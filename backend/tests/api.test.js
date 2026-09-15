@@ -58,13 +58,21 @@ describe('API Endpoints', () => {
             expect(res.body.error).toBe('Email and password required');
         });
 
+        it('should require CGU acceptance', async () => {
+            const res = await request(app)
+                .post('/auth/register')
+                .send({ email: 'test@test.com', password: 'password123' });
+            expect(res.statusCode).toBe(400);
+            expect(res.body.error).toBe('You must accept the CGU to register.');
+        });
+
         it('should register a new user successfully', async () => {
             prisma.user.findUnique.mockResolvedValue(null);
             prisma.user.create.mockResolvedValue({ id: 1, email: 'test@test.com' });
 
             const res = await request(app)
                 .post('/auth/register')
-                .send({ email: 'test@test.com', password: 'password123', name: 'Test' });
+                .send({ email: 'test@test.com', password: 'password123', cguAccepted: true });
 
             expect(res.statusCode).toBe(201);
             expect(res.body.message).toBe('User registered successfully');
@@ -76,7 +84,7 @@ describe('API Endpoints', () => {
 
             const res = await request(app)
                 .post('/auth/register')
-                .send({ email: 'test@test.com', password: 'password123' });
+                .send({ email: 'test@test.com', password: 'password123', cguAccepted: true });
 
             expect(res.statusCode).toBe(409);
             expect(res.body.error).toBe('Email already in use');
