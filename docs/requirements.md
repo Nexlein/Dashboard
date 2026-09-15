@@ -33,6 +33,27 @@
   - [ ] Account deletion (Right to be forgotten).
   - [ ] Data export (Right of access).
 
+## Security & Robustness
+
+- [ ] **API Security**: Encrypt sensitive widget parameters (like API keys) in the database.
+- [ ] **Rate Limiting**: Protect authentication endpoints against brute-force attacks.
+- [ ] **CORS**: Restrict API access to the frontend origin.
+- [ ] **Backend Cache**: In-memory cache for external API calls to prevent rate-limiting/bans.
+- [ ] **UI Error Boundaries**: Individual widget failures must not crash the entire dashboard.
+
+## UX / UI Polish
+
+- [ ] **Dark / Light Mode**: Theme toggle saved in local storage.
+- [ ] **Responsive Design**: Dashboard grid must stack beautifully on mobile devices.
+- [ ] **Internationalization (i18n)**: UI and Legal texts available in English and French.
+- [ ] **Lighthouse 100/100**: Perfect score on Accessibility and Best Practices.
+
+## Bonus Features
+
+- [ ] **PWA (Progressive Web App)**: Dashboard installable as a standalone app.
+- [ ] **Database Seeding**: Automated mock data (users + widgets) generation on startup for instant grading access.
+- [ ] **AI Chatbot with RAG**: Optional LLM integration widget.
+
 ## Technical Constraints
 
 - [x] **Docker**: `docker-compose.yml` at root. Must support `docker-compose build` and `docker-compose up`.
