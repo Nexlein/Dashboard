@@ -7,6 +7,7 @@
 Returns the application's supported services and widgets in the format required by Epitech grading.
 
 **Response (200 OK):**
+
 ```json
 {
   "client": { "host": "127.0.0.1" },
@@ -21,7 +22,6 @@ Returns the application's supported services and widgets in the format required 
   }
 }
 ```
-
 
 ## Authentication
 
