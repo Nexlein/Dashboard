@@ -8,7 +8,38 @@ datasource db {
 }
 
 model User {
-  id    Int     @id @default(autoincrement())
-  email String  @unique
-  name  String?
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String? // Null for OAuth-only users
+  isAdmin   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  widgets WidgetConfig[]
+  tokens  OAuthToken[]
+}
+
+model OAuthToken {
+  id           Int       @id @default(autoincrement())
+  userId       Int
+  provider     String // e.g. "github", "google"
+  accessToken  String
+  refreshToken String?
+  expiresAt    DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+}
+
+model WidgetConfig {
+  id          Int    @id @default(autoincrement())
+  userId      Int
+  serviceName String
+  widgetName  String
+  params      Json // Widget params (e.g. { "city": "Paris" })
+  refreshRate Int // Refresh interval in seconds
+  layout      Json // Grid coords (e.g. { "x": 0, "y": 0, "w": 2, "h": 2 })
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
