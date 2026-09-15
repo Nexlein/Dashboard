@@ -4,7 +4,8 @@
     "description": "",
     "main": "index.js",
     "scripts": {
-        "start": "node index.js"
+        "start": "npx prisma generate && npx prisma db push --accept-data-loss && node index.js",
+        "dev": "nodemon index.js"
     },
     "keywords": [],
     "author": "",
