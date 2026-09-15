@@ -9,17 +9,17 @@
 
 - [ ] **User Management**: Unauthenticated users can register. Administration section useful.
 - [ ] **Identity & Permissions**:
-    - [ ] Authentication (credentials or OIDC) to bind data to account.
-    - [ ] Authorization (OAuth 2.0) to access external APIs. Link third-party to platform user.
+  - [ ] Authentication (credentials or OIDC) to bind data to account.
+  - [ ] Authorization (OAuth 2.0) to access external APIs. Link third-party to platform user.
 - [ ] **Service Subscriptions**:
-    - [ ] Authenticated users select services to subscribe to.
-    - [ ] Subscribing requires credentials or OAuth linking.
-    - [ ] Some services (e.g., weather) available by default without external account.
+  - [ ] Authenticated users select services to subscribe to.
+  - [ ] Subscribing requires credentials or OAuth linking.
+  - [ ] Some services (e.g., weather) available by default without external account.
 - [ ] **Dashboard & Widgets**:
-    - [ ] Add widget (select type, configure, set refresh rate).
-    - [ ] Reconfigure, move, delete widgets.
-    - [ ] **Crucial**: Widget _must_ have configurable parameters.
-    - [ ] **Crucial**: Two instances of same widget with different configs must display distinct info.
+  - [ ] Add widget (select type, configure, set refresh rate).
+  - [ ] Reconfigure, move, delete widgets.
+  - [ ] **Crucial**: Widget _must_ have configurable parameters.
+  - [ ] **Crucial**: Two instances of same widget with different configs must display distinct info.
 - [ ] **Timer**: Periodic refresh of widget data based on widget config.
 
 ## Technical Constraints
@@ -33,12 +33,12 @@
 
 - [x] **Source Code**: No binaries or temp files.
 - [ ] **README.md**:
-    - [ ] List of key features, services, and widgets.
-    - [ ] Precise steps to install and build.
-    - [ ] Overview of app purpose and use cases.
-    - [ ] Clear instructions to run and use.
-    - [ ] Description of technologies used and overall structure.
-    - [ ] Adapt communication to audience (users vs developers).
+  - [ ] List of key features, services, and widgets.
+  - [ ] Precise steps to install and build.
+  - [ ] Overview of app purpose and use cases.
+  - [ ] Clear instructions to run and use.
+  - [ ] Description of technologies used and overall structure.
+  - [ ] Adapt communication to audience (users vs developers).
 
 ## about.json Schema
 

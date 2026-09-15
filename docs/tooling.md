@@ -20,6 +20,6 @@
 ## 4. Docker Compose
 
 - **docker-compose.yml**: Orchestrates the entire app.
-    - `client`: React Vite frontend (port 8081).
-    - `server`: Express Node.js backend (port 8080).
-    - `db`: PostgreSQL 15 database (port 5432).
+  - `client`: React Vite frontend (port 8081).
+  - `server`: Express Node.js backend (port 8080).
+  - `db`: PostgreSQL 15 database (port 5432).
