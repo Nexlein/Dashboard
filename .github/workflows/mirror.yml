@@ -1,0 +1,27 @@
+name: Epitech Mirror
+
+on:
+    push:
+        branches: ['main']
+
+jobs:
+    mirror_to_epitech:
+        if: github.repository == 'Nexlein/Dashboard'
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout Repository
+              uses: actions/checkout@v6
+              with:
+                  fetch-depth: 0
+
+            - name: Setup SSH
+              uses: webfactory/ssh-agent@v0.10.0
+              with:
+                  ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+            - name: Push to Epitech Mirror
+              run: |
+                  ssh-keyscan github.com >> ~/.ssh/known_hosts
+                  git remote add epitech git@github.com:EpitechPGE3-2026/G-WEB-500-MPL-5-1-dashboard-4.git
+                  git push epitech HEAD:main
