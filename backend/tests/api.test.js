@@ -25,9 +25,29 @@ describe('API Endpoints', () => {
             const res = await request(app).get('/about.json');
             expect(res.statusCode).toBe(200);
             expect(res.body).toHaveProperty('client');
+            expect(res.body.client).toHaveProperty('host');
+
             expect(res.body).toHaveProperty('server');
             expect(res.body.server).toHaveProperty('current_time');
             expect(res.body.server).toHaveProperty('services');
+
+            // We expect our 4 base services (weather, github, youtube, chatbot)
+            expect(Array.isArray(res.body.server.services)).toBe(true);
+            expect(res.body.server.services.length).toBeGreaterThanOrEqual(4);
+
+            // Check that the first service has the correct Epitech structure
+            const firstService = res.body.server.services[0];
+            expect(firstService).toHaveProperty('name');
+            expect(firstService).toHaveProperty('widgets');
+            expect(Array.isArray(firstService.widgets)).toBe(true);
+
+            if (firstService.widgets.length > 0) {
+                const firstWidget = firstService.widgets[0];
+                expect(firstWidget).toHaveProperty('name');
+                expect(firstWidget).toHaveProperty('description');
+                expect(firstWidget).toHaveProperty('params');
+                expect(Array.isArray(firstWidget.params)).toBe(true);
+            }
         });
     });
 
