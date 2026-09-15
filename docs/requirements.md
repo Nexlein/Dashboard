@@ -28,7 +28,7 @@
 ## Legal & Compliance
 
 - [ ] **CGU (Terms of Service)**: Users must read and accept CGU during registration.
-- [ ] **RGPD (GDPR)**: 
+- [ ] **RGPD (GDPR)**:
   - [ ] Clear privacy policy.
   - [ ] Account deletion (Right to be forgotten).
   - [ ] Data export (Right of access).
