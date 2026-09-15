@@ -15,6 +15,9 @@ The core entity representing a registered user on the platform.
 | `email` | String | Unique email address |
 | `password` | String? | Hashed password (Nullable if logged in exclusively via OAuth) |
 | `isAdmin` | Boolean | Flag for administrative privileges |
+| `cguAcceptedAt` | DateTime? | Timestamp when user accepted CGU |
+| `language` | String | User's i18n preference (`en` or `fr`), defaults to `en` |
+| `theme` | String | User's theme preference (`light`, `dark`, or `system`) |
 | `createdAt` | DateTime | Timestamp of creation |
 | `updatedAt` | DateTime | Timestamp of last update |
 
