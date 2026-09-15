@@ -7,9 +7,9 @@
 
 ## Core Features
 
-- [ ] **User Management**: Unauthenticated users can register. Administration section useful.
+- [x] **User Management**: Unauthenticated users can register. Administration section useful.
 - [ ] **Identity & Permissions**:
-  - [ ] Authentication (credentials or OIDC) to bind data to account.
+  - [x] Authentication (credentials or OIDC) to bind data to account.
   - [ ] Authorization (OAuth 2.0) to access external APIs. Link third-party to platform user.
 - [ ] **Service Subscriptions**:
   - [ ] Authenticated users select services to subscribe to.
