@@ -23,6 +23,7 @@ Build a web dashboard (React/Express/PostgreSQL) allowing users to configure and
 
 ## Relevant Documentation
 
+- [System Architecture](docs/architecture.md)
 - [Requirements](docs/requirements.md)
 - [API Routes](docs/api.md)
 - [DB Schema](docs/db_schema.md)
