@@ -7,6 +7,7 @@
 Register a new user account.
 
 **Request Body:**
+
 ```json
 {
   "email": "user@example.com",
@@ -16,6 +17,7 @@ Register a new user account.
 ```
 
 **Response (201 Created):**
+
 ```json
 {
   "message": "User registered successfully",
@@ -28,6 +30,7 @@ Register a new user account.
 Authenticate an existing user.
 
 **Request Body:**
+
 ```json
 {
   "email": "user@example.com",
@@ -36,6 +39,7 @@ Authenticate an existing user.
 ```
 
 **Response (200 OK):**
+
 ```json
 {
   "message": "Login successful",
