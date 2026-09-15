@@ -20,7 +20,18 @@
   - [ ] Reconfigure, move, delete widgets.
   - [ ] **Crucial**: Widget _must_ have configurable parameters.
   - [ ] **Crucial**: Two instances of same widget with different configs must display distinct info.
+- [ ] **Accessibility (a11y)**:
+  - [ ] Full keyboard navigation support.
+  - [ ] Screen reader compatibility (ARIA labels).
 - [ ] **Timer**: Periodic refresh of widget data based on widget config.
+
+## Legal & Compliance
+
+- [ ] **CGU (Terms of Service)**: Users must read and accept CGU during registration.
+- [ ] **RGPD (GDPR)**: 
+  - [ ] Clear privacy policy.
+  - [ ] Account deletion (Right to be forgotten).
+  - [ ] Data export (Right of access).
 
 ## Technical Constraints
 
