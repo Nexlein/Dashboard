@@ -5,14 +5,17 @@
     "main": "index.js",
     "scripts": {
         "start": "npx prisma generate && npx prisma db push --accept-data-loss && node index.js",
-        "dev": "nodemon index.js"
+        "dev": "nodemon index.js",
+        "test": "jest"
     },
     "keywords": [],
     "author": "",
     "license": "ISC",
     "devDependencies": {
+        "jest": "^30.5.1",
         "nodemon": "^3.1.14",
-        "prisma": "^5.22.0"
+        "prisma": "^5.22.0",
+        "supertest": "^7.2.2"
     },
     "dependencies": {
         "@prisma/client": "^5.22.0",
