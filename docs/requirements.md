@@ -27,6 +27,8 @@
 - [x] **Docker**: `docker-compose.yml` at root. Must support `docker-compose build` and `docker-compose up`.
 - [x] **Server**: MUST run on port `8080`.
 - [x] **Endpoint**: MUST respond to `GET http://localhost:8080/about.json`.
+- [ ] **Health Check**: MUST respond to `GET http://localhost:8080/health`.
+- [ ] **API Docs**: Swagger UI available at `http://localhost:8080/api-docs`.
 - [x] **Bonus**: All bonus files must be in `bonus/` directory.
 
 ## Deliverables & Documentation
