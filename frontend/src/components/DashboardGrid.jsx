@@ -1,10 +1,8 @@
-import { Responsive, WidthProvider } from 'react-grid-layout';
+import { ResponsiveGridLayout } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import { useStore } from '@/store/useStore';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-
-const ResponsiveGridLayout = WidthProvider(Responsive);
 
 export default function DashboardGrid() {
     const { widgets, setWidgets } = useStore();
