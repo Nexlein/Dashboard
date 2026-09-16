@@ -61,6 +61,54 @@ Authenticate an existing user.
 }
 ```
 
+**Response (200 OK):**
+
+```json
+{
+  "message": "Login successful",
+  "token": "eyJhbGciOiJIUzI1NiIsInR..."
+}
+```
+
+## Administration
+
+All `/admin` endpoints require the `Authorization: Bearer <token>` header. The
+authenticated user must currently have `isAdmin` set to `true` in the database.
+Missing or invalid authentication returns `401 Unauthorized`; an authenticated
+non-admin user receives `403 Forbidden`.
+
+### `GET /admin/users`
+
+Returns all users without exposing password hashes or OAuth tokens.
+
+**Response (200 OK):**
+
+```json
+[
+  {
+    "id": 2,
+    "email": "user@example.com",
+    "isAdmin": false,
+    "cguAcceptedAt": "2026-09-16T10:00:00.000Z",
+    "language": "en",
+    "theme": "system",
+    "createdAt": "2026-09-16T10:00:00.000Z",
+    "updatedAt": "2026-09-16T10:00:00.000Z"
+  }
+]
+```
+
+### `DELETE /admin/users/:id`
+
+Deletes another user. Related widgets and OAuth tokens are deleted through the
+database cascade. An administrator cannot delete their own account.
+
+**Response (204 No Content)**
+
+- `400 Bad Request` if `id` is not a positive integer.
+- `403 Forbidden` when attempting to delete the authenticated admin account.
+- `404 Not Found` if the user does not exist.
+
 ## Widgets
 
 All `/widgets` endpoints require the `Authorization: Bearer <token>` header.
@@ -121,14 +169,6 @@ Update an existing widget's parameters, refresh rate, or layout.
 Delete a widget.
 
 **Response (204 No Content)**
-**Response (200 OK):**
-
-```json
-{
-  "message": "Login successful",
-  "token": "eyJhbGciOiJIUzI1NiIsInR..."
-}
-```
 
 ## GitHub account linking
 
