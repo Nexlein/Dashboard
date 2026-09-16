@@ -1,70 +1,44 @@
 # Dashboard Requirements
 
-## Group Size: 2
-
+## Group Size: 2 (Nexlein & Friend)
 - [ ] **Required Services**: 3 (1 + 2)
 - [ ] **Required Widgets**: 6 (3 * 2)
 
-## Core Features
+## 1. Authentication & Users
+- [ ] **Registration**: Unauthenticated users can register via email/password.
+- [ ] **Login**: Users must authenticate before accessing the dashboard.
+- [ ] **OIDC / OAuth 2.0**: Users can authenticate or link third-party accounts (e.g. GitHub OAuth).
+- [ ] **Administration**: An administration section to manage site users.
 
-- [x] **User Management**: Unauthenticated users can register. Administration section useful.
-- [x] **Identity & Permissions**:
-  - [x] Authentication (credentials or OIDC) to bind data to account.
-  - [x] Authorization (OAuth 2.0) to access external APIs. Link third-party to platform user.
-- [ ] **Service Subscriptions**:
-  - [ ] Authenticated users select services to subscribe to.
-  - [ ] Subscribing requires credentials or OAuth linking.
-  - [ ] Some services (e.g., weather) available by default without external account.
-- [x] **Dashboard & Widgets**:
-  - [x] Add widget (select type, configure, set refresh rate).
-  - [ ] Reconfigure, move, delete widgets. (Move is done)
-  - [x] **Crucial**: Widget _must_ have configurable parameters.
-  - [ ] **Crucial**: Two instances of same widget with different configs must display distinct info.
-- [ ] **Accessibility (a11y)**:
-  - [ ] Full keyboard navigation support.
-  - [ ] Screen reader compatibility (ARIA labels).
-- [ ] **Timer**: Periodic refresh of widget data based on widget config.
+## 2. Services & Subscriptions
+- [ ] **Service Subscription**: Authenticated users must explicitly subscribe to services (except default ones like Weather).
+- [ ] **OAuth Linking**: Subscribing to certain services requires linking via OAuth 2.0.
 
-## Legal & Compliance
+## 3. Dashboard & Widgets
+- [x] **Grid Layout**: A responsive dashboard that stacks beautifully on mobile.
+- [ ] **Widget Configurator Modal**: UI to add a new widget instance. (UI Built, needs dynamic schema fetch).
+- [ ] **Select Widget Type**: Choose service and widget type.
+- [x] **Configure Widget**: Widget MUST have configurable parameters.
+- [ ] **Set Refresh Rate**: User sets a custom timer for the widget.
+- [x] **Move Widgets**: Drag and drop widgets on the dashboard.
+- [ ] **Reconfigure Widgets**: Edit an existing widget's parameters.
+- [ ] **Delete Widgets**: Remove a widget from the dashboard.
+- [ ] **Distinct Instances**: Two instances of the SAME widget with DIFFERENT configs MUST display distinct information simultaneously.
 
-- [x] **CGU (Terms of Service)**: Users must read and accept CGU during registration.
-- [ ] **RGPD (GDPR)**:
-  - [ ] Clear privacy policy.
-  - [ ] Account deletion (Right to be forgotten).
-  - [ ] Data export (Right of access).
+## 4. The Timer Mechanism
+- [ ] **Auto-Refresh**: A timer mechanism that periodically fetches new data for each widget based on its configured refresh rate.
 
-## Security & Robustness
+## 5. Technical Constraints
+- [x] **Docker Compose**: `docker-compose.yml` at the root.
+- [x] **Build**: Must support `docker-compose build`.
+- [x] **Run**: Must support `docker-compose up`.
+- [x] **Port Requirement**: Server MUST run on port `8080`.
+- [ ] **about.json**: Server MUST respond to `GET http://localhost:8080/about.json`.
+  - [ ] Returns `client.host` (IP of client).
+  - [ ] Returns `server.current_time` (Epoch).
+  - [ ] Returns `server.services` (List of services, widgets, and param types).
 
-- [ ] **API Security**: Encrypt sensitive widget parameters (like API keys) in the database.
-- [ ] **Rate Limiting**: Protect authentication endpoints against brute-force attacks.
-- [ ] **CORS**: Restrict API access to the frontend origin.
-- [ ] **Backend Cache**: In-memory cache for external API calls to prevent rate-limiting/bans.
-- [ ] **UI Error Boundaries**: Individual widget failures must not crash the entire dashboard.
-
-## UX / UI Polish
-
-- [x] **Dark / Light Mode**: Theme toggle saved in local storage.
-- [x] **Responsive Design**: Dashboard grid must stack beautifully on mobile devices.
-- [ ] **Internationalization (i18n)**: UI and Legal texts available in English and French.
-- [ ] **Lighthouse 100/100**: Perfect score on Accessibility and Best Practices.
-
-## Bonus Features
-
-- [ ] **PWA (Progressive Web App)**: Dashboard installable as a standalone app.
-- [ ] **Database Seeding**: Automated mock data (users + widgets) generation on startup for instant grading access.
-- [ ] **AI Chatbot with RAG**: Optional LLM integration widget.
-
-## Technical Constraints
-
-- [x] **Docker**: `docker-compose.yml` at root. Must support `docker-compose build` and `docker-compose up`.
-- [x] **Server**: MUST run on port `8080`.
-- [x] **Endpoint**: MUST respond to `GET http://localhost:8080/about.json`.
-- [ ] **Health Check**: MUST respond to `GET http://localhost:8080/health`.
-- [ ] **API Docs**: Swagger UI available at `http://localhost:8080/api-docs`.
-- [x] **Bonus**: All bonus files must be in `bonus/` directory.
-
-## Deliverables & Documentation
-
+## 6. Deliverables & Documentation
 - [x] **Source Code**: No binaries or temp files.
 - [ ] **README.md**:
   - [ ] List of key features, services, and widgets.
@@ -72,32 +46,8 @@
   - [ ] Overview of app purpose and use cases.
   - [ ] Clear instructions to run and use.
   - [ ] Description of technologies used and overall structure.
-  - [ ] Adapt communication to audience (users vs developers).
+- [ ] **Video Presentation**: Short video showcasing main features.
 
-## about.json Schema
-
-```json
-{
-    "client": { "host": "IP_ADDRESS" },
-    "server": {
-        "current_time": 1531680780,
-        "services": [
-            {
-                "name": "service_name",
-                "widgets": [
-                    {
-                        "name": "widget_name",
-                        "description": "widget description",
-                        "params": [
-                            {
-                                "name": "param_name",
-                                "type": "string | integer"
-                            }
-                        ]
-                    }
-                ]
-            }
-        ]
-    }
-}
-```
+## 7. Custom Ideas & Polish (Bonus)
+- [x] **Dark / Light Mode**: Theme toggle.
+- [ ] **Data Persistence**: Save dashboard layouts in the database so they survive a refresh.
