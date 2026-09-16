@@ -50,19 +50,14 @@ A customizable web dashboard that allows authenticated users to monitor digital 
    your GitHub OAuth App: `http://localhost:8080/auth/github/callback`.
    Keep `backend/.env` private; commit only the example file.
 
-2. **Build the Application**
+2. **Run with Docker**
 
+   Start the entire stack (Frontend, Backend, Database) using Docker Compose:
    ```bash
-   docker compose build
+   docker-compose up --build
    ```
 
-3. **Start the Services**
-
-   ```bash
-   docker compose up -d
-   ```
-
-4. **Access the Application**
+3. **Access the Application**
    - Frontend: [http://localhost:8081](http://localhost:8081)
    - Backend API: [http://localhost:8080](http://localhost:8080)
    - `about.json`: [http://localhost:8080/about.json](http://localhost:8080/about.json)
