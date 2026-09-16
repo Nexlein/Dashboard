@@ -66,9 +66,11 @@ Authenticate an existing user.
 All `/widgets` endpoints require the `Authorization: Bearer <token>` header.
 
 ### `GET /widgets`
+
 Returns all widgets belonging to the authenticated user.
 
 **Response (200 OK):**
+
 ```json
 [
   {
@@ -83,9 +85,11 @@ Returns all widgets belonging to the authenticated user.
 ```
 
 ### `POST /widgets`
+
 Create a new widget for the dashboard.
 
 **Request Body:**
+
 ```json
 {
   "serviceName": "weather",
@@ -95,20 +99,25 @@ Create a new widget for the dashboard.
   "layout": { "x": 0, "y": 0, "w": 2, "h": 2 }
 }
 ```
+
 **Response (201 Created):** Returns the created widget object.
 
 ### `PUT /widgets/:id`
+
 Update an existing widget's parameters, refresh rate, or layout.
 
 **Request Body (Partial updates allowed):**
+
 ```json
 {
   "layout": { "x": 2, "y": 0, "w": 2, "h": 2 }
 }
 ```
+
 **Response (200 OK):** Returns the updated widget object.
 
 ### `DELETE /widgets/:id`
+
 Delete a widget.
 
 **Response (204 No Content)**
