@@ -10,7 +10,7 @@
 - [x] **User Management**: Unauthenticated users can register. Administration section useful.
 - [ ] **Identity & Permissions**:
   - [x] Authentication (credentials or OIDC) to bind data to account.
-  - [ ] Authorization (OAuth 2.0) to access external APIs. Link third-party to platform user.
+  - [x] Authorization (OAuth 2.0) to access external APIs. Link third-party to platform user.
 - [ ] **Service Subscriptions**:
   - [ ] Authenticated users select services to subscribe to.
   - [ ] Subscribing requires credentials or OAuth linking.
@@ -27,7 +27,7 @@
 
 ## Legal & Compliance
 
-- [ ] **CGU (Terms of Service)**: Users must read and accept CGU during registration.
+- [x] **CGU (Terms of Service)**: Users must read and accept CGU during registration.
 - [ ] **RGPD (GDPR)**:
   - [ ] Clear privacy policy.
   - [ ] Account deletion (Right to be forgotten).
@@ -43,7 +43,7 @@
 
 ## UX / UI Polish
 
-- [ ] **Dark / Light Mode**: Theme toggle saved in local storage.
+- [x] **Dark / Light Mode**: Theme toggle saved in local storage.
 - [ ] **Responsive Design**: Dashboard grid must stack beautifully on mobile devices.
 - [ ] **Internationalization (i18n)**: UI and Legal texts available in English and French.
 - [ ] **Lighthouse 100/100**: Perfect score on Accessibility and Best Practices.
