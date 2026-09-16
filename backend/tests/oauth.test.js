@@ -1,9 +1,17 @@
 const request = require('supertest');
 const jwt = require('jsonwebtoken');
 
-jest.mock('@prisma/client', () => ({
-    PrismaClient: jest.fn(() => ({ oAuthToken: { upsert: jest.fn() } })),
-}));
+jest.mock('@prisma/client', () => {
+    const mockPrisma = {
+        oAuthToken: {
+            upsert: jest.fn(),
+        },
+    };
+
+    return {
+        PrismaClient: jest.fn(() => mockPrisma),
+    };
+});
 
 const originalEnv = { ...process.env };
 process.env.JWT_SECRET = 'oauth-test-secret';
@@ -13,7 +21,7 @@ process.env.GITHUB_CALLBACK_URL = 'http://localhost:8080/auth/github/callback';
 
 const app = require('../index');
 const { PrismaClient } = require('@prisma/client');
-const prisma = PrismaClient.mock.results[0].value;
+const prisma = new PrismaClient();
 
 function authToken(userId = 1) {
     return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '1h' });
@@ -54,7 +62,12 @@ describe('GitHub account linking', () => {
     });
 
     afterAll(() => {
-        for (const key of ['JWT_SECRET', 'GITHUB_CLIENT_ID', 'GITHUB_CLIENT_SECRET', 'GITHUB_CALLBACK_URL']) {
+        for (const key of [
+            'JWT_SECRET',
+            'GITHUB_CLIENT_ID',
+            'GITHUB_CLIENT_SECRET',
+            'GITHUB_CALLBACK_URL',
+        ]) {
             if (originalEnv[key] === undefined) delete process.env[key];
             else process.env[key] = originalEnv[key];
         }
@@ -67,8 +80,10 @@ describe('GitHub account linking', () => {
     });
 
     it('preserves the redirect and sets a separate, temporary HttpOnly cookie', async () => {
-        const response = await request(app).get('/auth/github')
-            .set('Authorization', `Bearer ${authToken()}`).expect(302);
+        const response = await request(app)
+            .get('/auth/github')
+            .set('Authorization', `Bearer ${authToken()}`)
+            .expect(302);
         const url = new URL(response.headers.location);
         const state = url.searchParams.get('state');
         const cookie = response.headers['set-cookie'][0];
@@ -101,8 +116,10 @@ describe('GitHub account linking', () => {
 
     it('rejects a callback without its cookie before contacting GitHub or consuming state', async () => {
         const link = await startLink();
-        await request(app).get('/auth/github/callback')
-            .query({ state: link.state, code: 'github-code' }).expect(403);
+        await request(app)
+            .get('/auth/github/callback')
+            .query({ state: link.state, code: 'github-code' })
+            .expect(403);
         expect(global.fetch).not.toHaveBeenCalled();
         expect(prisma.oAuthToken.upsert).not.toHaveBeenCalled();
         await callback(link).expect(200);
@@ -128,7 +145,13 @@ describe('GitHub account linking', () => {
         expect(response.headers['set-cookie'][0]).toContain('Path=/auth/github/callback');
         expect(prisma.oAuthToken.upsert).toHaveBeenCalledWith({
             where: { userId_provider: { userId: 42, provider: 'github' } },
-            create: { userId: 42, provider: 'github', accessToken: 'github-access-token', refreshToken: null, expiresAt: null },
+            create: {
+                userId: 42,
+                provider: 'github',
+                accessToken: 'github-access-token',
+                refreshToken: null,
+                expiresAt: null,
+            },
             update: { accessToken: 'github-access-token', refreshToken: null, expiresAt: null },
         });
         const [url, options] = global.fetch.mock.calls[0];
@@ -149,7 +172,12 @@ describe('GitHub account linking', () => {
     });
 
     it('rejects missing, malformed and unknown state', async () => {
-        for (const query of [{}, { state: 'bad' }, { state: 'a'.repeat(64) }, { state: ['a', 'b'] }]) {
+        for (const query of [
+            {},
+            { state: 'bad' },
+            { state: 'a'.repeat(64) },
+            { state: ['a', 'b'] },
+        ]) {
             await request(app).get('/auth/github/callback').query(query).expect(400);
         }
         expect(global.fetch).not.toHaveBeenCalled();
@@ -184,7 +212,10 @@ describe('GitHub account linking', () => {
     });
 
     it('does not save a failed token exchange', async () => {
-        global.fetch.mockResolvedValue({ ok: true, json: async () => ({ error: 'bad_verification_code' }) });
+        global.fetch.mockResolvedValue({
+            ok: true,
+            json: async () => ({ error: 'bad_verification_code' }),
+        });
         await callback(await startLink()).expect(502);
         expect(prisma.oAuthToken.upsert).not.toHaveBeenCalled();
     });
