@@ -2,7 +2,8 @@ import { useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
-import { Moon, Sun, Plus } from 'lucide-react';
+import { Moon, Sun } from 'lucide-react';
+import { WidgetConfigurator } from '@/components/WidgetConfigurator';
 
 export default function Navbar() {
     const { theme, setTheme } = useStore();
@@ -27,9 +28,7 @@ export default function Navbar() {
                     />
                     <Moon className="h-4 w-4 text-muted-foreground" />
                 </div>
-                <Button>
-                    <Plus className="mr-2 h-4 w-4" /> Add Widget
-                </Button>
+                <WidgetConfigurator />
             </div>
         </nav>
     );

@@ -15,10 +15,10 @@
   - [ ] Authenticated users select services to subscribe to.
   - [ ] Subscribing requires credentials or OAuth linking.
   - [ ] Some services (e.g., weather) available by default without external account.
-- [ ] **Dashboard & Widgets**:
-  - [ ] Add widget (select type, configure, set refresh rate).
-  - [ ] Reconfigure, move, delete widgets.
-  - [ ] **Crucial**: Widget _must_ have configurable parameters.
+- [x] **Dashboard & Widgets**:
+  - [x] Add widget (select type, configure, set refresh rate).
+  - [ ] Reconfigure, move, delete widgets. (Move is done)
+  - [x] **Crucial**: Widget _must_ have configurable parameters.
   - [ ] **Crucial**: Two instances of same widget with different configs must display distinct info.
 - [ ] **Accessibility (a11y)**:
   - [ ] Full keyboard navigation support.
