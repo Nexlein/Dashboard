@@ -5,6 +5,8 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v3
+            - name: Prepare example environment
+              run: cp backend/.env.example backend/.env
             - name: Setup Node
               uses: actions/setup-node@v3
               with:
@@ -12,7 +14,7 @@ jobs:
             - name: Install dependencies and Test
               run: |
                   cd backend
-                  npm install
+                  npm ci
                   npm test
             - name: Test Docker Compose Build
               run: docker compose build
