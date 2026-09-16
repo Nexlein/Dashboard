@@ -59,3 +59,14 @@
 
 - [x] **Dark / Light Mode**: Theme toggle.
 - [ ] **Data Persistence**: Save dashboard layouts in the database so they survive a refresh.
+
+## 8. Extra Ideas & Bonus Points (Not in PDF)
+- [ ] **Accessibility (a11y)**: Full keyboard navigation and screen reader support (ARIA labels).
+- [ ] **Lighthouse 100/100**: Perfect score on Accessibility and Best Practices.
+- [ ] **Legal & Compliance**:
+  - [ ] **CGU (Terms of Service)**: Users must accept CGU during registration.
+  - [ ] **RGPD (GDPR)**: Account deletion and data export.
+- [ ] **Security**: Encrypt sensitive widget parameters (like API keys) in the database.
+- [ ] **Rate Limiting**: Protect authentication endpoints against brute-force attacks.
+- [ ] **UI Error Boundaries**: Individual widget failures must not crash the entire dashboard.
+- [ ] **Database Seeding**: Automated mock data generation on startup for instant grading access.
