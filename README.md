@@ -42,11 +42,18 @@ A customizable web dashboard that allows authenticated users to monitor digital 
    docker-compose build
    ```
 
-2. **Start the Services**
+### 1. Configure Environment
+Before starting the project, you must set up the environment variables:
+```bash
+cp .env.example ./backend/.env
+```
+*(Fill in the `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` in `./backend/.env` if you want to test OAuth linking).*
 
-   ```bash
-   docker-compose up -d
-   ```
+### 2. Run with Docker
+Start the entire stack (Frontend, Backend, Database) using Docker Compose:
+```bash
+docker-compose up --build
+```
 
 3. **Access the Application**
    - Frontend: [http://localhost:8081](http://localhost:8081)
