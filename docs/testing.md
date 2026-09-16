@@ -34,4 +34,5 @@ The frontend uses **Vitest** and **React Testing Library**.
 
 - `npm test` runs the frontend test suite in `jsdom`.
 - Component tests are located alongside components (e.g. `Navbar.test.jsx`).
+- Global mocks (like `ResizeObserver` for the grid layout) are configured in `frontend/src/test/setup.js`.
 - Ensure the store (Zustand) is reset before each test if mocked state is required.

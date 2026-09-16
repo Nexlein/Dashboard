@@ -4,6 +4,8 @@
 
 - **Component-Based**: Perfect for isolated widgets.
 - **Ecosystem**: Access to `react-grid-layout` for drag-and-drop dashboard grids.
+- **State Management**: `zustand` for lightweight, predictable global state (user auth, widget layout).
+- **UI Components**: `shadcn/ui` (Radix Primitives) for accessible, unstyled building blocks.
 - **Vite & PWA**: Fast build times with `vite-plugin-pwa` for standalone app installation.
 - **Tailwind CSS**: Rapid UI development and native Dark/Light mode support.
 - **i18n**: `react-i18next` for English/French translations.
