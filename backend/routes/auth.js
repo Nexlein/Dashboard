@@ -9,10 +9,14 @@ const JWT_SECRET = process.env.JWT_SECRET || 'supersecretkey';
 
 router.post('/register', async (req, res) => {
     try {
-        const { email, password, name } = req.body;
+        const { email, password, cguAccepted } = req.body;
 
         if (!email || !password) {
             return res.status(400).json({ error: 'Email and password required' });
+        }
+
+        if (!cguAccepted) {
+            return res.status(400).json({ error: 'You must accept the CGU to register.' });
         }
 
         const existingUser = await prisma.user.findUnique({ where: { email } });
@@ -26,7 +30,7 @@ router.post('/register', async (req, res) => {
             data: {
                 email,
                 password: hashedPassword,
-                name,
+                cguAcceptedAt: new Date(),
             },
         });
 

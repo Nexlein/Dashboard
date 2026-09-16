@@ -14,7 +14,7 @@
 
 ## 3. GitHub Actions (CI/CD)
 
-- **CI Pipeline (`.github/workflows/ci.yml`)**: Runs `docker-compose build` every time you push to GitHub. Ensures nobody pushes broken code that fails to build.
+- **CI Pipeline (`.github/workflows/ci.yml`)**: Runs `npm test` and `docker-compose build` on every push. Ensures nobody pushes broken code.
 - **Mirror Pipeline (`.github/workflows/mirror.yml`)**: Automatically pushes your code to the Epitech grading repository when you push to `main`. Requires `GIT_SSH_PRIVATE_KEY` secret in GitHub.
 
 ## 4. Docker Compose
@@ -23,3 +23,7 @@
   - `client`: React Vite frontend (port 8081).
   - `server`: Express Node.js backend (port 8080).
   - `db`: PostgreSQL 15 database (port 5432).
+
+## 5. Testing
+
+- **Jest & Supertest**: Used for backend API integration tests (`backend/tests/`). Ensures routes like `/auth/login` and `/about.json` function correctly.

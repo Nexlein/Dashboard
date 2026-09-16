@@ -28,6 +28,7 @@ A customizable web dashboard that allows authenticated users to monitor digital 
 
 ## Documentation
 
+- [System Architecture](docs/architecture.md)
 - [Project Requirements & Constraints](docs/requirements.md)
 - [Database Schema](docs/db_schema.md)
 - [API Reference](docs/api.md)
