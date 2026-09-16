@@ -9,7 +9,7 @@ Build a web dashboard (React/Express/PostgreSQL) allowing users to configure and
 
 ## Tech Stack
 
-- **Frontend**: React (Vite) + Tailwind CSS + `react-grid-layout`
+- **Frontend**: React (Vite) + Tailwind CSS + `shadcn/ui` + `zustand` + `react-grid-layout`
 - **Backend**: Node.js (Express), Prisma ORM
 - **Database**: PostgreSQL (Containerized)
 - **Deployment**: Docker Compose (`server` on 8080, `client` on 8081)
