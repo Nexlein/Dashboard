@@ -21,7 +21,7 @@ A customizable web dashboard that allows authenticated users to monitor digital 
 
 ## Tech Stack
 
-- **Frontend**: React, Vite, TailwindCSS, React-Grid-Layout
+- **Frontend**: React, Vite, TailwindCSS, shadcn/ui, React-Grid-Layout, Zustand
 - **Backend**: Node.js, Express
 - **Database**: PostgreSQL with Prisma ORM
 - **Infrastructure**: Docker & Docker Compose

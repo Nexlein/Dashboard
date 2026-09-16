@@ -26,4 +26,6 @@
 
 ## 5. Testing
 
+- **Vitest & React Testing Library**: Frontend unit and component testing.
+
 - **Jest & Supertest**: Used for backend API integration tests (`backend/tests/`). Ensures routes like `/auth/login` and `/about.json` function correctly.
