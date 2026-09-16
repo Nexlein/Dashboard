@@ -36,24 +36,27 @@ A customizable web dashboard that allows authenticated users to monitor digital 
 
 ## Installation & Usage
 
-1. **Build the Application**
+1. **Configure the Backend**
+
+   Copy the example once, keeping any existing local configuration:
 
    ```bash
-   docker-compose build
+   cp -n backend/.env.example backend/.env
    ```
 
-### 1. Configure Environment
-Before starting the project, you must set up the environment variables:
-```bash
-cp .env.example ./backend/.env
-```
-*(Fill in the `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` in `./backend/.env` if you want to test OAuth linking).*
+   Set `JWT_SECRET` in `backend/.env` to a long random value. You can generate one
+   with `openssl rand -hex 32`. Fill in `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`
+   and `GITHUB_CALLBACK_URL` to enable GitHub linking. Register this callback in
+   your GitHub OAuth App: `http://localhost:8080/auth/github/callback`.
+   Keep `backend/.env` private; commit only the example file.
 
-### 2. Run with Docker
-Start the entire stack (Frontend, Backend, Database) using Docker Compose:
-```bash
-docker-compose up --build
-```
+2. **Run with Docker**
+
+   Start the entire stack (Frontend, Backend, Database) using Docker Compose:
+
+   ```bash
+   docker-compose up --build
+   ```
 
 3. **Access the Application**
    - Frontend: [http://localhost:8081](http://localhost:8081)
@@ -61,3 +64,26 @@ docker-compose up --build
    - `about.json`: [http://localhost:8080/about.json](http://localhost:8080/about.json)
 
 *Note: The backend will automatically apply the database schema on startup.*
+
+### Run the backend outside Docker
+
+After configuring `backend/.env` as above, keep `localhost:5432` in its
+`DATABASE_URL`. Docker Compose overrides this with `db:5432` when the backend
+itself runs inside Docker.
+
+```bash
+docker compose up -d db
+docker compose exec db pg_isready -U user -d dashboard
+cd backend
+npm ci
+npx prisma db push
+node index.js
+```
+
+On the first database start, wait until `pg_isready` reports `accepting connections`
+before running `prisma db push`. Run either the Docker backend or the local backend
+on port 8080, not both at once.
+
+See the [manual browser flow](docs/api.md#manual-browser-flow) to test GitHub
+linking without a frontend. Run backend tests with `npm test` from `backend/`;
+the OAuth tests mock GitHub and Prisma and do not require real credentials or a database.

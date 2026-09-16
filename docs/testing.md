@@ -22,5 +22,8 @@ This ensures our API stays reliable and does not break existing integrations (li
 All backend tests are located in `backend/tests/`.
 
 - `api.test.js`: Core tests for endpoints (`/about.json`, `/auth/*`).
+- `oauth.test.js`: GitHub redirects, browser cookie binding, state expiration and
+  replay protection, token persistence and error handling. GitHub and Prisma are
+  mocked; these tests require no real credentials or running database.
 
 *Note: For tests requiring the database, ensure you mock Prisma or use a separate test database.*
