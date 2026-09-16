@@ -53,6 +53,7 @@ A customizable web dashboard that allows authenticated users to monitor digital 
 2. **Run with Docker**
 
    Start the entire stack (Frontend, Backend, Database) using Docker Compose:
+
    ```bash
    docker-compose up --build
    ```
