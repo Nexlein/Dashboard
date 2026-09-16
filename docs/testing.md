@@ -27,3 +27,11 @@ All backend tests are located in `backend/tests/`.
   mocked; these tests require no real credentials or running database.
 
 *Note: For tests requiring the database, ensure you mock Prisma or use a separate test database.*
+
+## Frontend Tests
+
+The frontend uses **Vitest** and **React Testing Library**.
+
+- `npm test` runs the frontend test suite in `jsdom`.
+- Component tests are located alongside components (e.g. `Navbar.test.jsx`).
+- Ensure the store (Zustand) is reset before each test if mocked state is required.
