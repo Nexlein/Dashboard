@@ -8,7 +8,7 @@
 ## Core Features
 
 - [x] **User Management**: Unauthenticated users can register. Administration section useful.
-- [ ] **Identity & Permissions**:
+- [x] **Identity & Permissions**:
   - [x] Authentication (credentials or OIDC) to bind data to account.
   - [x] Authorization (OAuth 2.0) to access external APIs. Link third-party to platform user.
 - [ ] **Service Subscriptions**:
@@ -44,7 +44,7 @@
 ## UX / UI Polish
 
 - [x] **Dark / Light Mode**: Theme toggle saved in local storage.
-- [ ] **Responsive Design**: Dashboard grid must stack beautifully on mobile devices.
+- [x] **Responsive Design**: Dashboard grid must stack beautifully on mobile devices.
 - [ ] **Internationalization (i18n)**: UI and Legal texts available in English and French.
 - [ ] **Lighthouse 100/100**: Perfect score on Accessibility and Best Practices.
 
