@@ -10,6 +10,7 @@ datasource db {
 model User {
   id            Int       @id @default(autoincrement())
   email         String    @unique
+  displayName   String?
   password      String? // Null for OAuth-only users
   isAdmin       Boolean   @default(false)
   cguAcceptedAt DateTime? // Timestamp when CGU was accepted

@@ -1,4 +1,7 @@
+process.env.JWT_SECRET = 'api-test-secret-that-is-long-enough-for-authentication-tests';
+
 const request = require('supertest');
+const jwt = require('jsonwebtoken');
 const app = require('../index');
 
 // Mock Prisma Client
@@ -56,6 +59,22 @@ describe('API Endpoints', () => {
                 expect(Array.isArray(firstWidget.params)).toBe(true);
             }
         });
+
+        it('allows configured frontend origins through CORS', async () => {
+            const res = await request(app)
+                .get('/about.json')
+                .set('Origin', 'http://localhost:5173');
+
+            expect(res.headers['access-control-allow-origin']).toBe('http://localhost:5173');
+        });
+
+        it('does not allow unknown origins through CORS', async () => {
+            const res = await request(app)
+                .get('/about.json')
+                .set('Origin', 'https://malicious.example');
+
+            expect(res.headers['access-control-allow-origin']).toBeUndefined();
+        });
     });
 
     describe('POST /auth/register', () => {
@@ -73,17 +92,83 @@ describe('API Endpoints', () => {
             expect(res.body.error).toBe('You must accept the CGU to register.');
         });
 
+        it('should reject invalid email addresses', async () => {
+            const res = await request(app).post('/auth/register').send({
+                email: 'not-an-email',
+                password: 'password123',
+                cguAccepted: true,
+            });
+
+            expect(res.statusCode).toBe(400);
+            expect(res.body.error).toBe('Invalid email address');
+        });
+
+        it('should require a password between 8 and 72 characters', async () => {
+            const res = await request(app).post('/auth/register').send({
+                email: 'test@test.com',
+                password: 'short',
+                cguAccepted: true,
+            });
+
+            expect(res.statusCode).toBe(400);
+            expect(res.body.error).toBe('Password must be between 8 and 72 characters');
+        });
+
         it('should register a new user successfully', async () => {
             prisma.user.findUnique.mockResolvedValue(null);
-            prisma.user.create.mockResolvedValue({ id: 1, email: 'test@test.com' });
+            prisma.user.create.mockResolvedValue({
+                id: 1,
+                email: 'test@test.com',
+                displayName: 'Test User',
+            });
 
-            const res = await request(app)
-                .post('/auth/register')
-                .send({ email: 'test@test.com', password: 'password123', cguAccepted: true });
+            const res = await request(app).post('/auth/register').send({
+                email: ' Test@TEST.com ',
+                password: 'password123',
+                displayName: '  Test User  ',
+                cguAccepted: true,
+            });
 
             expect(res.statusCode).toBe(201);
             expect(res.body.message).toBe('User registered successfully');
             expect(res.body.userId).toBe(1);
+            expect(prisma.user.create).toHaveBeenCalledWith({
+                data: expect.objectContaining({
+                    email: 'test@test.com',
+                    displayName: 'Test User',
+                }),
+            });
+        });
+
+        it('should reject a display name longer than 50 characters', async () => {
+            const res = await request(app)
+                .post('/auth/register')
+                .send({
+                    email: 'test@test.com',
+                    password: 'password123',
+                    displayName: 'a'.repeat(51),
+                    cguAccepted: true,
+                });
+
+            expect(res.statusCode).toBe(400);
+            expect(res.body.error).toBe('Display name must be 50 characters or fewer');
+            expect(prisma.user.create).not.toHaveBeenCalled();
+        });
+
+        it('should allow registration without a display name', async () => {
+            prisma.user.findUnique.mockResolvedValue(null);
+            prisma.user.create.mockResolvedValue({ id: 2, email: 'anonymous@test.com' });
+
+            const res = await request(app).post('/auth/register').send({
+                email: 'anonymous@test.com',
+                password: 'password123',
+                cguAccepted: true,
+            });
+
+            expect(res.statusCode).toBe(201);
+            expect(prisma.user.create).toHaveBeenCalledWith({
+                data: expect.objectContaining({ displayName: null }),
+            });
         });
 
         it('should return error if email already in use', async () => {
@@ -95,6 +180,49 @@ describe('API Endpoints', () => {
 
             expect(res.statusCode).toBe(409);
             expect(res.body.error).toBe('Email already in use');
+        });
+
+        it('should rate limit repeated authentication attempts', async () => {
+            let response;
+
+            for (let attempt = 0; attempt < 21; attempt += 1) {
+                response = await request(app).post('/auth/login').send({});
+            }
+
+            expect(response.statusCode).toBe(429);
+            expect(response.body.error).toBe(
+                'Too many authentication attempts. Please try again later.',
+            );
+        });
+    });
+
+    describe('GET /auth/me', () => {
+        it('returns the authenticated user profile', async () => {
+            const token = jwt.sign({ userId: 7, isAdmin: false }, process.env.JWT_SECRET);
+            prisma.user.findUnique.mockResolvedValue({
+                id: 7,
+                email: 'user@example.com',
+                displayName: 'Test User',
+            });
+
+            const res = await request(app).get('/auth/me').set('Authorization', `Bearer ${token}`);
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body).toEqual({
+                id: 7,
+                email: 'user@example.com',
+                displayName: 'Test User',
+            });
+            expect(prisma.user.findUnique).toHaveBeenCalledWith({
+                where: { id: 7 },
+                select: { id: true, email: true, displayName: true },
+            });
+        });
+
+        it('rejects unauthenticated profile requests', async () => {
+            const res = await request(app).get('/auth/me');
+
+            expect(res.statusCode).toBe(401);
         });
     });
 

@@ -13,6 +13,7 @@ The core entity representing a registered user on the platform.
 | - | - | - |
 | `id` | Int | Primary Key |
 | `email` | String | Unique email address |
+| `displayName` | String? | Optional display name used to personalize the interface |
 | `password` | String? | Hashed password (Nullable if logged in exclusively via OAuth) |
 | `isAdmin` | Boolean | Flag for administrative privileges |
 | `cguAcceptedAt` | DateTime? | Timestamp when user accepted CGU |
