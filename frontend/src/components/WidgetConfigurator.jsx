@@ -100,8 +100,9 @@ export function WidgetConfigurator() {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button>
-                    <Plus className="mr-2 h-4 w-4" /> Add Widget
+                <Button className="h-11 px-4" aria-label="Add widget">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Widget
                 </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">

@@ -4,7 +4,7 @@ import { persist } from 'zustand/middleware';
 export const useStore = create(
     persist(
         (set) => ({
-            theme: 'dark', // default theme
+            theme: 'light', // default theme
             setTheme: (theme) => set({ theme }),
             widgets: [
                 // initial dummy layout for #55
