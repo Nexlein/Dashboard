@@ -10,7 +10,13 @@ router.get('/', async (req, res) => {
         const widgets = await prisma.widgetConfig.findMany({
             where: { userId: req.user.userId },
         });
-        res.json(widgets);
+
+        const decryptedWidgets = widgets.map((w) => ({
+            ...w,
+            params: decryptParams(w.params),
+        }));
+
+        res.json(decryptedWidgets);
     } catch (error) {
         res.status(500).json({ error: 'Internal server error' });
     }
@@ -36,7 +42,11 @@ router.post('/', async (req, res) => {
             },
         });
 
-        res.status(201).json(widget);
+        // Decrypt immediately before sending back to frontend
+        res.status(201).json({
+            ...widget,
+            params: decryptParams(widget.params),
+        });
     } catch (error) {
         res.status(500).json({ error: 'Internal server error' });
     }
@@ -94,7 +104,10 @@ router.put('/:id', async (req, res) => {
             },
         });
 
-        res.json(updated);
+        res.json({
+            ...updated,
+            params: decryptParams(updated.params),
+        });
     } catch (error) {
         res.status(500).json({ error: 'Internal server error' });
     }
