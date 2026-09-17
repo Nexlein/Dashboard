@@ -60,7 +60,19 @@ A customizable web dashboard that allows authenticated users to monitor digital 
    docker-compose up --build
    ```
 
-3. **Access the Application**
+3. **Database Seeding (Test Data)**
+
+   To populate the database with mock accounts and widgets for testing, run the Prisma seeder from within the backend container:
+
+   ```bash
+   docker compose exec server npx prisma db seed
+   ```
+
+   **Available Test Accounts:**
+   - **Admin:** `admin@dashboard.local` / `admin`
+   - **User:** `user@dashboard.local` / `user` (comes pre-configured with a Weather and GitHub widget)
+
+4. **Access the Application**
    - Frontend: [http://localhost:8081](http://localhost:8081)
    - Backend API: [http://localhost:8080](http://localhost:8080)
    - `about.json`: [http://localhost:8080/about.json](http://localhost:8080/about.json)
