@@ -38,7 +38,7 @@
 ## Security & Robustness
 
 - [ ] **API Security**: Encrypt sensitive widget parameters (like API keys) in the database.
-- [ ] **Rate Limiting**: Protect authentication endpoints against brute-force attacks.
+- [x] **Rate Limiting**: Protect authentication endpoints against brute-force attacks.
 - [ ] **CORS**: Restrict API access to the frontend origin.
 - [ ] **Backend Cache**: In-memory cache for external API calls to prevent rate-limiting/bans.
 - [ ] **UI Error Boundaries**: Individual widget failures must not crash the entire dashboard.
