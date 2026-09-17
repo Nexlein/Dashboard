@@ -10,7 +10,13 @@ router.get('/', async (req, res) => {
         const widgets = await prisma.widgetConfig.findMany({
             where: { userId: req.user.userId },
         });
-        res.json(widgets);
+
+        const decryptedWidgets = widgets.map((w) => ({
+            ...w,
+            params: decryptParams(w.params),
+        }));
+
+        res.json(decryptedWidgets);
     } catch (error) {
         res.status(500).json({ error: 'Internal server error' });
     }
@@ -36,7 +42,35 @@ router.post('/', async (req, res) => {
             },
         });
 
-        res.status(201).json(widget);
+        // Decrypt immediately before sending back to frontend
+        res.status(201).json({
+            ...widget,
+            params: decryptParams(widget.params),
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// PUT /widgets/layout -> Batch update layouts for widgets
+router.put('/layout', async (req, res) => {
+    try {
+        const { layouts } = req.body;
+        if (!Array.isArray(layouts)) {
+            return res.status(400).json({ error: 'Layouts must be an array' });
+        }
+
+        // We can execute multiple updates in a transaction
+        await prisma.$transaction(
+            layouts.map((l) =>
+                prisma.widgetConfig.updateMany({
+                    where: { id: l.id, userId: req.user.userId },
+                    data: { layout: l.layout },
+                }),
+            ),
+        );
+
+        res.status(204).send();
     } catch (error) {
         res.status(500).json({ error: 'Internal server error' });
     }
@@ -70,7 +104,10 @@ router.put('/:id', async (req, res) => {
             },
         });
 
-        res.json(updated);
+        res.json({
+            ...updated,
+            params: decryptParams(updated.params),
+        });
     } catch (error) {
         res.status(500).json({ error: 'Internal server error' });
     }

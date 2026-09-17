@@ -10,6 +10,7 @@ router.get('/users', async (req, res) => {
             select: {
                 id: true,
                 email: true,
+                displayName: true,
                 isAdmin: true,
                 cguAcceptedAt: true,
                 language: true,

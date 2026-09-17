@@ -35,9 +35,14 @@ Register a new user account.
 {
   "email": "user@example.com",
   "password": "securepassword",
-  "name": "John Doe"
+  "displayName": "John Doe",
+  "cguAccepted": true
 }
 ```
+
+`displayName` is optional and limited to 50 characters. `cguAccepted` must be
+`true` for the account to be created. Email addresses are trimmed and stored in
+lowercase. Passwords must contain between 8 and 72 characters.
 
 **Response (201 Created):**
 
@@ -70,6 +75,22 @@ Authenticate an existing user.
 }
 ```
 
+Registration and login share a limit of 20 attempts per IP address every 15
+minutes. Further requests return `429 Too Many Requests`.
+
+### `GET /auth/me`
+
+Returns the authenticated user's public profile. Requires the
+`Authorization: Bearer <token>` header.
+
+```json
+{
+  "id": 1,
+  "email": "user@example.com",
+  "displayName": "John Doe"
+}
+```
+
 ## Administration
 
 All `/admin` endpoints require the `Authorization: Bearer <token>` header. The
@@ -88,6 +109,7 @@ Returns all users without exposing password hashes or OAuth tokens.
   {
     "id": 2,
     "email": "user@example.com",
+    "displayName": "John Doe",
     "isAdmin": false,
     "cguAcceptedAt": "2026-09-16T10:00:00.000Z",
     "language": "en",

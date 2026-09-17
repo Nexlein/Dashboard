@@ -48,6 +48,8 @@ A customizable web dashboard that allows authenticated users to monitor digital 
    with `openssl rand -hex 32`. Fill in `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`
    and `GITHUB_CALLBACK_URL` to enable GitHub linking. Register this callback in
    your GitHub OAuth App: `http://localhost:8080/auth/github/callback`.
+   `CORS_ORIGINS` lists the frontend origins allowed to call the API; the example
+   includes Vite on ports 5173/5174 and the Docker frontend on port 8081.
    Keep `backend/.env` private; commit only the example file.
 
 2. **Run with Docker**
@@ -58,7 +60,19 @@ A customizable web dashboard that allows authenticated users to monitor digital 
    docker-compose up --build
    ```
 
-3. **Access the Application**
+3. **Database Seeding (Test Data)**
+
+   To populate the database with mock accounts and widgets for testing, run the Prisma seeder from within the backend container:
+
+   ```bash
+   docker compose exec server npx prisma db seed
+   ```
+
+   **Available Test Accounts:**
+   - **Admin:** `admin@dashboard.local` / `admin`
+   - **User:** `user@dashboard.local` / `user` (comes pre-configured with a Weather and GitHub widget)
+
+4. **Access the Application**
    - Frontend: [http://localhost:8081](http://localhost:8081)
    - Backend API: [http://localhost:8080](http://localhost:8080)
    - `about.json`: [http://localhost:8080/about.json](http://localhost:8080/about.json)
@@ -67,7 +81,7 @@ A customizable web dashboard that allows authenticated users to monitor digital 
 
 ### Run the backend outside Docker
 
-After configuring `backend/.env` as above, keep `localhost:5432` in its
+After configuring `backend/.env` as above, keep `localhost:5433` in its
 `DATABASE_URL`. Docker Compose overrides this with `db:5432` when the backend
 itself runs inside Docker.
 

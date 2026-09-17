@@ -7,9 +7,9 @@
 
 ## Core Features
 
-- [ ] **User Management**: Unauthenticated users can register. Administration section useful. (Backend done, Frontend missing)
+- [ ] **User Management**: Unauthenticated users can register. Administration section useful. (Registration frontend/backend connected; administration frontend missing)
 - [ ] **Identity & Permissions**:
-  - [ ] Authentication (credentials or OIDC) to bind data to account. (Backend done, Frontend missing)
+  - [ ] Authentication (credentials or OIDC) to bind data to account. (Credentials frontend/backend connected; security hardening and OIDC remain)
   - [ ] Authorization (OAuth 2.0) to access external APIs. Link third-party to platform user.
 - [ ] **Service Subscriptions**:
   - [ ] Authenticated users select services to subscribe to.
@@ -38,7 +38,7 @@
 ## Security & Robustness
 
 - [ ] **API Security**: Encrypt sensitive widget parameters (like API keys) in the database.
-- [ ] **Rate Limiting**: Protect authentication endpoints against brute-force attacks.
+- [x] **Rate Limiting**: Protect authentication endpoints against brute-force attacks.
 - [ ] **CORS**: Restrict API access to the frontend origin.
 - [ ] **Backend Cache**: In-memory cache for external API calls to prevent rate-limiting/bans.
 - [ ] **UI Error Boundaries**: Individual widget failures must not crash the entire dashboard.

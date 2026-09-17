@@ -4,13 +4,9 @@ import { persist } from 'zustand/middleware';
 export const useStore = create(
     persist(
         (set) => ({
-            theme: 'dark', // default theme
+            theme: 'light', // default theme
             setTheme: (theme) => set({ theme }),
-            widgets: [
-                // initial dummy layout for #55
-                { i: 'a', x: 0, y: 0, w: 4, h: 2, title: 'Weather' },
-                { i: 'b', x: 4, y: 0, w: 4, h: 2, title: 'GitHub' },
-            ],
+            widgets: [],
             setWidgets: (widgets) => set({ widgets }),
             addWidget: (widget) =>
                 set((state) => ({
@@ -18,17 +14,18 @@ export const useStore = create(
                         ...state.widgets,
                         {
                             ...widget,
-                            i: crypto.randomUUID(), // unique id
-                            x: 0,
-                            y: 0, // Top left placement, gravity handles the rest
-                            w: widget.w || 4,
-                            h: widget.h || 2,
+                            i: String(widget.id), // Backend ID as grid ID
+                            x: widget.layout?.x || 0,
+                            y: widget.layout?.y || 0,
+                            w: widget.layout?.w || 4,
+                            h: widget.layout?.h || 2,
                         },
                     ],
                 })),
         }),
         {
             name: 'dashboard-storage',
+            partialize: (state) => ({ theme: state.theme }), // Only persist theme locally
         },
     ),
 );

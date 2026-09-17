@@ -50,6 +50,7 @@ describe('Admin routes', () => {
             {
                 id: 2,
                 email: 'user@test.com',
+                displayName: 'Test User',
                 isAdmin: false,
             },
         ]);
@@ -63,9 +64,16 @@ describe('Admin routes', () => {
             {
                 id: 2,
                 email: 'user@test.com',
+                displayName: 'Test User',
                 isAdmin: false,
             },
         ]);
+
+        expect(prisma.user.findMany).toHaveBeenCalledWith(
+            expect.objectContaining({
+                select: expect.objectContaining({ displayName: true }),
+            }),
+        );
     });
 
     test('allows an admin to delete another user', async () => {
