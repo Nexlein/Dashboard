@@ -3,11 +3,14 @@ import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import { useStore } from '@/store/useStore';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { updateWidgetLayouts } from '@/lib/widgets';
+import { useRef } from 'react';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
 export default function DashboardGrid() {
     const { widgets, setWidgets } = useStore();
+    const timeoutRef = useRef(null);
 
     const onLayoutChange = (layout) => {
         // Map new layout to our widgets state
@@ -25,6 +28,16 @@ export default function DashboardGrid() {
             return widget;
         });
         setWidgets(updatedWidgets);
+
+        // Batch update to backend via debounce
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        timeoutRef.current = setTimeout(() => {
+            const apiLayouts = updatedWidgets.map((w) => ({
+                id: parseInt(w.i, 10),
+                layout: { x: w.x, y: w.y, w: w.w, h: w.h },
+            }));
+            updateWidgetLayouts(apiLayouts).catch(console.error);
+        }, 1000);
     };
 
     return (

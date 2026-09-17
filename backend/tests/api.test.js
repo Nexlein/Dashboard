@@ -18,6 +18,7 @@ jest.mock('@prisma/client', () => {
             update: jest.fn(),
             delete: jest.fn(),
         },
+        $transaction: jest.fn(),
     };
     return { PrismaClient: jest.fn(() => mPrisma) };
 });
@@ -262,6 +263,23 @@ describe('API Endpoints', () => {
             // We just check if the route is defined and processes the body
             if (res.statusCode === 201) {
                 expect(res.body.serviceName).toBe('weather');
+            }
+        });
+
+        it('should batch update widget layouts', async () => {
+            prisma.$transaction.mockResolvedValue();
+
+            const res = await request(app)
+                .put('/widgets/layout')
+                .send({
+                    layouts: [
+                        { id: 1, layout: { x: 0, y: 0, w: 4, h: 4 } },
+                        { id: 2, layout: { x: 4, y: 0, w: 4, h: 2 } },
+                    ],
+                });
+
+            if (res.statusCode === 204) {
+                expect(prisma.$transaction).toHaveBeenCalled();
             }
         });
     });

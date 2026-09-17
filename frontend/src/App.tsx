@@ -6,16 +6,34 @@ import { getCurrentUser, hasValidAuthToken, logout, type AuthUser } from '@/lib/
 import AuthPage from '@/pages/AuthPage';
 import TermsPage from '@/pages/TermsPage';
 
+import { useStore } from '@/store/useStore';
+import { fetchWidgets } from '@/lib/widgets';
+
 function Dashboard() {
     const navigate = useNavigate();
     const [user, setUser] = useState<AuthUser | null>(null);
+    const setWidgets = useStore((state) => state.setWidgets);
 
     useEffect(() => {
         let isActive = true;
 
         getCurrentUser()
             .then((profile) => {
-                if (isActive) setUser(profile);
+                if (isActive) {
+                    setUser(profile);
+                    fetchWidgets().then((apiWidgets) => {
+                        const formatted = apiWidgets.map((w) => ({
+                            ...w,
+                            i: String(w.id),
+                            x: w.layout.x,
+                            y: w.layout.y,
+                            w: w.layout.w,
+                            h: w.layout.h,
+                            title: w.widgetName,
+                        }));
+                        setWidgets(formatted);
+                    });
+                }
             })
             .catch(() => {
                 if (!isActive) return;
@@ -26,7 +44,7 @@ function Dashboard() {
         return () => {
             isActive = false;
         };
-    }, [navigate]);
+    }, [navigate, setWidgets]);
 
     function handleLogout() {
         logout();

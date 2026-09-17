@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { useStore } from '@/store/useStore';
+import { createWidget } from '@/lib/widgets';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -74,27 +75,41 @@ export function WidgetConfigurator() {
         setParams({});
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!service || !widgetType) return;
 
         // Find the widget name for the title
         const widgetName =
             SERVICES[service].widgets.find((w) => w.id === widgetType)?.name || 'Unknown Widget';
 
-        addWidget({
-            service,
-            type: widgetType,
-            title: `${SERVICES[service].name} - ${widgetName}`,
-            params,
-            refreshTimer: parseInt(refreshTimer, 10),
-        });
+        try {
+            const apiWidget = await createWidget({
+                serviceName: service,
+                widgetName: widgetType,
+                params,
+                refreshRate: parseInt(refreshTimer, 10),
+                layout: { x: 0, y: 0, w: 4, h: 2 },
+            });
 
-        setOpen(false);
-        // Reset form
-        setService('');
-        setWidgetType('');
-        setParams({});
-        setRefreshTimer('60');
+            addWidget({
+                id: apiWidget.id,
+                service,
+                type: widgetType,
+                title: `${SERVICES[service].name} - ${widgetName}`,
+                params,
+                refreshTimer: parseInt(refreshTimer, 10),
+                layout: apiWidget.layout,
+            });
+
+            setOpen(false);
+            // Reset form
+            setService('');
+            setWidgetType('');
+            setParams({});
+            setRefreshTimer('60');
+        } catch (error) {
+            console.error('Failed to create widget:', error);
+        }
     };
 
     return (

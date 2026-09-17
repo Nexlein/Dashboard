@@ -42,6 +42,30 @@ router.post('/', async (req, res) => {
     }
 });
 
+// PUT /widgets/layout -> Batch update layouts for widgets
+router.put('/layout', async (req, res) => {
+    try {
+        const { layouts } = req.body;
+        if (!Array.isArray(layouts)) {
+            return res.status(400).json({ error: 'Layouts must be an array' });
+        }
+
+        // We can execute multiple updates in a transaction
+        await prisma.$transaction(
+            layouts.map((l) =>
+                prisma.widgetConfig.updateMany({
+                    where: { id: l.id, userId: req.user.userId },
+                    data: { layout: l.layout },
+                }),
+            ),
+        );
+
+        res.status(204).send();
+    } catch (error) {
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 // PUT /widgets/:id -> Update an existing widget
 router.put('/:id', async (req, res) => {
     try {
