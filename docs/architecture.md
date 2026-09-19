@@ -35,6 +35,7 @@ flowchart TB
 - **Framework**: React via Vite.
 - **Role**: Renders the drag-and-drop grid (`react-grid-layout`) and handles user interactions.
 - **State**: Manages widget configurations, OAuth states, and user sessions.
+- **Widgets**: Uses a custom `useWidgetTimer` hook embedded in `WidgetRenderer` to independently auto-refresh widget data based on the database `refreshRate`.
 
 ### 2. Backend (Server)
 
