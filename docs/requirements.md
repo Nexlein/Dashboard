@@ -25,7 +25,7 @@
 - [ ] **Accessibility (a11y)**:
   - [ ] Full keyboard navigation support.
   - [ ] Screen reader compatibility (ARIA labels).
-- [ ] **Timer**: Periodic refresh of widget data based on widget config.
+- [x] **Timer**: Periodic refresh of widget data based on widget config.
 
 ## Legal & Compliance
 
