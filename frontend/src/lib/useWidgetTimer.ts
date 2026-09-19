@@ -2,11 +2,11 @@ import { useEffect, useRef } from 'react';
 
 /**
  * Hook to auto-refresh widget data.
- * @param {number} refreshRate - Refresh interval in seconds.
- * @param {function} fetchFn - Function to fetch data.
+ * @param refreshRate - Refresh interval in seconds.
+ * @param fetchFn - Function to fetch data.
  */
-export function useWidgetTimer(refreshRate, fetchFn) {
-    const savedFetchFn = useRef();
+export function useWidgetTimer(refreshRate: number, fetchFn: () => void) {
+    const savedFetchFn = useRef<() => void>(fetchFn);
 
     // Remember the latest callback if it changes.
     useEffect(() => {
