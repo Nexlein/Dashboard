@@ -5,6 +5,7 @@ import { useStore } from '@/store/useStore';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { updateWidgetLayouts } from '@/lib/widgets';
 import { useRef } from 'react';
+import WidgetRenderer from './WidgetRenderer';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
@@ -58,8 +59,8 @@ export default function DashboardGrid() {
                             <CardHeader className="p-4 bg-muted/50 border-b border-border">
                                 <CardTitle className="text-sm">{widget.title}</CardTitle>
                             </CardHeader>
-                            <CardContent className="p-4 flex items-center justify-center">
-                                <p className="text-muted-foreground text-sm">Widget Content</p>
+                            <CardContent className="p-4 flex items-center justify-center h-full">
+                                <WidgetRenderer widget={widget} />
                             </CardContent>
                         </Card>
                     </div>
