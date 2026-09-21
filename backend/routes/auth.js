@@ -240,12 +240,14 @@ router.get('/github/callback', async (req, res) => {
     else pendingGithubLinks.delete(state);
     res.clearCookie(cookieName, cookieOptions);
 
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+
     if (req.query.error) {
-        return res.status(400).json({ error: 'GitHub authorization failed or refused' });
+        return res.redirect(`${frontendUrl}/services?error=github_auth_failed`);
     }
 
     if (typeof code !== 'string' || !code) {
-        return res.status(400).json({ error: 'Missing or invalid code' });
+        return res.redirect(`${frontendUrl}/services?error=github_missing_code`);
     }
 
     try {
@@ -272,7 +274,7 @@ router.get('/github/callback', async (req, res) => {
             typeof data.access_token !== 'string' ||
             !data.access_token
         ) {
-            return res.status(502).json({ error: 'Could not obtain GitHub token' });
+            throw new Error('Could not obtain GitHub token');
         }
 
         const accessToken = data.access_token;
@@ -342,21 +344,19 @@ router.get('/github/callback', async (req, res) => {
             update: tokenData,
         });
 
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
         if (isLogin) {
             const user = await prisma.user.findUnique({ where: { id: userId } });
             const token = jwt.sign({ userId: user.id, isAdmin: user.isAdmin }, JWT_SECRET, {
                 expiresIn: '24h',
             });
-            const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
             res.redirect(`${frontendUrl}/login/oauth?token=${token}`);
         } else {
-            res.json({
-                message: 'GitHub account linked',
-                userId,
-            });
+            res.redirect(`${frontendUrl}/services?linked=github`);
         }
     } catch {
-        res.status(500).json({ error: 'GitHub flow failed' });
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        res.redirect(`${frontendUrl}/services?error=github_flow_failed`);
     }
 });
 
