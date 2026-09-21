@@ -34,42 +34,87 @@ const SERVICES = {
     weather: {
         name: 'Weather',
         widgets: [
-            { id: 'current_weather', name: 'Current Temperature' },
-            { id: 'forecast', name: '5-Day Forecast' },
+            {
+                id: 'current_weather',
+                name: 'Current Temperature',
+                params: [
+                    { id: 'city', label: 'City Name', type: 'text', placeholder: 'e.g. Paris' },
+                ],
+            },
+            {
+                id: 'forecast',
+                name: '5-Day Forecast',
+                params: [
+                    { id: 'city', label: 'City Name', type: 'text', placeholder: 'e.g. Paris' },
+                ],
+            },
         ],
-        params: [{ id: 'city', label: 'City Name', type: 'text', placeholder: 'e.g. Paris' }],
     },
     github: {
         name: 'GitHub',
         widgets: [
-            { id: 'github-repo', name: 'Repository Stats' },
-            { id: 'github-user', name: 'User Profile' },
-        ],
-        params: [
             {
-                id: 'repo',
-                label: 'Repository Name',
-                type: 'text',
-                placeholder: 'e.g. facebook/react',
+                id: 'repo_stats',
+                name: 'Repository Stats',
+                params: [
+                    {
+                        id: 'owner',
+                        label: 'Owner (Organization/User)',
+                        type: 'text',
+                        placeholder: 'e.g. facebook',
+                    },
+                    {
+                        id: 'repo',
+                        label: 'Repository Name',
+                        type: 'text',
+                        placeholder: 'e.g. react',
+                    },
+                ],
             },
-        ],
-    },
-    youtube: {
-        name: 'YouTube',
-        widgets: [{ id: 'youtube-stats', name: 'Channel Stats' }],
-        params: [
             {
-                id: 'channel',
-                label: 'Channel ID',
-                type: 'text',
-                placeholder: 'e.g. UCX6OQ3DkcsbYNE6H8uQQuVA',
+                id: 'latest_commits',
+                name: 'Latest Commits',
+                params: [
+                    { id: 'owner', label: 'Owner', type: 'text', placeholder: 'e.g. facebook' },
+                    {
+                        id: 'repo',
+                        label: 'Repository Name',
+                        type: 'text',
+                        placeholder: 'e.g. react',
+                    },
+                    {
+                        id: 'branch',
+                        label: 'Branch (optional)',
+                        type: 'text',
+                        placeholder: 'e.g. main',
+                    },
+                ],
+            },
+            {
+                id: 'user_profile',
+                name: 'User Profile',
+                params: [
+                    {
+                        id: 'username',
+                        label: 'GitHub Username (leave empty for your profile)',
+                        type: 'text',
+                        placeholder: 'e.g. nexlein',
+                    },
+                ],
             },
         ],
     },
 };
 
-function areParamsComplete(service, params) {
-    return SERVICES[service]?.params?.every((param) => params[param.id]?.trim()) ?? false;
+function areParamsComplete(service, widgetType, params) {
+    if (!service || !widgetType) return false;
+    const widgetInfo = SERVICES[service]?.widgets?.find((w) => w.id === widgetType);
+    if (!widgetInfo || !widgetInfo.params) return true;
+    return widgetInfo.params.every((param) => {
+        // if optional (e.g. branch, or username), don't require it
+        if (param.label.includes('optional') || param.label.includes('leave empty')) return true;
+        return params[param.id]?.trim();
+    });
 }
 
 function isRefreshRateValid(refreshTimer) {
@@ -116,7 +161,7 @@ export function WidgetConfigurator() {
         if (
             !service ||
             !widgetType ||
-            !areParamsComplete(service, params) ||
+            !areParamsComplete(service, widgetType, params) ||
             !serviceConnected ||
             !isRefreshRateValid(refreshTimer)
         )
@@ -227,23 +272,25 @@ export function WidgetConfigurator() {
                     )}
 
                     {widgetType &&
-                        SERVICES[service]?.params?.map((param) => (
-                            <div
-                                className="grid gap-2 animate-in fade-in slide-in-from-top-2"
-                                key={param.id}
-                            >
-                                <Label htmlFor={param.id}>{param.label}</Label>
-                                <Input
-                                    id={param.id}
-                                    type={param.type}
-                                    placeholder={param.placeholder}
-                                    value={params[param.id] || ''}
-                                    onChange={(e) =>
-                                        setParams({ ...params, [param.id]: e.target.value })
-                                    }
-                                />
-                            </div>
-                        ))}
+                        SERVICES[service]?.widgets
+                            ?.find((w) => w.id === widgetType)
+                            ?.params?.map((param) => (
+                                <div
+                                    className="grid gap-2 animate-in fade-in slide-in-from-top-2"
+                                    key={param.id}
+                                >
+                                    <Label htmlFor={param.id}>{param.label}</Label>
+                                    <Input
+                                        id={param.id}
+                                        type={param.type}
+                                        placeholder={param.placeholder}
+                                        value={params[param.id] || ''}
+                                        onChange={(e) =>
+                                            setParams({ ...params, [param.id]: e.target.value })
+                                        }
+                                    />
+                                </div>
+                            ))}
 
                     {widgetType && (
                         <div className="grid gap-2 animate-in fade-in slide-in-from-top-2">
@@ -269,7 +316,7 @@ export function WidgetConfigurator() {
                         disabled={
                             !service ||
                             !widgetType ||
-                            !areParamsComplete(service, params) ||
+                            !areParamsComplete(service, widgetType, params) ||
                             !serviceConnected ||
                             connectionsLoading ||
                             !isRefreshRateValid(refreshTimer)

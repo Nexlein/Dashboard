@@ -35,8 +35,18 @@ const WIDGET_PRESENTATION: Record<string, WidgetPresentation> = {
         title: 'Weather',
         defaultLayout: { x: 0, y: 0, w: 4, h: 3 },
     },
-    'github:github-user': { title: 'GitHub - User Profile' },
-    'github:github-repo': { title: 'GitHub - Repository Stats' },
+    'github:repo_stats': {
+        title: 'GitHub - Repository Stats',
+        defaultLayout: { x: 0, y: 0, w: 3, h: 2 },
+    },
+    'github:latest_commits': {
+        title: 'GitHub - Latest Commits',
+        defaultLayout: { x: 0, y: 0, w: 4, h: 3 },
+    },
+    'github:user_profile': {
+        title: 'GitHub - User Profile',
+        defaultLayout: { x: 0, y: 0, w: 3, h: 3 },
+    },
 };
 
 function widgetKey(serviceName: string, widgetName: string) {

@@ -2,6 +2,11 @@ import { useState, useCallback } from 'react';
 import { useWidgetTimer } from '@/lib/useWidgetTimer';
 import { Droplets, Loader2, Wind } from 'lucide-react';
 import { fetchWidgetData } from '@/lib/widgets';
+import {
+    GithubRepoWidget,
+    GithubProfileWidget,
+    GithubCommitsWidget,
+} from './widgets/GithubWidgets';
 
 function WeatherIcon({ code, description }) {
     if (!code) return null;
@@ -92,9 +97,10 @@ export default function WidgetRenderer({ widget }) {
         }
     }, [id]);
 
-    useWidgetTimer(isWeatherWidget ? refreshRate : 0, fetchData);
+    const isSupportedService = ['weather', 'github'].includes(serviceName);
+    useWidgetTimer(isSupportedService ? refreshRate : 0, fetchData);
 
-    if (!isWeatherWidget) {
+    if (!isSupportedService) {
         return (
             <div className="flex h-full items-center justify-center text-center text-sm text-muted-foreground">
                 This service is not implemented yet.
@@ -132,6 +138,12 @@ export default function WidgetRenderer({ widget }) {
         return <CurrentWeather data={data} />;
     }
     if (['forecast', 'weather-forecast'].includes(widgetName)) return <Forecast data={data} />;
+
+    if (['repo_stats', 'github-repo'].includes(widgetName)) return <GithubRepoWidget data={data} />;
+    if (['latest_commits', 'github-commits'].includes(widgetName))
+        return <GithubCommitsWidget data={data} />;
+    if (['user_profile', 'github-user'].includes(widgetName))
+        return <GithubProfileWidget data={data} />;
 
     return (
         <pre className="h-full w-full overflow-auto text-xs">{JSON.stringify(data, null, 2)}</pre>
