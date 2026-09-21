@@ -183,7 +183,7 @@ router.get('/github', requireAuth, (req, res) => {
     const params = new URLSearchParams({
         client_id: process.env.GITHUB_CLIENT_ID,
         redirect_uri: process.env.GITHUB_CALLBACK_URL,
-        scope: 'read:user',
+        scope: 'user:email read:user repo',
         state,
     });
 

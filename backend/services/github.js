@@ -46,7 +46,11 @@ module.exports = {
         if (widgetName === 'repo_stats' || widgetName === 'github-repo') {
             const { owner, repo } = params;
             const res = await fetch(`https://api.github.com/repos/${owner}/${repo}`, { headers });
-            if (!res.ok) throw new Error('Failed to fetch repo stats');
+            if (!res.ok) {
+                const err = new Error(`GitHub API error: ${res.statusText}`);
+                err.statusCode = res.status;
+                throw err;
+            }
             const data = await res.json();
             return {
                 stars: data.stargazers_count,
@@ -63,7 +67,11 @@ module.exports = {
                 `https://api.github.com/repos/${owner}/${repo}/commits?sha=${branch || 'main'}&per_page=5`,
                 { headers },
             );
-            if (!res.ok) throw new Error('Failed to fetch commits');
+            if (!res.ok) {
+                const err = new Error(`GitHub API error: ${res.statusText}`);
+                err.statusCode = res.status;
+                throw err;
+            }
             const data = await res.json();
             return data.map((commit) => ({
                 sha: commit.sha,
@@ -81,7 +89,11 @@ module.exports = {
                 ? `https://api.github.com/users/${username}`
                 : 'https://api.github.com/user';
             const res = await fetch(url, { headers });
-            if (!res.ok) throw new Error('Failed to fetch user profile');
+            if (!res.ok) {
+                const err = new Error(`GitHub API error: ${res.statusText}`);
+                err.statusCode = res.status;
+                throw err;
+            }
             const data = await res.json();
             return {
                 login: data.login,
