@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { login, register } from '@/lib/auth';
+import { login, register, API_URL } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 
 function DashboardBackdrop() {
@@ -256,6 +256,25 @@ export default function AuthPage() {
                             Compte créé. Vous pouvez maintenant vous connecter.
                         </p>
                     )}
+
+                    <Button
+                        type="button"
+                        variant="outline"
+                        className="mb-4 h-10 w-full"
+                        onClick={() => (window.location.href = `${API_URL}/auth/github/login`)}
+                    >
+                        <GitFork className="mr-2 size-4" />
+                        Continuer avec GitHub
+                    </Button>
+
+                    <div className="relative mb-6">
+                        <div className="absolute inset-0 flex items-center">
+                            <span className="w-full border-t" />
+                        </div>
+                        <div className="relative flex justify-center text-xs uppercase">
+                            <span className="bg-white/88 px-2 text-muted-foreground">Ou</span>
+                        </div>
+                    </div>
 
                     <form className="space-y-4" onSubmit={handleSubmit}>
                         {isRegister && (
