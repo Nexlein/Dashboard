@@ -1,6 +1,6 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
-const { encryptParams, decryptParams, decryptJson } = require('../utils/encryption');
+const { encryptParams, decryptParams, decryptJson, encryptJson } = require('../utils/encryption');
 const registry = require('../services/registry');
 
 const router = express.Router();
@@ -13,6 +13,26 @@ function isValidRefreshRate(refreshRate) {
 
 async function getServiceConnection(userId, service) {
     if (!service.connection) return null;
+
+    if (service.connection.type === 'oauth') {
+        const token = await prisma.oAuthToken.findUnique({
+            where: {
+                userId_provider: {
+                    userId,
+                    provider: service.name,
+                },
+            },
+        });
+        if (!token) return null;
+        return {
+            id: token.id,
+            userId,
+            serviceName: service.name,
+            encryptedCredentials: encryptJson({ accessToken: token.accessToken }),
+            keyHint: 'OAuth',
+            verifiedAt: token.expiresAt || new Date(),
+        };
+    }
 
     return prisma.serviceConnection.findUnique({
         where: {
