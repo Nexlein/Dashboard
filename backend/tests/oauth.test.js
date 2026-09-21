@@ -223,11 +223,11 @@ describe('GitHub account linking', () => {
     it('handles a network failure and database failure without exposing secrets', async () => {
         global.fetch.mockRejectedValueOnce(new Error('private upstream details'));
         let response = await callback(await startLink()).expect(500);
-        expect(response.body).toEqual({ error: 'GitHub linking failed' });
+        expect(response.body).toEqual({ error: 'GitHub flow failed' });
         expect(prisma.oAuthToken.upsert).not.toHaveBeenCalled();
         prisma.oAuthToken.upsert.mockRejectedValueOnce(new Error('private database details'));
         response = await callback(await startLink()).expect(500);
-        expect(response.body).toEqual({ error: 'GitHub linking failed' });
+        expect(response.body).toEqual({ error: 'GitHub flow failed' });
     });
 
     describe('GitHub Login Flow (/auth/github/login)', () => {

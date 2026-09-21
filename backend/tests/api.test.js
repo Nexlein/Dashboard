@@ -26,6 +26,12 @@ jest.mock('@prisma/client', () => {
             upsert: jest.fn(),
             deleteMany: jest.fn(),
         },
+        oAuthToken: {
+            findMany: jest.fn(),
+            findUnique: jest.fn(),
+            upsert: jest.fn(),
+            deleteMany: jest.fn(),
+        },
         $transaction: jest.fn(),
     };
     return { PrismaClient: jest.fn(() => mPrisma) };
@@ -380,6 +386,7 @@ describe('API Endpoints', () => {
 
         it('lists services without exposing credentials', async () => {
             prisma.serviceConnection.findMany.mockResolvedValue([connection]);
+            prisma.oAuthToken.findMany.mockResolvedValue([]);
 
             const res = await request(app).get('/services').set('Authorization', `Bearer ${token}`);
 
