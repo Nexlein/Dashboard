@@ -1,3 +1,7 @@
+const MAX_CACHE_TTL_MS = 5 * 60 * 1000;
+const MIN_REFRESH_RATE_SECONDS = 60;
+const cache = new Map();
+
 module.exports = {
     name: 'github',
     displayName: 'GitHub',
@@ -38,6 +42,16 @@ module.exports = {
             throw error;
         }
 
+        const cacheScope = context.cacheScope || 'unscoped';
+        const cacheKey = `${cacheScope}:${widgetName}:${JSON.stringify(params)}`;
+        const requestedRefreshRate = Number(context.refreshRate);
+        const refreshRate = Number.isFinite(requestedRefreshRate)
+            ? Math.max(requestedRefreshRate, MIN_REFRESH_RATE_SECONDS)
+            : MIN_REFRESH_RATE_SECONDS;
+        const cacheTtlMs = Math.min(refreshRate * 1000, MAX_CACHE_TTL_MS);
+        const cached = cache.get(cacheKey);
+        if (cached && Date.now() - cached.fetchedAt < cacheTtlMs) return cached.data;
+
         const headers = {
             Authorization: `Bearer ${credentials.accessToken}`,
             Accept: 'application/vnd.github.v3+json',
@@ -52,13 +66,15 @@ module.exports = {
                 throw err;
             }
             const data = await res.json();
-            return {
+            const result = {
                 stars: data.stargazers_count,
                 forks: data.forks_count,
                 open_issues: data.open_issues_count,
                 name: data.full_name,
                 description: data.description,
             };
+            cache.set(cacheKey, { data: result, fetchedAt: Date.now() });
+            return result;
         }
 
         if (widgetName === 'latest_commits' || widgetName === 'github-commits') {
@@ -73,7 +89,7 @@ module.exports = {
                 throw err;
             }
             const data = await res.json();
-            return data.map((commit) => ({
+            const result = data.map((commit) => ({
                 sha: commit.sha,
                 message: commit.commit.message,
                 author: commit.commit.author.name,
@@ -81,6 +97,8 @@ module.exports = {
                 avatar: commit.author?.avatar_url,
                 url: commit.html_url,
             }));
+            cache.set(cacheKey, { data: result, fetchedAt: Date.now() });
+            return result;
         }
 
         if (widgetName === 'user_profile' || widgetName === 'github-user') {
@@ -95,7 +113,7 @@ module.exports = {
                 throw err;
             }
             const data = await res.json();
-            return {
+            const result = {
                 login: data.login,
                 name: data.name,
                 avatar_url: data.avatar_url,
@@ -104,8 +122,11 @@ module.exports = {
                 following: data.following,
                 bio: data.bio,
             };
+            cache.set(cacheKey, { data: result, fetchedAt: Date.now() });
+            return result;
         }
 
         throw new Error('Unknown widget name');
     },
+    clearCache: () => cache.clear(),
 };
