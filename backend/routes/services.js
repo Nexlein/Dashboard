@@ -22,12 +22,24 @@ function publicConnection(service, connection) {
 
 router.get('/', async (req, res) => {
     try {
-        const connections = await prisma.serviceConnection.findMany({
-            where: { userId: req.user.userId },
+        const [connections, oauthTokens] = await Promise.all([
+            prisma.serviceConnection.findMany({
+                where: { userId: req.user.userId },
+            }),
+            prisma.oAuthToken.findMany({
+                where: { userId: req.user.userId },
+            }),
+        ]);
+
+        const byService = new Map();
+        connections.forEach((conn) => byService.set(conn.serviceName, conn));
+        oauthTokens.forEach((token) => {
+            byService.set(token.provider, {
+                serviceName: token.provider,
+                keyHint: 'OAuth',
+                verifiedAt: token.expiresAt || new Date(),
+            });
         });
-        const byService = new Map(
-            connections.map((connection) => [connection.serviceName, connection]),
-        );
 
         return res.json(
             registry
@@ -93,12 +105,21 @@ router.delete('/:serviceName/connection', async (req, res) => {
     }
 
     try {
-        await prisma.serviceConnection.deleteMany({
-            where: {
-                userId: req.user.userId,
-                serviceName: service.name,
-            },
-        });
+        if (service.connection.type === 'oauth') {
+            await prisma.oAuthToken.deleteMany({
+                where: {
+                    userId: req.user.userId,
+                    provider: service.name,
+                },
+            });
+        } else {
+            await prisma.serviceConnection.deleteMany({
+                where: {
+                    userId: req.user.userId,
+                    serviceName: service.name,
+                },
+            });
+        }
         service.clearCache?.();
         return res.status(204).send();
     } catch {

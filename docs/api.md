@@ -246,7 +246,19 @@ a connection-required message until the service is connected again.
 
 **Response (204 No Content)**
 
-## GitHub account linking
+## GitHub Authentication & Account linking
+
+### `GET /auth/github/login`
+
+Starts the GitHub OAuth login flow. If the user does not exist, an account is created using their GitHub email.
+Redirects the user to GitHub to authorize the application.
+
+Can be called directly from the browser (e.g. `window.location.href = '/auth/github/login'`).
+
+### `GET /auth/github/login/callback`
+
+Receives the GitHub OAuth callback for the login flow.
+On success, it creates or updates the user account, generates a Dashboard JWT, and redirects the user to the frontend with the token appended as a query parameter (e.g., `http://localhost:8081/?token=...`).
 
 ### Manual browser flow
 

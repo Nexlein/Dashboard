@@ -229,4 +229,14 @@ describe('GitHub account linking', () => {
         response = await callback(await startLink()).expect(500);
         expect(response.body).toEqual({ error: 'GitHub linking failed' });
     });
+
+    describe('GitHub Login Flow (/auth/github/login)', () => {
+        it('starts the login flow without needing authorization', async () => {
+            const response = await request(app).get('/auth/github/login').expect(302);
+            const url = new URL(response.headers.location);
+            expect(url.origin).toBe('https://github.com');
+            expect(url.pathname).toBe('/login/oauth/authorize');
+            expect(url.searchParams.get('client_id')).toBe('test-client-id');
+        });
+    });
 });
