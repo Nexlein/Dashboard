@@ -1,6 +1,77 @@
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+
 const MAX_CACHE_TTL_MS = 5 * 60 * 1000;
 const MIN_REFRESH_RATE_SECONDS = 60;
 const cache = new Map();
+
+async function refreshGitHubToken(userId, refreshToken) {
+    if (!process.env.GITHUB_CLIENT_ID || !process.env.GITHUB_CLIENT_SECRET) {
+        throw new Error('GitHub client not configured');
+    }
+
+    const response = await fetch('https://github.com/login/oauth/access_token', {
+        method: 'POST',
+        headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+            client_id: process.env.GITHUB_CLIENT_ID,
+            client_secret: process.env.GITHUB_CLIENT_SECRET,
+            refresh_token: refreshToken,
+            grant_type: 'refresh_token',
+        }),
+    });
+
+    const data = await response.json();
+    if (!response.ok || data.error || !data.access_token) {
+        throw new Error('Could not refresh GitHub token');
+    }
+
+    await prisma.oAuthToken.update({
+        where: { userId_provider: { userId, provider: 'github' } },
+        data: {
+            accessToken: data.access_token,
+            refreshToken: data.refresh_token ?? refreshToken,
+            expiresAt: data.expires_in ? new Date(Date.now() + data.expires_in * 1000) : null,
+        },
+    });
+
+    return data.access_token;
+}
+
+async function fetchWithRefresh(url, context) {
+    let accessToken = context.credentials.accessToken;
+    let headers = {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: 'application/vnd.github.v3+json',
+    };
+
+    let res = await fetch(url, { headers });
+
+    if (res.status === 401 && context.credentials.refreshToken && context.userId) {
+        try {
+            accessToken = await refreshGitHubToken(
+                context.userId,
+                context.credentials.refreshToken,
+            );
+            // Update credentials in memory for subsequent calls if any
+            context.credentials.accessToken = accessToken;
+            headers.Authorization = `Bearer ${accessToken}`;
+            res = await fetch(url, { headers });
+        } catch (err) {
+            // Let the original 401 fall through
+        }
+    }
+
+    if (!res.ok) {
+        const err = new Error(`GitHub API error: ${res.statusText}`);
+        err.statusCode = res.status;
+        throw err;
+    }
+    return res;
+}
 
 module.exports = {
     name: 'github',
@@ -52,19 +123,12 @@ module.exports = {
         const cached = cache.get(cacheKey);
         if (cached && Date.now() - cached.fetchedAt < cacheTtlMs) return cached.data;
 
-        const headers = {
-            Authorization: `Bearer ${credentials.accessToken}`,
-            Accept: 'application/vnd.github.v3+json',
-        };
-
         if (widgetName === 'repo_stats' || widgetName === 'github-repo') {
             const { owner, repo } = params;
-            const res = await fetch(`https://api.github.com/repos/${owner}/${repo}`, { headers });
-            if (!res.ok) {
-                const err = new Error(`GitHub API error: ${res.statusText}`);
-                err.statusCode = res.status;
-                throw err;
-            }
+            const res = await fetchWithRefresh(
+                `https://api.github.com/repos/${owner}/${repo}`,
+                context,
+            );
             const data = await res.json();
             const result = {
                 stars: data.stargazers_count,
@@ -79,15 +143,10 @@ module.exports = {
 
         if (widgetName === 'latest_commits' || widgetName === 'github-commits') {
             const { owner, repo, branch } = params;
-            const res = await fetch(
+            const res = await fetchWithRefresh(
                 `https://api.github.com/repos/${owner}/${repo}/commits?sha=${branch || 'main'}&per_page=5`,
-                { headers },
+                context,
             );
-            if (!res.ok) {
-                const err = new Error(`GitHub API error: ${res.statusText}`);
-                err.statusCode = res.status;
-                throw err;
-            }
             const data = await res.json();
             const result = data.map((commit) => ({
                 sha: commit.sha,
@@ -106,12 +165,7 @@ module.exports = {
             const url = username
                 ? `https://api.github.com/users/${username}`
                 : 'https://api.github.com/user';
-            const res = await fetch(url, { headers });
-            if (!res.ok) {
-                const err = new Error(`GitHub API error: ${res.statusText}`);
-                err.statusCode = res.status;
-                throw err;
-            }
+            const res = await fetchWithRefresh(url, context);
             const data = await res.json();
             const result = {
                 login: data.login,
