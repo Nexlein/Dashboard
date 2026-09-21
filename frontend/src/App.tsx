@@ -1,39 +1,32 @@
 import { useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 import { BrowserRouter as Router, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import DashboardGrid from '@/components/DashboardGrid';
 import { getCurrentUser, hasValidAuthToken, logout, type AuthUser } from '@/lib/auth';
 import AuthPage from '@/pages/AuthPage';
 import TermsPage from '@/pages/TermsPage';
+import ServicesPage from '@/pages/ServicesPage';
 
 import { useStore } from '@/store/useStore';
-import { fetchWidgets } from '@/lib/widgets';
+import { fetchWidgets, toDashboardWidget, type ApiWidget } from '@/lib/widgets';
 
-function Dashboard() {
+function AuthenticatedShell({
+    children,
+    showWidgetConfigurator = false,
+}: {
+    children: ReactNode;
+    showWidgetConfigurator?: boolean;
+}) {
     const navigate = useNavigate();
     const [user, setUser] = useState<AuthUser | null>(null);
-    const setWidgets = useStore((state) => state.setWidgets);
 
     useEffect(() => {
         let isActive = true;
 
         getCurrentUser()
             .then((profile) => {
-                if (isActive) {
-                    setUser(profile);
-                    fetchWidgets().then((apiWidgets) => {
-                        const formatted = apiWidgets.map((w) => ({
-                            ...w,
-                            i: String(w.id),
-                            x: w.layout.x,
-                            y: w.layout.y,
-                            w: w.layout.w,
-                            h: w.layout.h,
-                            title: w.widgetName,
-                        }));
-                        setWidgets(formatted);
-                    });
-                }
+                if (isActive) setUser(profile);
             })
             .catch(() => {
                 if (!isActive) return;
@@ -44,7 +37,7 @@ function Dashboard() {
         return () => {
             isActive = false;
         };
-    }, [navigate, setWidgets]);
+    }, [navigate]);
 
     function handleLogout() {
         logout();
@@ -53,21 +46,70 @@ function Dashboard() {
 
     return (
         <div className="min-h-screen bg-background text-foreground transition-colors duration-200">
-            <Navbar user={user} onLogout={handleLogout} />
-            <DashboardGrid />
+            <Navbar
+                user={user}
+                onLogout={handleLogout}
+                showWidgetConfigurator={showWidgetConfigurator}
+            />
+            {children}
         </div>
     );
 }
 
-function ProtectedDashboard() {
-    return hasValidAuthToken() ? <Dashboard /> : <Navigate to="/login" replace />;
+function Dashboard() {
+    const navigate = useNavigate();
+    const setWidgets = useStore((state) => state.setWidgets);
+
+    useEffect(() => {
+        fetchWidgets()
+            .then((apiWidgets) => {
+                setWidgets(apiWidgets.map((widget: ApiWidget) => toDashboardWidget(widget)));
+            })
+            .catch(() => {
+                logout();
+                navigate('/login', { replace: true });
+            });
+    }, [navigate, setWidgets]);
+
+    return (
+        <AuthenticatedShell showWidgetConfigurator>
+            <DashboardGrid />
+        </AuthenticatedShell>
+    );
+}
+
+function Services() {
+    return (
+        <AuthenticatedShell>
+            <ServicesPage />
+        </AuthenticatedShell>
+    );
+}
+
+function ProtectedRoute({ children }: { children: ReactNode }) {
+    return hasValidAuthToken() ? children : <Navigate to="/login" replace />;
 }
 
 export default function App() {
     return (
         <Router>
             <Routes>
-                <Route path="/" element={<ProtectedDashboard />} />
+                <Route
+                    path="/"
+                    element={
+                        <ProtectedRoute>
+                            <Dashboard />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/services"
+                    element={
+                        <ProtectedRoute>
+                            <Services />
+                        </ProtectedRoute>
+                    }
+                />
                 <Route path="/login" element={<AuthPage />} />
                 <Route path="/register" element={<AuthPage />} />
                 <Route path="/cgu" element={<TermsPage />} />

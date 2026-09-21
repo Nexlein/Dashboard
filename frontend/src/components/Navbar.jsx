@@ -1,7 +1,17 @@
 import { useEffect } from 'react';
+import { NavLink } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { Button } from '@/components/ui/button';
-import { Check, ChevronDown, LogOut, Moon, Sun, UserRound } from 'lucide-react';
+import {
+    Check,
+    ChevronDown,
+    LayoutDashboard,
+    LogOut,
+    Moon,
+    Plug,
+    Sun,
+    UserRound,
+} from 'lucide-react';
 import { WidgetConfigurator } from '@/components/WidgetConfigurator';
 import {
     DropdownMenu,
@@ -13,7 +23,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-export default function Navbar({ user, onLogout }) {
+export default function Navbar({ user, onLogout, showWidgetConfigurator = true }) {
     const { theme, setTheme } = useStore();
     const accountLabel = user?.displayName || user?.email || 'Compte';
     const initial = accountLabel.charAt(0).toUpperCase();
@@ -33,9 +43,37 @@ export default function Navbar({ user, onLogout }) {
 
     return (
         <nav className="flex items-center justify-between gap-4 border-b border-border bg-card p-4 shadow-sm">
-            <h1 className="hidden text-xl font-bold text-foreground sm:block">Dashboard</h1>
+            <div className="flex items-center gap-1">
+                <NavLink
+                    to="/"
+                    end
+                    className={({ isActive }) =>
+                        `flex h-10 items-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors ${
+                            isActive
+                                ? 'bg-primary text-primary-foreground'
+                                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                        }`
+                    }
+                >
+                    <LayoutDashboard className="size-4" />
+                    <span className="hidden sm:inline">Dashboard</span>
+                </NavLink>
+                <NavLink
+                    to="/services"
+                    className={({ isActive }) =>
+                        `flex h-10 items-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors ${
+                            isActive
+                                ? 'bg-primary text-primary-foreground'
+                                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                        }`
+                    }
+                >
+                    <Plug className="size-4" />
+                    <span className="hidden sm:inline">Services</span>
+                </NavLink>
+            </div>
             <div className="flex min-w-0 items-center gap-3">
-                <WidgetConfigurator />
+                {showWidgetConfigurator && <WidgetConfigurator />}
 
                 <DropdownMenu>
                     <DropdownMenuTrigger

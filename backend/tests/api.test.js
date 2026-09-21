@@ -3,6 +3,7 @@ process.env.JWT_SECRET = 'api-test-secret-that-is-long-enough-for-authentication
 const request = require('supertest');
 const jwt = require('jsonwebtoken');
 const app = require('../index');
+const weatherService = require('../services/weather');
 
 // Mock Prisma Client
 jest.mock('@prisma/client', () => {
@@ -16,7 +17,14 @@ jest.mock('@prisma/client', () => {
             findUnique: jest.fn(),
             create: jest.fn(),
             update: jest.fn(),
+            updateMany: jest.fn(),
             delete: jest.fn(),
+        },
+        serviceConnection: {
+            findMany: jest.fn(),
+            findUnique: jest.fn(),
+            upsert: jest.fn(),
+            deleteMany: jest.fn(),
         },
         $transaction: jest.fn(),
     };
@@ -228,6 +236,7 @@ describe('API Endpoints', () => {
     });
 
     describe('Widget CRUD API', () => {
+        const token = jwt.sign({ userId: 1, isAdmin: false }, process.env.JWT_SECRET);
         const mockWidget = {
             id: 1,
             userId: 1,
@@ -238,19 +247,19 @@ describe('API Endpoints', () => {
             layout: { x: 0, y: 0, w: 2, h: 2 },
         };
 
-        // We mock the auth middleware manually for tests since we don't load the real one
-        // In a real app we'd sign a JWT. But here we can mock Prisma directly.
-        it('should require authentication (mocked by auth middleware)', () => {
-            // Because we didn't implement the exact auth middleware in tests,
-            // we will just trust the route unit tests for Prisma interaction.
+        it('should require authentication', async () => {
+            const res = await request(app).get('/widgets');
+
+            expect(res.statusCode).toBe(401);
         });
 
-        it('should create a new widget', async () => {
+        it('should create a widget with encrypted params and return the public contract', async () => {
+            prisma.serviceConnection.findUnique.mockResolvedValue({ id: 9 });
             prisma.widgetConfig.create.mockResolvedValue(mockWidget);
 
-            // Note: Since we are mocking auth middleware with req.userId = 1 in index.js, this will pass.
             const res = await request(app)
                 .post('/widgets')
+                .set('Authorization', `Bearer ${token}`)
                 .send({
                     serviceName: 'weather',
                     widgetName: 'current_weather',
@@ -259,11 +268,34 @@ describe('API Endpoints', () => {
                     layout: { x: 0, y: 0, w: 2, h: 2 },
                 });
 
-            // If the route returns 201, Prisma mock worked
-            // We just check if the route is defined and processes the body
-            if (res.statusCode === 201) {
-                expect(res.body.serviceName).toBe('weather');
-            }
+            expect(res.statusCode).toBe(201);
+            expect(res.body).toEqual(mockWidget);
+            expect(prisma.widgetConfig.create).toHaveBeenCalledWith({
+                data: expect.objectContaining({
+                    userId: 1,
+                    serviceName: 'weather',
+                    widgetName: 'current_weather',
+                    params: expect.objectContaining({ _encrypted: true }),
+                    refreshRate: 60,
+                }),
+            });
+        });
+
+        it('should reject a refresh rate below 60 seconds', async () => {
+            const res = await request(app)
+                .post('/widgets')
+                .set('Authorization', `Bearer ${token}`)
+                .send({
+                    serviceName: 'weather',
+                    widgetName: 'current_weather',
+                    params: { city: 'Paris' },
+                    refreshRate: 30,
+                    layout: { x: 0, y: 0, w: 2, h: 2 },
+                });
+
+            expect(res.statusCode).toBe(400);
+            expect(res.body.error).toBe('Refresh rate must be at least 60 seconds');
+            expect(prisma.widgetConfig.create).not.toHaveBeenCalled();
         });
 
         it('should batch update widget layouts', async () => {
@@ -271,6 +303,7 @@ describe('API Endpoints', () => {
 
             const res = await request(app)
                 .put('/widgets/layout')
+                .set('Authorization', `Bearer ${token}`)
                 .send({
                     layouts: [
                         { id: 1, layout: { x: 0, y: 0, w: 4, h: 4 } },
@@ -278,9 +311,125 @@ describe('API Endpoints', () => {
                     ],
                 });
 
-            if (res.statusCode === 204) {
-                expect(prisma.$transaction).toHaveBeenCalled();
-            }
+            expect(res.statusCode).toBe(204);
+            expect(prisma.$transaction).toHaveBeenCalled();
+        });
+
+        it('should execute a configured weather widget for its owner', async () => {
+            prisma.widgetConfig.findUnique.mockResolvedValue(mockWidget);
+            prisma.serviceConnection.findUnique.mockResolvedValue({
+                id: 9,
+                userId: 1,
+                serviceName: 'weather',
+                encryptedCredentials: { apiKey: 'test-key' },
+            });
+            const execute = jest.spyOn(weatherService, 'execute').mockResolvedValue({
+                type: 'current_weather',
+                temperature: 19,
+            });
+
+            const res = await request(app)
+                .get('/widgets/1/data')
+                .set('Authorization', `Bearer ${token}`);
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.temperature).toBe(19);
+            expect(execute).toHaveBeenCalledWith(
+                'current_weather',
+                { city: 'Paris' },
+                {
+                    refreshRate: 60,
+                    credentials: { apiKey: 'test-key' },
+                    cacheScope: '1:9',
+                },
+            );
+            execute.mockRestore();
+        });
+
+        it('requires the user to connect OpenWeather before creating a weather widget', async () => {
+            prisma.serviceConnection.findUnique.mockResolvedValue(null);
+
+            const res = await request(app)
+                .post('/widgets')
+                .set('Authorization', `Bearer ${token}`)
+                .send({
+                    serviceName: 'weather',
+                    widgetName: 'current_weather',
+                    params: { city: 'Paris' },
+                    refreshRate: 60,
+                    layout: { x: 0, y: 0, w: 3, h: 2 },
+                });
+
+            expect(res.statusCode).toBe(409);
+            expect(res.body.error).toMatch(/OpenWeather is not connected/);
+            expect(prisma.widgetConfig.create).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('Service connections API', () => {
+        const token = jwt.sign({ userId: 1, isAdmin: false }, process.env.JWT_SECRET);
+        const verifiedAt = new Date('2026-09-21T12:00:00.000Z');
+        const connection = {
+            id: 9,
+            userId: 1,
+            serviceName: 'weather',
+            encryptedCredentials: { hidden: true },
+            keyHint: 't-key',
+            verifiedAt,
+        };
+
+        it('lists services without exposing credentials', async () => {
+            prisma.serviceConnection.findMany.mockResolvedValue([connection]);
+
+            const res = await request(app).get('/services').set('Authorization', `Bearer ${token}`);
+
+            expect(res.statusCode).toBe(200);
+            const weather = res.body.find((service) => service.name === 'weather');
+            expect(weather).toEqual(
+                expect.objectContaining({
+                    displayName: 'OpenWeather',
+                    connected: true,
+                    keyHint: 't-key',
+                }),
+            );
+            expect(JSON.stringify(res.body)).not.toContain('encryptedCredentials');
+        });
+
+        it('verifies and securely saves an OpenWeather API key', async () => {
+            const verify = jest.spyOn(weatherService, 'verifyCredentials').mockResolvedValue();
+            prisma.serviceConnection.upsert.mockResolvedValue(connection);
+
+            const res = await request(app)
+                .put('/services/weather/connection')
+                .set('Authorization', `Bearer ${token}`)
+                .send({ apiKey: 'test-api-key' });
+
+            expect(res.statusCode).toBe(200);
+            expect(verify).toHaveBeenCalledWith({ apiKey: 'test-api-key' });
+            expect(prisma.serviceConnection.upsert).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    create: expect.objectContaining({
+                        userId: 1,
+                        serviceName: 'weather',
+                        encryptedCredentials: expect.objectContaining({ _encrypted: true }),
+                    }),
+                }),
+            );
+            expect(res.body).not.toHaveProperty('encryptedCredentials');
+            verify.mockRestore();
+        });
+
+        it('disconnects only the authenticated user service', async () => {
+            prisma.serviceConnection.deleteMany.mockResolvedValue({ count: 1 });
+
+            const res = await request(app)
+                .delete('/services/weather/connection')
+                .set('Authorization', `Bearer ${token}`);
+
+            expect(res.statusCode).toBe(204);
+            expect(prisma.serviceConnection.deleteMany).toHaveBeenCalledWith({
+                where: { userId: 1, serviceName: 'weather' },
+            });
         });
     });
 });

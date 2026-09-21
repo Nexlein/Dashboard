@@ -1,30 +1,54 @@
-import { render, screen, act } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import WidgetRenderer from './WidgetRenderer';
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { fetchWidgetData } from '@/lib/widgets';
+
+vi.mock('@/lib/widgets', () => ({ fetchWidgetData: vi.fn() }));
 
 describe('WidgetRenderer', () => {
-    const mockWidget = {
-        serviceName: 'test-service',
-        widgetName: 'test-widget',
-        params: { key: 'value' },
-        refreshRate: 5,
-    };
+    beforeEach(() => vi.clearAllMocks());
 
-    it('renders loading state initially', async () => {
-        render(<WidgetRenderer widget={mockWidget} />);
+    it('renders current weather returned by the backend', async () => {
+        fetchWidgetData.mockResolvedValue({
+            location: { name: 'Paris', country: 'FR' },
+            temperature: 19,
+            feelsLike: 18,
+            humidity: 70,
+            windSpeed: 3.2,
+            condition: 'clear sky',
+            icon: '01d',
+        });
 
-        // lucide-react Loader2 has class "animate-spin"
-        expect(document.querySelector('.animate-spin')).toBeInTheDocument();
+        render(
+            <WidgetRenderer
+                widget={{
+                    id: 1,
+                    serviceName: 'weather',
+                    widgetName: 'current_weather',
+                    refreshRate: 60,
+                }}
+            />,
+        );
+
+        expect(await screen.findByTestId('current-weather')).toBeInTheDocument();
+        expect(screen.getByText('19°C')).toBeInTheDocument();
+        expect(screen.getByText('Paris, FR')).toBeInTheDocument();
+        expect(fetchWidgetData).toHaveBeenCalledWith(1);
     });
 
-    it('fetches data and renders content after timeout', async () => {
-        render(<WidgetRenderer widget={mockWidget} />);
+    it('does not request data for services that are not implemented', () => {
+        render(
+            <WidgetRenderer
+                widget={{
+                    id: 2,
+                    serviceName: 'github',
+                    widgetName: 'github-user',
+                    refreshRate: 60,
+                }}
+            />,
+        );
 
-        // No need to advance timers manually, findByTestId will wait
-
-        const content = await screen.findByTestId('widget-renderer-content');
-        expect(content).toBeInTheDocument();
-        expect(screen.getByText(/test-service \/ test-widget/)).toBeInTheDocument();
-        expect(screen.getByText(/mockData/)).toBeInTheDocument();
+        expect(screen.getByText('This service is not implemented yet.')).toBeInTheDocument();
+        expect(fetchWidgetData).not.toHaveBeenCalled();
     });
 });

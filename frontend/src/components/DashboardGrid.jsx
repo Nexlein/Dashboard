@@ -3,15 +3,34 @@ import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import { useStore } from '@/store/useStore';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { updateWidgetLayouts } from '@/lib/widgets';
+import { Button } from '@/components/ui/button';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { deleteWidget, updateWidgetLayouts } from '@/lib/widgets';
 import { useRef } from 'react';
 import WidgetRenderer from './WidgetRenderer';
+import { CloudSun, EllipsisVertical, Trash2 } from 'lucide-react';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
 export default function DashboardGrid() {
-    const { widgets, setWidgets } = useStore();
+    const { widgets, setWidgets, removeWidget } = useStore();
     const timeoutRef = useRef(null);
+
+    const handleDelete = async (widget) => {
+        if (!window.confirm(`Delete ${widget.title}?`)) return;
+
+        try {
+            await deleteWidget(Number.parseInt(widget.i, 10));
+            removeWidget(widget.i);
+        } catch (error) {
+            console.error('Failed to delete widget:', error);
+        }
+    };
 
     const onLayoutChange = (layout) => {
         // Map new layout to our widgets state
@@ -55,11 +74,49 @@ export default function DashboardGrid() {
             >
                 {widgets.map((widget) => (
                     <div key={widget.i} data-grid={widget}>
-                        <Card className="w-full h-full cursor-move overflow-hidden">
-                            <CardHeader className="p-4 bg-muted/50 border-b border-border">
-                                <CardTitle className="text-sm">{widget.title}</CardTitle>
+                        <Card className="flex h-full w-full cursor-move flex-col overflow-hidden">
+                            <CardHeader className="flex shrink-0 flex-row items-center justify-between border-b border-border bg-muted/50 p-4">
+                                <CardTitle className="flex items-center gap-2 text-sm">
+                                    {widget.serviceName === 'weather' && (
+                                        <CloudSun
+                                            aria-hidden="true"
+                                            className="h-5 w-5 text-sky-500"
+                                        />
+                                    )}
+                                    <span>{widget.title}</span>
+                                </CardTitle>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger
+                                        render={
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon-sm"
+                                                className="cursor-pointer text-muted-foreground"
+                                                aria-label={`Configure ${widget.title}`}
+                                                onPointerDown={(event) => event.stopPropagation()}
+                                            />
+                                        }
+                                    >
+                                        <EllipsisVertical className="h-4 w-4" />
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent
+                                        align="end"
+                                        sideOffset={6}
+                                        className="w-36"
+                                    >
+                                        <DropdownMenuItem
+                                            variant="destructive"
+                                            className="min-h-9 px-2"
+                                            onClick={() => handleDelete(widget)}
+                                        >
+                                            <Trash2 />
+                                            Delete
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                             </CardHeader>
-                            <CardContent className="p-4 flex items-center justify-center h-full">
+                            <CardContent className="flex min-h-0 flex-1 items-center justify-center overflow-auto p-4">
                                 <WidgetRenderer widget={widget} />
                             </CardContent>
                         </Card>

@@ -7,6 +7,7 @@ const adminRoutes = require('./routes/admin');
 const authRoutes = require('./routes/auth');
 const aboutRoutes = require('./routes/about');
 const widgetRoutes = require('./routes/widgets');
+const serviceRoutes = require('./routes/services');
 const authMiddleware = require('./middleware/auth');
 const adminMiddleware = require('./middleware/admin');
 
@@ -33,6 +34,7 @@ app.use('/admin', authMiddleware, adminMiddleware, adminRoutes);
 app.use('/auth', authRoutes);
 app.use('/about.json', aboutRoutes);
 app.use('/widgets', authMiddleware, widgetRoutes);
+app.use('/services', authMiddleware, serviceRoutes);
 
 if (require.main === module) {
     app.listen(PORT, () => {

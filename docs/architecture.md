@@ -41,15 +41,16 @@ flowchart TB
 
 - **Framework**: Node.js with Express.
 - **Role**: Acts as the central orchestrator.
-  - Handles Authentication (`/auth/login`, `/auth/register`).
-  - Serves the dynamic Service Registry (`/about.json`).
-  - Proxies widget requests to external APIs.
+    - Handles Authentication (`/auth/login`, `/auth/register`).
+    - Stores and verifies user-owned service connections (`/services`).
+    - Serves the dynamic Service Registry (`/about.json`).
+    - Proxies widget requests to external APIs.
 
 ### 3. Caching Layer
 
-- **Role**: Sits inside the Backend container. Intercepts outgoing requests to external APIs. If data was fetched recently, it returns the cached version. This is critical to prevent external services from banning our API keys when many users refresh widgets simultaneously.
+- **Role**: Sits inside the Backend container. Intercepts outgoing requests to external APIs. Weather cache entries are scoped to the authenticated user's service connection and expire according to the widget refresh interval.
 
 ### 4. Database
 
 - **Engine**: PostgreSQL 15.
-- **Role**: Persistent storage for User accounts, OAuth tokens, and Widget configurations (position, refresh rates, parameters).
+- **Role**: Persistent storage for User accounts, OAuth tokens, encrypted service connections, and Widget configurations (position, refresh rates, parameters).

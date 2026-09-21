@@ -33,10 +33,10 @@ Register a new user account.
 
 ```json
 {
-  "email": "user@example.com",
-  "password": "securepassword",
-  "displayName": "John Doe",
-  "cguAccepted": true
+    "email": "user@example.com",
+    "password": "securepassword",
+    "displayName": "John Doe",
+    "cguAccepted": true
 }
 ```
 
@@ -48,8 +48,8 @@ lowercase. Passwords must contain between 8 and 72 characters.
 
 ```json
 {
-  "message": "User registered successfully",
-  "userId": 1
+    "message": "User registered successfully",
+    "userId": 1
 }
 ```
 
@@ -61,8 +61,8 @@ Authenticate an existing user.
 
 ```json
 {
-  "email": "user@example.com",
-  "password": "securepassword"
+    "email": "user@example.com",
+    "password": "securepassword"
 }
 ```
 
@@ -70,8 +70,8 @@ Authenticate an existing user.
 
 ```json
 {
-  "message": "Login successful",
-  "token": "eyJhbGciOiJIUzI1NiIsInR..."
+    "message": "Login successful",
+    "token": "eyJhbGciOiJIUzI1NiIsInR..."
 }
 ```
 
@@ -85,9 +85,9 @@ Returns the authenticated user's public profile. Requires the
 
 ```json
 {
-  "id": 1,
-  "email": "user@example.com",
-  "displayName": "John Doe"
+    "id": 1,
+    "email": "user@example.com",
+    "displayName": "John Doe"
 }
 ```
 
@@ -106,17 +106,17 @@ Returns all users without exposing password hashes or OAuth tokens.
 
 ```json
 [
-  {
-    "id": 2,
-    "email": "user@example.com",
-    "displayName": "John Doe",
-    "isAdmin": false,
-    "cguAcceptedAt": "2026-09-16T10:00:00.000Z",
-    "language": "en",
-    "theme": "system",
-    "createdAt": "2026-09-16T10:00:00.000Z",
-    "updatedAt": "2026-09-16T10:00:00.000Z"
-  }
+    {
+        "id": 2,
+        "email": "user@example.com",
+        "displayName": "John Doe",
+        "isAdmin": false,
+        "cguAcceptedAt": "2026-09-16T10:00:00.000Z",
+        "language": "en",
+        "theme": "system",
+        "createdAt": "2026-09-16T10:00:00.000Z",
+        "updatedAt": "2026-09-16T10:00:00.000Z"
+    }
 ]
 ```
 
@@ -143,14 +143,14 @@ Returns all widgets belonging to the authenticated user.
 
 ```json
 [
-  {
-    "id": 1,
-    "serviceName": "weather",
-    "widgetName": "current_weather",
-    "params": { "city": "Paris" },
-    "refreshRate": 60,
-    "layout": { "x": 0, "y": 0, "w": 2, "h": 2 }
-  }
+    {
+        "id": 1,
+        "serviceName": "weather",
+        "widgetName": "current_weather",
+        "params": { "city": "Paris" },
+        "refreshRate": 60,
+        "layout": { "x": 0, "y": 0, "w": 2, "h": 2 }
+    }
 ]
 ```
 
@@ -162,25 +162,32 @@ Create a new widget for the dashboard.
 
 ```json
 {
-  "serviceName": "weather",
-  "widgetName": "current_weather",
-  "params": { "city": "Paris" },
-  "refreshRate": 60,
-  "layout": { "x": 0, "y": 0, "w": 2, "h": 2 }
+    "serviceName": "weather",
+    "widgetName": "current_weather",
+    "params": { "city": "Paris" },
+    "refreshRate": 60,
+    "layout": { "x": 0, "y": 0, "w": 2, "h": 2 }
 }
 ```
 
 **Response (201 Created):** Returns the created widget object.
 
+`refreshRate` is expressed in seconds and must be an integer greater than or equal to `60`.
+Weather responses are cached for at most the configured refresh interval, so the next scheduled
+refresh can request fresh provider data.
+Creating a weather widget returns `409 Conflict` until the authenticated user has connected
+OpenWeather through `/services/weather/connection`.
+
 ### `PUT /widgets/:id`
 
 Update an existing widget's parameters, refresh rate, or layout.
+When supplied, `refreshRate` must be an integer greater than or equal to `60`.
 
 **Request Body (Partial updates allowed):**
 
 ```json
 {
-  "layout": { "x": 2, "y": 0, "w": 2, "h": 2 }
+    "layout": { "x": 2, "y": 0, "w": 2, "h": 2 }
 }
 ```
 
@@ -189,6 +196,53 @@ Update an existing widget's parameters, refresh rate, or layout.
 ### `DELETE /widgets/:id`
 
 Delete a widget.
+
+**Response (204 No Content)**
+
+### `GET /widgets/:id/data`
+
+Executes a saved widget and returns its normalized service data. The widget must
+belong to the authenticated user. Weather responses are cached in memory per
+user connection and never beyond the widget refresh interval. Provider credentials
+are decrypted only for the outgoing request and are never exposed to the client.
+
+Current weather widgets return the resolved location, temperature, perceived
+temperature, humidity, wind and condition. Forecast widgets return five daily
+entries aggregated from OpenWeather's three-hour forecast.
+
+- `400 Bad Request` for an invalid id or unsupported widget.
+- `403 Forbidden` when the widget belongs to another user.
+- `404 Not Found` when the widget or requested city does not exist.
+- `409 Conflict` when the widget owner has not connected OpenWeather.
+- `502 Bad Gateway` when OpenWeather cannot answer.
+- `503 Service Unavailable` when OpenWeather rejects requests temporarily or reaches its limit.
+
+## Service connections
+
+All `/services` endpoints require the `Authorization: Bearer <token>` header.
+
+### `GET /services`
+
+Lists registry services and the authenticated user's connection status. The response contains
+only safe metadata such as `connected`, `keyHint`, and `verifiedAt`; credentials are never returned.
+
+### `PUT /services/:serviceName/connection`
+
+Verifies and creates or replaces the authenticated user's provider credentials.
+
+```json
+{
+    "apiKey": "user-owned-provider-key"
+}
+```
+
+For `weather`, the key is checked against OpenWeather before it is encrypted and stored.
+Invalid or inactive keys return `400 Bad Request` and are not saved.
+
+### `DELETE /services/:serviceName/connection`
+
+Disconnects the service for the authenticated user. Existing widgets are preserved and display
+a connection-required message until the service is connected again.
 
 **Response (204 No Content)**
 

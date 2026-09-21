@@ -1,5 +1,70 @@
 import { API_URL } from './auth';
 
+export const MIN_REFRESH_RATE_SECONDS = 60;
+
+export type ApiWidget = {
+    id: number;
+    serviceName: string;
+    widgetName: string;
+    params: Record<string, unknown>;
+    refreshRate: number;
+    layout: { x: number; y: number; w: number; h: number };
+};
+
+type WidgetPresentation = {
+    title: string;
+    defaultLayout?: ApiWidget['layout'];
+};
+
+const DEFAULT_WIDGET_LAYOUT: ApiWidget['layout'] = { x: 0, y: 0, w: 4, h: 2 };
+
+const WIDGET_PRESENTATION: Record<string, WidgetPresentation> = {
+    'weather:current_weather': {
+        title: 'Weather',
+        defaultLayout: { x: 0, y: 0, w: 3, h: 2 },
+    },
+    'weather:weather-current': {
+        title: 'Weather',
+        defaultLayout: { x: 0, y: 0, w: 3, h: 2 },
+    },
+    'weather:forecast': {
+        title: 'Weather',
+        defaultLayout: { x: 0, y: 0, w: 4, h: 3 },
+    },
+    'weather:weather-forecast': {
+        title: 'Weather',
+        defaultLayout: { x: 0, y: 0, w: 4, h: 3 },
+    },
+    'github:github-user': { title: 'GitHub - User Profile' },
+    'github:github-repo': { title: 'GitHub - Repository Stats' },
+};
+
+function widgetKey(serviceName: string, widgetName: string) {
+    return `${serviceName}:${widgetName}`;
+}
+
+export function getDefaultWidgetLayout(serviceName: string, widgetName: string) {
+    const configuredLayout = WIDGET_PRESENTATION[widgetKey(serviceName, widgetName)]?.defaultLayout;
+    return { ...(configuredLayout || DEFAULT_WIDGET_LAYOUT) };
+}
+
+export function toDashboardWidget(
+    widget: ApiWidget,
+    title = WIDGET_PRESENTATION[widgetKey(widget.serviceName, widget.widgetName)]?.title ||
+        widget.widgetName,
+) {
+    return {
+        ...widget,
+        refreshRate: Math.max(widget.refreshRate, MIN_REFRESH_RATE_SECONDS),
+        i: String(widget.id),
+        x: widget.layout.x,
+        y: widget.layout.y,
+        w: widget.layout.w,
+        h: widget.layout.h,
+        title,
+    };
+}
+
 export async function fetchWidgets() {
     const token = localStorage.getItem('dashboard-auth-token');
     const response = await fetch(`${API_URL}/widgets`, {
@@ -15,7 +80,7 @@ export async function fetchWidgets() {
     return response.json();
 }
 
-export async function createWidget(widgetData) {
+export async function createWidget(widgetData): Promise<ApiWidget> {
     const token = localStorage.getItem('dashboard-auth-token');
     const response = await fetch(`${API_URL}/widgets`, {
         method: 'POST',
@@ -26,11 +91,20 @@ export async function createWidget(widgetData) {
         body: JSON.stringify(widgetData),
     });
 
-    if (!response.ok) {
-        throw new Error('Failed to create widget');
-    }
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body.error || 'Failed to create widget');
+    return body;
+}
 
-    return response.json();
+export async function fetchWidgetData(id: number) {
+    const token = localStorage.getItem('dashboard-auth-token');
+    const response = await fetch(`${API_URL}/widgets/${id}/data`, {
+        headers: { Authorization: `Bearer ${token}` },
+    });
+
+    const body = await response.json();
+    if (!response.ok) throw new Error(body.error || 'Failed to fetch widget data');
+    return body;
 }
 
 export async function updateWidgetLayouts(layouts) {

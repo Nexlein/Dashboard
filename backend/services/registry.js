@@ -8,4 +8,5 @@ const services = [weather, github, youtube, chatbot];
 
 module.exports = {
     getAllServices: () => services,
+    getService: (name) => services.find((service) => service.name === name),
 };

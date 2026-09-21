@@ -9,35 +9,35 @@
 
 - [ ] **User Management**: Unauthenticated users can register. Administration section useful. (Registration frontend/backend connected; administration frontend missing)
 - [ ] **Identity & Permissions**:
-  - [ ] Authentication (credentials or OIDC) to bind data to account. (Credentials frontend/backend connected; security hardening and OIDC remain)
-  - [ ] Authorization (OAuth 2.0) to access external APIs. Link third-party to platform user.
+    - [ ] Authentication (credentials or OIDC) to bind data to account. (Credentials frontend/backend connected; security hardening and OIDC remain)
+    - [ ] Authorization (OAuth 2.0) to access external APIs. Link third-party to platform user.
 - [ ] **Service Subscriptions**:
-  - [ ] Authenticated users select services to subscribe to.
-  - [ ] Subscribing requires credentials or OAuth linking.
-  - [ ] Some services (e.g., weather) available by default without external account.
+    - [x] Authenticated users select services to subscribe to.
+    - [x] OpenWeather subscription requires a verified, user-owned API key.
+    - [ ] Add OAuth linking for every remaining account-based service.
 - [ ] **Dashboard & Widgets**:
-  - [ ] Connect `about.json` dynamically to the frontend Configurator.
-  - [ ] Sync Dashboard Grid layout with Postgres Database via PUT/POST routes.
-  - [x] Add widget (select type, configure, set refresh rate).
-  - [ ] Reconfigure, move, delete widgets. (Move is done)
-  - [x] **Crucial**: Widget _must_ have configurable parameters.
-  - [ ] **Crucial**: Two instances of same widget with different configs must display distinct info.
+    - [ ] Connect `about.json` dynamically to the frontend Configurator.
+    - [ ] Sync Dashboard Grid layout with Postgres Database via PUT/POST routes.
+    - [x] Add widget (select type, configure, set refresh rate).
+    - [ ] Reconfigure, move, delete widgets. (Move is done)
+    - [x] **Crucial**: Widget _must_ have configurable parameters.
+    - [ ] **Crucial**: Two instances of same widget with different configs must display distinct info.
 - [ ] **Accessibility (a11y)**:
-  - [ ] Full keyboard navigation support.
-  - [ ] Screen reader compatibility (ARIA labels).
+    - [ ] Full keyboard navigation support.
+    - [ ] Screen reader compatibility (ARIA labels).
 - [x] **Timer**: Periodic refresh of widget data based on widget config.
 
 ## Legal & Compliance
 
 - [x] **CGU (Terms of Service)**: Users must read and accept CGU during registration.
 - [ ] **RGPD (GDPR)**:
-  - [ ] Clear privacy policy.
-  - [ ] Account deletion (Right to be forgotten).
-  - [ ] Data export (Right of access).
+    - [ ] Clear privacy policy.
+    - [ ] Account deletion (Right to be forgotten).
+    - [ ] Data export (Right of access).
 
 ## Security & Robustness
 
-- [ ] **API Security**: Encrypt sensitive widget parameters (like API keys) in the database.
+- [x] **API Security**: Encrypt widget parameters and user-owned service credentials in the database.
 - [x] **Rate Limiting**: Protect authentication endpoints against brute-force attacks.
 - [ ] **CORS**: Restrict API access to the frontend origin.
 - [ ] **Backend Cache**: In-memory cache for external API calls to prevent rate-limiting/bans.
@@ -69,12 +69,12 @@
 
 - [x] **Source Code**: No binaries or temp files.
 - [ ] **README.md**:
-  - [ ] List of key features, services, and widgets.
-  - [ ] Precise steps to install and build.
-  - [ ] Overview of app purpose and use cases.
-  - [ ] Clear instructions to run and use.
-  - [ ] Description of technologies used and overall structure.
-  - [ ] Adapt communication to audience (users vs developers).
+    - [ ] List of key features, services, and widgets.
+    - [ ] Precise steps to install and build.
+    - [ ] Overview of app purpose and use cases.
+    - [ ] Clear instructions to run and use.
+    - [ ] Description of technologies used and overall structure.
+    - [ ] Adapt communication to audience (users vs developers).
 - [ ] **Video Presentation**: Short video showcasing main features (to avoid disruptions during live demo).
 
 ## about.json Schema

@@ -54,7 +54,7 @@ async function main() {
         data: {
             userId: user.id,
             serviceName: 'weather',
-            widgetName: 'weather-current',
+            widgetName: 'current_weather',
             params: encryptParams({ city: 'Paris' }),
             refreshRate: 300, // 5 minutes
             layout: { x: 0, y: 0, w: 4, h: 2 },

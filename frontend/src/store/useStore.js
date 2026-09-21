@@ -10,17 +10,11 @@ export const useStore = create(
             setWidgets: (widgets) => set({ widgets }),
             addWidget: (widget) =>
                 set((state) => ({
-                    widgets: [
-                        ...state.widgets,
-                        {
-                            ...widget,
-                            i: String(widget.id), // Backend ID as grid ID
-                            x: widget.layout?.x || 0,
-                            y: widget.layout?.y || 0,
-                            w: widget.layout?.w || 4,
-                            h: widget.layout?.h || 2,
-                        },
-                    ],
+                    widgets: [...state.widgets, widget],
+                })),
+            removeWidget: (id) =>
+                set((state) => ({
+                    widgets: state.widgets.filter((widget) => widget.i !== String(id)),
                 })),
         }),
         {

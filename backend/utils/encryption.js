@@ -78,6 +78,8 @@ function decryptParams(encryptedPayload) {
 }
 
 module.exports = {
+    encryptJson: encryptParams,
+    decryptJson: decryptParams,
     encryptParams,
     decryptParams,
 };

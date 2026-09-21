@@ -1,7 +1,14 @@
 import { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { KeyRound, Loader2, Plus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { createWidget } from '@/lib/widgets';
+import {
+    createWidget,
+    getDefaultWidgetLayout,
+    MIN_REFRESH_RATE_SECONDS,
+    toDashboardWidget,
+} from '@/lib/widgets';
+import { fetchServices } from '@/lib/services';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,8 +34,8 @@ const SERVICES = {
     weather: {
         name: 'Weather',
         widgets: [
-            { id: 'weather-current', name: 'Current Temperature' },
-            { id: 'weather-forecast', name: '5-Day Forecast' },
+            { id: 'current_weather', name: 'Current Temperature' },
+            { id: 'forecast', name: '5-Day Forecast' },
         ],
         params: [{ id: 'city', label: 'City Name', type: 'text', placeholder: 'e.g. Paris' }],
     },
@@ -61,26 +68,59 @@ const SERVICES = {
     },
 };
 
+function areParamsComplete(service, params) {
+    return SERVICES[service]?.params?.every((param) => params[param.id]?.trim()) ?? false;
+}
+
+function isRefreshRateValid(refreshTimer) {
+    const refreshRate = Number(refreshTimer);
+    return Number.isInteger(refreshRate) && refreshRate >= MIN_REFRESH_RATE_SECONDS;
+}
+
 export function WidgetConfigurator() {
+    const navigate = useNavigate();
     const addWidget = useStore((state) => state.addWidget);
     const [open, setOpen] = useState(false);
     const [service, setService] = useState('');
     const [widgetType, setWidgetType] = useState('');
     const [params, setParams] = useState({});
     const [refreshTimer, setRefreshTimer] = useState('60'); // seconds
+    const [serviceConnections, setServiceConnections] = useState([]);
+    const [connectionsLoading, setConnectionsLoading] = useState(false);
+    const [error, setError] = useState('');
+
+    const handleOpenChange = (nextOpen) => {
+        setOpen(nextOpen);
+        if (!nextOpen) return;
+
+        setError('');
+        setConnectionsLoading(true);
+        fetchServices()
+            .then(setServiceConnections)
+            .catch((err) => setError(err.message))
+            .finally(() => setConnectionsLoading(false));
+    };
+
+    const selectedConnection = serviceConnections.find((item) => item.name === service);
+    const serviceConnectionRequired = service === 'weather' || selectedConnection?.configurable;
+    const serviceConnected = !serviceConnectionRequired || selectedConnection?.connected === true;
 
     const handleServiceChange = (val) => {
         setService(val);
         setWidgetType('');
         setParams({});
+        setError('');
     };
 
     const handleSave = async () => {
-        if (!service || !widgetType) return;
-
-        // Find the widget name for the title
-        const widgetName =
-            SERVICES[service].widgets.find((w) => w.id === widgetType)?.name || 'Unknown Widget';
+        if (
+            !service ||
+            !widgetType ||
+            !areParamsComplete(service, params) ||
+            !serviceConnected ||
+            !isRefreshRateValid(refreshTimer)
+        )
+            return;
 
         try {
             const apiWidget = await createWidget({
@@ -88,18 +128,10 @@ export function WidgetConfigurator() {
                 widgetName: widgetType,
                 params,
                 refreshRate: parseInt(refreshTimer, 10),
-                layout: { x: 0, y: 0, w: 4, h: 2 },
+                layout: getDefaultWidgetLayout(service, widgetType),
             });
 
-            addWidget({
-                id: apiWidget.id,
-                service,
-                type: widgetType,
-                title: `${SERVICES[service].name} - ${widgetName}`,
-                params,
-                refreshTimer: parseInt(refreshTimer, 10),
-                layout: apiWidget.layout,
-            });
+            addWidget(toDashboardWidget(apiWidget));
 
             setOpen(false);
             // Reset form
@@ -108,12 +140,12 @@ export function WidgetConfigurator() {
             setParams({});
             setRefreshTimer('60');
         } catch (error) {
-            console.error('Failed to create widget:', error);
+            setError(error.message || 'Failed to create widget');
         }
     };
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
                 <Button className="h-11 px-4" aria-label="Add widget">
                     <Plus className="mr-2 h-4 w-4" />
@@ -144,21 +176,53 @@ export function WidgetConfigurator() {
                         </Select>
                     </div>
 
-                    {service && (
-                        <div className="grid gap-2 animate-in fade-in slide-in-from-top-2">
-                            <Label htmlFor="widgetType">Widget Type</Label>
-                            <Select value={widgetType} onValueChange={setWidgetType}>
-                                <SelectTrigger id="widgetType">
-                                    <SelectValue placeholder="Select a widget type..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {SERVICES[service].widgets.map((w) => (
-                                        <SelectItem key={w.id} value={w.id}>
-                                            {w.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                    {service &&
+                        (serviceConnectionRequired && !serviceConnected ? (
+                            <div className="rounded-lg border border-sky-500/30 bg-sky-500/10 p-3 text-sm">
+                                <div className="flex items-start gap-2">
+                                    <KeyRound className="mt-0.5 size-4 shrink-0 text-sky-500" />
+                                    <div>
+                                        <p className="font-medium">OpenWeather is not connected</p>
+                                        <p className="mt-1 text-muted-foreground">
+                                            Add and verify your personal API key before creating a
+                                            weather widget.
+                                        </p>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            className="mt-3"
+                                            onClick={() => {
+                                                setOpen(false);
+                                                navigate('/services');
+                                            }}
+                                        >
+                                            Open Services
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="grid gap-2 animate-in fade-in slide-in-from-top-2">
+                                <Label htmlFor="widgetType">Widget Type</Label>
+                                <Select value={widgetType} onValueChange={setWidgetType}>
+                                    <SelectTrigger id="widgetType">
+                                        <SelectValue placeholder="Select a widget type..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {SERVICES[service].widgets.map((w) => (
+                                            <SelectItem key={w.id} value={w.id}>
+                                                {w.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        ))}
+
+                    {connectionsLoading && service && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Loader2 className="size-4 animate-spin" />
+                            Checking service connection…
                         </div>
                     )}
 
@@ -187,15 +251,31 @@ export function WidgetConfigurator() {
                             <Input
                                 id="refreshTimer"
                                 type="number"
-                                min="10"
+                                min={MIN_REFRESH_RATE_SECONDS}
                                 value={refreshTimer}
                                 onChange={(e) => setRefreshTimer(e.target.value)}
                             />
                         </div>
                     )}
+
+                    {error && (
+                        <p role="alert" className="text-sm text-destructive">
+                            {error}
+                        </p>
+                    )}
                 </div>
                 <DialogFooter>
-                    <Button disabled={!service || !widgetType} onClick={handleSave}>
+                    <Button
+                        disabled={
+                            !service ||
+                            !widgetType ||
+                            !areParamsComplete(service, params) ||
+                            !serviceConnected ||
+                            connectionsLoading ||
+                            !isRefreshRateValid(refreshTimer)
+                        }
+                        onClick={handleSave}
+                    >
                         Add to Dashboard
                     </Button>
                 </DialogFooter>
