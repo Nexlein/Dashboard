@@ -9,12 +9,12 @@
 
 - [ ] **User Management**: Unauthenticated users can register. Administration section useful. (Registration frontend/backend connected; administration frontend missing)
 - [ ] **Identity & Permissions**:
-    - [ ] Authentication (credentials or OIDC) to bind data to account. (Credentials frontend/backend connected; security hardening and OIDC remain)
-    - [ ] Authorization (OAuth 2.0) to access external APIs. Link third-party to platform user.
+    - [x] Authentication (credentials or OIDC) to bind data to account. (GitHub OIDC & credentials implemented)
+    - [x] Authorization (OAuth 2.0) to access external APIs. Link third-party to platform user (GitHub).
 - [ ] **Service Subscriptions**:
     - [x] Authenticated users select services to subscribe to.
     - [x] OpenWeather subscription requires a verified, user-owned API key.
-    - [ ] Add OAuth linking for every remaining account-based service.
+    - [x] Add OAuth linking for every remaining account-based service (GitHub done).
 - [ ] **Dashboard & Widgets**:
     - [ ] Connect `about.json` dynamically to the frontend Configurator.
     - [ ] Sync Dashboard Grid layout with Postgres Database via PUT/POST routes.

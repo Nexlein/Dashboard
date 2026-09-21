@@ -16,7 +16,7 @@ A customizable web dashboard that allows authenticated users to monitor digital 
 ### Included Services (Planned)
 
 1. **Weather**: Current Temperature, 5-Day Forecast.
-2. **GitHub**: Repository Stats, Latest Commits.
+2. **GitHub**: Repository Stats, Latest Commits, User Profile. (Also supports GitHub Login / Account Creation)
 3. **YouTube**: Video Stats, Channel Subscribers.
 
 ## Tech Stack
