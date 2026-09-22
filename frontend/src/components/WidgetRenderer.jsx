@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useWidgetTimer } from '@/lib/useWidgetTimer';
 import { Droplets, Loader2, Wind } from 'lucide-react';
 import { fetchWidgetData } from '@/lib/widgets';
@@ -99,6 +99,11 @@ export default function WidgetRenderer({ widget }) {
 
     const isSupportedService = ['weather', 'github'].includes(serviceName);
     useWidgetTimer(isSupportedService ? refreshRate : 0, fetchData);
+
+    // Refetch when params change via editing
+    useEffect(() => {
+        fetchData();
+    }, [widget.params, fetchData]);
 
     if (!isSupportedService) {
         return (
