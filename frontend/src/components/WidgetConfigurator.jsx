@@ -9,6 +9,7 @@ import {
     toDashboardWidget,
 } from '@/lib/widgets';
 import { fetchServices } from '@/lib/services';
+import { WidgetParameterField } from './WidgetParameterField';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -122,6 +123,53 @@ export const SERVICES = {
                         label: 'Currency',
                         type: 'text',
                         placeholder: 'e.g. eur or usd',
+                    },
+                ],
+            },
+            {
+                id: 'crypto_chart',
+                name: 'Market Comparison Chart',
+                params: [
+                    {
+                        id: 'coins',
+                        label: 'Cryptocurrencies',
+                        type: 'coin-multiselect',
+                        placeholder: 'CoinGecko ID, e.g. dogecoin',
+                        options: [
+                            { value: 'bitcoin', label: 'BTC' },
+                            { value: 'ethereum', label: 'ETH' },
+                            { value: 'solana', label: 'SOL' },
+                            { value: 'binancecoin', label: 'BNB' },
+                            { value: 'ripple', label: 'XRP' },
+                            { value: 'cardano', label: 'ADA' },
+                            { value: 'dogecoin', label: 'DOGE' },
+                            { value: 'avalanche-2', label: 'AVAX' },
+                            { value: 'chainlink', label: 'LINK' },
+                            { value: 'polkadot', label: 'DOT' },
+                        ],
+                    },
+                    {
+                        id: 'currency',
+                        label: 'Currency',
+                        type: 'select',
+                        placeholder: 'Select a currency',
+                        options: [
+                            { value: 'eur', label: 'EUR (€)' },
+                            { value: 'usd', label: 'USD ($)' },
+                            { value: 'gbp', label: 'GBP (£)' },
+                        ],
+                    },
+                    {
+                        id: 'days',
+                        label: 'Period',
+                        type: 'select',
+                        placeholder: 'Select a period',
+                        options: [
+                            { value: '7', label: '1 week' },
+                            { value: '30', label: '1 month' },
+                            { value: '90', label: '3 months' },
+                            { value: '365', label: '1 year' },
+                        ],
                     },
                 ],
             },
@@ -306,14 +354,11 @@ export function WidgetConfigurator() {
                                     className="grid gap-2 animate-in fade-in slide-in-from-top-2"
                                     key={param.id}
                                 >
-                                    <Label htmlFor={param.id}>{param.label}</Label>
-                                    <Input
-                                        id={param.id}
-                                        type={param.type}
-                                        placeholder={param.placeholder}
+                                    <WidgetParameterField
+                                        param={param}
                                         value={params[param.id] || ''}
-                                        onChange={(e) =>
-                                            setParams({ ...params, [param.id]: e.target.value })
+                                        onChange={(value) =>
+                                            setParams({ ...params, [param.id]: value })
                                         }
                                     />
                                 </div>

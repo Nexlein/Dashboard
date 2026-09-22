@@ -1,6 +1,8 @@
 const COINGECKO_API_URL = 'https://api.coingecko.com/api/v3';
 const MAX_CACHE_TTL_MS = 5 * 60 * 1000;
 const MIN_REFRESH_RATE_SECONDS = 60;
+const MAX_CHART_COINS = 8;
+const COINGECKO_HISTORY_START = 1230768000; // 2009-01-01, before the first crypto market data.
 const cache = new Map();
 
 class CryptoServiceError extends Error {
@@ -32,13 +34,17 @@ async function fetchCoinGecko(path, params, apiKey) {
     }
 
     if (response.status === 401 || response.status === 403) {
-        throw new CryptoServiceError('CoinGecko API key is invalid', 400);
+        const error = new CryptoServiceError('CoinGecko API key is invalid', 400);
+        error.providerStatus = response.status;
+        throw error;
     }
     if (response.status === 429) {
         throw new CryptoServiceError('CoinGecko API rate limit reached', 503);
     }
     if (!response.ok) {
-        throw new CryptoServiceError('CoinGecko provider request failed');
+        const error = new CryptoServiceError('CoinGecko provider request failed');
+        error.providerStatus = response.status;
+        throw error;
     }
 
     return response.json();
@@ -65,21 +71,189 @@ function normalizedParam(value, field, maxLength) {
     return normalized;
 }
 
-async function execute(widgetName, params = {}, options = {}) {
-    if (widgetName !== 'crypto_price') {
-        throw new CryptoServiceError('Unsupported crypto widget', 400);
+function normalizedCoins(value) {
+    const rawCoins = Array.isArray(value)
+        ? value
+        : typeof value === 'string'
+          ? value.split(',')
+          : [];
+    const coins = [...new Set(rawCoins.map((coin) => normalizedParam(coin, 'Coin', 100)))];
+
+    if (!coins.length || coins.length > MAX_CHART_COINS) {
+        throw new CryptoServiceError(
+            `Select between 1 and ${MAX_CHART_COINS} cryptocurrencies`,
+            400,
+        );
+    }
+    return coins;
+}
+
+async function fetchChartHistory(coin, currency, days, apiKey) {
+    if (days !== 'max') {
+        return {
+            payload: await fetchCoinGecko(
+                `/coins/${coin}/market_chart`,
+                { vs_currency: currency, days: String(days), precision: 'full' },
+                apiKey,
+            ),
+            historyLimited: false,
+        };
     }
 
-    const coin = normalizedParam(params.coin, 'Coin', 100);
-    const currency = normalizedParam(params.currency, 'Currency', 20);
-    const apiKey = getApiKey(options);
-    const cacheScope = options.cacheScope || 'unscoped';
-    const cacheKey = `${cacheScope}:${widgetName}:${coin}:${currency}`;
+    try {
+        return {
+            payload: await fetchCoinGecko(
+                `/coins/${coin}/market_chart/range`,
+                {
+                    vs_currency: currency,
+                    from: String(COINGECKO_HISTORY_START),
+                    to: String(Math.floor(Date.now() / 1000)),
+                    precision: 'full',
+                },
+                apiKey,
+            ),
+            historyLimited: false,
+        };
+    } catch (error) {
+        // Demo plans can restrict full-range history. In that case, show the
+        // deepest commonly available history rather than breaking the widget.
+        if (![400, 401, 403, 404, 422].includes(error.providerStatus)) throw error;
+        return {
+            payload: await fetchCoinGecko(
+                `/coins/${coin}/market_chart`,
+                { vs_currency: currency, days: '365', precision: 'full' },
+                apiKey,
+            ),
+            historyLimited: true,
+        };
+    }
+}
+
+async function fetchCoinMetadata(coins, currency, apiKey) {
+    try {
+        const payload = await fetchCoinGecko(
+            '/coins/markets',
+            {
+                vs_currency: currency,
+                ids: coins.join(','),
+                sparkline: 'false',
+            },
+            apiKey,
+        );
+
+        if (!Array.isArray(payload)) return new Map();
+        return new Map(
+            payload.map((coin) => {
+                let image = null;
+                try {
+                    const imageUrl = new URL(coin.image);
+                    if (imageUrl.protocol === 'https:') image = imageUrl.toString();
+                } catch {
+                    // A missing logo should never prevent the chart from rendering.
+                }
+                return [
+                    coin.id,
+                    {
+                        name: typeof coin.name === 'string' ? coin.name : coin.id,
+                        symbol:
+                            typeof coin.symbol === 'string'
+                                ? coin.symbol.toUpperCase()
+                                : coin.id.slice(0, 4).toUpperCase(),
+                        image,
+                    },
+                ];
+            }),
+        );
+    } catch {
+        return new Map();
+    }
+}
+
+function normalizedDays(value) {
+    if (value === 'max') return 'max';
+
+    const days = Number(value);
+    if (![1, 7, 30, 90, 365].includes(days)) {
+        throw new CryptoServiceError('Chart period is invalid', 400);
+    }
+    return days;
+}
+
+function cacheTtl(options) {
     const requestedRefreshRate = Number(options.refreshRate);
     const refreshRate = Number.isFinite(requestedRefreshRate)
         ? Math.max(requestedRefreshRate, MIN_REFRESH_RATE_SECONDS)
         : MIN_REFRESH_RATE_SECONDS;
-    const cacheTtlMs = Math.min(refreshRate * 1000, MAX_CACHE_TTL_MS);
+    return Math.min(refreshRate * 1000, MAX_CACHE_TTL_MS);
+}
+
+async function execute(widgetName, params = {}, options = {}) {
+    if (!['crypto_price', 'crypto_chart'].includes(widgetName)) {
+        throw new CryptoServiceError('Unsupported crypto widget', 400);
+    }
+
+    const currency = normalizedParam(params.currency, 'Currency', 20);
+    const apiKey = getApiKey(options);
+    const cacheScope = options.cacheScope || 'unscoped';
+    const cacheTtlMs = cacheTtl(options);
+
+    if (widgetName === 'crypto_chart') {
+        const coins = normalizedCoins(params.coins);
+        const days = normalizedDays(params.days);
+        const cacheKey = `${cacheScope}:${widgetName}:${coins.join(',')}:${currency}:${days}`;
+        const cached = cache.get(cacheKey);
+
+        if (cached && Date.now() - cached.fetchedAt < cacheTtlMs) return cached.data;
+
+        const chartResults = await Promise.all(
+            coins.map(async (coin) => {
+                const { payload, historyLimited } = await fetchChartHistory(
+                    coin,
+                    currency,
+                    days,
+                    apiKey,
+                );
+                const prices = (payload?.prices || [])
+                    .filter(
+                        (point) =>
+                            Array.isArray(point) &&
+                            Number.isFinite(point[0]) &&
+                            Number.isFinite(point[1]),
+                    )
+                    .map(([timestamp, price]) => ({ timestamp, price }));
+
+                if (!prices.length) {
+                    throw new CryptoServiceError(`No chart data found for ${coin}`, 404);
+                }
+
+                const firstPrice = prices[0].price;
+                const currentPrice = prices[prices.length - 1].price;
+                const change = firstPrice ? ((currentPrice - firstPrice) / firstPrice) * 100 : null;
+
+                return { series: { coin, currentPrice, change, prices }, historyLimited };
+            }),
+        );
+        const series = chartResults.map((result) => result.series);
+        const historyLimited = chartResults.some((result) => result.historyLimited);
+        const metadata = await fetchCoinMetadata(coins, currency, apiKey);
+        const enrichedSeries = series.map((item) => ({
+            ...item,
+            ...(metadata.get(item.coin) || {}),
+        }));
+        const data = {
+            type: 'crypto_chart',
+            currency,
+            days,
+            historyLimited,
+            series: enrichedSeries,
+        };
+
+        cache.set(cacheKey, { data, fetchedAt: Date.now() });
+        return data;
+    }
+
+    const coin = normalizedParam(params.coin, 'Coin', 100);
+    const cacheKey = `${cacheScope}:${widgetName}:${coin}:${currency}`;
     const cached = cache.get(cacheKey);
 
     if (cached && Date.now() - cached.fetchedAt < cacheTtlMs) return cached.data;
@@ -133,6 +307,15 @@ module.exports = {
             params: [
                 { name: 'coin', type: 'string' },
                 { name: 'currency', type: 'string' },
+            ],
+        },
+        {
+            name: 'crypto_chart',
+            description: 'Compares historical price performance for multiple cryptocurrencies',
+            params: [
+                { name: 'coins', type: 'string' },
+                { name: 'currency', type: 'string' },
+                { name: 'days', type: 'integer' },
             ],
         },
     ],

@@ -1,12 +1,14 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useWidgetTimer } from '@/lib/useWidgetTimer';
 import { Droplets, Loader2, Wind } from 'lucide-react';
-import { fetchWidgetData } from '@/lib/widgets';
+import { fetchWidgetData, updateWidget as updateWidgetRequest } from '@/lib/widgets';
+import { useStore } from '@/store/useStore';
 import {
     GithubRepoWidget,
     GithubProfileWidget,
     GithubCommitsWidget,
 } from './widgets/GithubWidgets';
+import { CryptoChartWidget } from './widgets/CryptoChartWidget';
 
 function WeatherIcon({ code, description }) {
     if (!code) return null;
@@ -145,9 +147,12 @@ function CryptoPrice({ data }) {
 export default function WidgetRenderer({ widget }) {
     const { id, serviceName, widgetName, refreshRate } = widget;
     const isCryptoWidget = serviceName === 'crypto' && widgetName === 'crypto_price';
+    const isCryptoChart = serviceName === 'crypto' && widgetName === 'crypto_chart';
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [periodUpdating, setPeriodUpdating] = useState(false);
+    const updateWidgetInStore = useStore((state) => state.updateWidget);
 
     const fetchData = useCallback(async () => {
         try {
@@ -161,6 +166,26 @@ export default function WidgetRenderer({ widget }) {
             setLoading(false);
         }
     }, [id]);
+
+    const handlePeriodChange = useCallback(
+        async (days) => {
+            if (!isCryptoChart || String(widget.params?.days) === days) return;
+
+            setPeriodUpdating(true);
+            setError(null);
+            try {
+                const updated = await updateWidgetRequest(id, {
+                    params: { ...widget.params, days },
+                });
+                updateWidgetInStore(String(id), { params: updated.params });
+            } catch (err) {
+                setError(err.message || 'Failed to update chart period');
+            } finally {
+                setPeriodUpdating(false);
+            }
+        },
+        [id, isCryptoChart, updateWidgetInStore, widget.params],
+    );
 
     const isSupportedService = ['weather', 'github', 'crypto'].includes(serviceName);
     useWidgetTimer(isSupportedService ? refreshRate : 0, fetchData);
@@ -209,6 +234,16 @@ export default function WidgetRenderer({ widget }) {
     }
     if (['forecast', 'weather-forecast'].includes(widgetName)) return <Forecast data={data} />;
     if (isCryptoWidget) return <CryptoPrice data={data} />;
+    if (isCryptoChart)
+        return (
+            <CryptoChartWidget
+                key={data.series.map((series) => series.coin).join(':')}
+                data={data}
+                selectedPeriod={widget.params?.days}
+                onPeriodChange={handlePeriodChange}
+                periodUpdating={periodUpdating}
+            />
+        );
 
     if (['repo_stats', 'github-repo'].includes(widgetName)) return <GithubRepoWidget data={data} />;
     if (['latest_commits', 'github-commits'].includes(widgetName))

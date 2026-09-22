@@ -59,6 +59,12 @@ const WIDGET_PRESENTATION: Record<string, WidgetPresentation> = {
         title: 'Crypto Price',
         defaultLayout: { x: 0, y: 0, w: 3, h: 2 },
     },
+    'crypto:crypto_chart': {
+        title: 'Crypto Market',
+        defaultLayout: { x: 0, y: 0, w: 6, h: 5 },
+        minW: 3,
+        minH: 4,
+    },
 };
 
 function widgetKey(serviceName: string, widgetName: string) {
