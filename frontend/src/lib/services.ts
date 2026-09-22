@@ -53,6 +53,7 @@ export async function disconnectService(serviceName: string) {
 export async function getOAuthUrl(serviceName: string) {
     const response = await fetch(`${API_URL}/auth/${serviceName}?format=json`, {
         headers: authHeaders(),
+        credentials: 'include',
     });
     const body = await responseBody(response);
     if (!response.ok) throw new Error(body.error || 'Unable to start linking flow');
