@@ -104,6 +104,29 @@ export const SERVICES = {
             },
         ],
     },
+    crypto: {
+        name: 'Crypto',
+        widgets: [
+            {
+                id: 'crypto_price',
+                name: 'Price & Market Stats',
+                params: [
+                    {
+                        id: 'coin',
+                        label: 'CoinGecko Coin ID',
+                        type: 'text',
+                        placeholder: 'e.g. bitcoin, ethereum, solana',
+                    },
+                    {
+                        id: 'currency',
+                        label: 'Currency',
+                        type: 'text',
+                        placeholder: 'e.g. eur or usd',
+                    },
+                ],
+            },
+        ],
+    },
 };
 
 function areParamsComplete(service, widgetType, params) {

@@ -3,6 +3,7 @@ import { API_URL } from './auth';
 export type ServiceConnection = {
     name: string;
     displayName: string;
+    description: string | null;
     configurable: boolean;
     connectionType: string | null;
     credentialLabel: string | null;

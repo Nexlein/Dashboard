@@ -172,6 +172,7 @@ async function verifyCredentials(credentials) {
 module.exports = {
     name: 'weather',
     displayName: 'OpenWeather',
+    description: 'Current weather and forecasts',
     connection: {
         type: 'apiKey',
         label: 'OpenWeather API key',

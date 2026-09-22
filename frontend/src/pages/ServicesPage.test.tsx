@@ -19,6 +19,7 @@ describe('ServicesPage', () => {
             {
                 name: 'weather',
                 displayName: 'OpenWeather',
+                description: 'Current weather and forecasts',
                 configurable: true,
                 connectionType: 'apiKey',
                 credentialLabel: 'OpenWeather API key',

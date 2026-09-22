@@ -10,6 +10,7 @@ function publicConnection(service, connection) {
     return {
         name: service.name,
         displayName: service.displayName || service.name,
+        description: service.description || null,
         configurable: Boolean(service.connection),
         connectionType: service.connection?.type || null,
         credentialLabel: service.connection?.label || null,

@@ -51,4 +51,35 @@ describe('WidgetRenderer', () => {
         expect(screen.getByText('This service is not implemented yet.')).toBeInTheDocument();
         expect(fetchWidgetData).not.toHaveBeenCalled();
     });
+
+    it('renders a crypto price with its market statistics', async () => {
+        fetchWidgetData.mockResolvedValue({
+            type: 'crypto_price',
+            coin: 'bitcoin',
+            currency: 'eur',
+            price: 62000.5,
+            marketCap: 1230000000000,
+            volume24h: 28000000000,
+            change24h: 2.345,
+            lastUpdatedAt: 1770000000,
+        });
+
+        render(
+            <WidgetRenderer
+                widget={{
+                    id: 3,
+                    serviceName: 'crypto',
+                    widgetName: 'crypto_price',
+                    refreshRate: 60,
+                }}
+            />,
+        );
+
+        expect(await screen.findByTestId('crypto-price')).toBeInTheDocument();
+        expect(screen.getByText('bitcoin')).toBeInTheDocument();
+        expect(screen.getByText('+2.35%')).toBeInTheDocument();
+        expect(screen.getByText('Market cap')).toBeInTheDocument();
+        expect(screen.getByText('24h volume')).toBeInTheDocument();
+        expect(fetchWidgetData).toHaveBeenCalledWith(3);
+    });
 });
