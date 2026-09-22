@@ -1,14 +1,7 @@
 import { useEffect, useState } from 'react';
-import {
-    CheckCircle2,
-    CloudSun,
-    ExternalLink,
-    KeyRound,
-    Loader2,
-    Unplug,
-    GitFork,
-} from 'lucide-react';
+import { CheckCircle2, CloudSun, ExternalLink, KeyRound, Loader2, Unplug } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Github } from '@/components/ui/Github';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -112,7 +105,7 @@ export default function ServicesPage() {
                                     <div className="flex items-center gap-3">
                                         <span className="flex size-11 items-center justify-center rounded-xl bg-sky-500/10 text-sky-500">
                                             {service.name === 'github' ? (
-                                                <GitFork className="size-6" />
+                                                <Github className="size-6" />
                                             ) : (
                                                 <CloudSun className="size-6" />
                                             )}
