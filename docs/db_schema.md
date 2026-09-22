@@ -57,8 +57,8 @@ Stores a widget instance configured by a user. Supports multiple instances of th
 | ------------ | ------ | ------------------------------------------------------ |
 | `id`         | Int    | Primary Key                                            |
 | `userId`     | Int    | Foreign Key to `User`                                  |
-| `serviceName | String | Name of the service (e.g., `weather`)                  |
-| `widgetName` | String | Name of the widget (e.g., `current_temp`)              |
+| `serviceName | String | Name of the service (e.g., `weather` or `crypto`)      |
+| `widgetName` | String | Name of the widget (e.g., `current_weather`)            |
 | `params`     | Json   | Configurable parameters stored as JSON                 |
 | `refreshRate | Int    | Refresh interval in seconds                            |
 | `layout`     | Json   | Grid coordinates for UI rendering (`x`, `y`, `w`, `h`) |
@@ -77,7 +77,7 @@ Stores one user-owned credential set for a configurable external service.
 | ---------------------- | -------- | ---------------------------------------------- |
 | `id`                   | Int      | Primary key                                    |
 | `userId`               | Int      | Owner of the connection                        |
-| `serviceName`          | String   | Registry service name, such as `weather`       |
+| `serviceName`          | String   | Registry service name, such as `weather` or `crypto` |
 | `encryptedCredentials` | Json     | AES-256-GCM encrypted provider credentials     |
 | `keyHint`              | String?  | Last four characters shown in the UI           |
 | `verifiedAt`           | DateTime | Last successful provider verification          |

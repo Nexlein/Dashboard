@@ -13,6 +13,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { SERVICES } from './WidgetConfigurator'; // We'll need to export SERVICES from there
+import { WidgetParameterField } from './WidgetParameterField';
 
 function isRefreshRateValid(refreshTimer) {
     const refreshRate = Number(refreshTimer);
@@ -75,16 +76,11 @@ export function WidgetEditDialog({ widget, open, onOpenChange }) {
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                     {widgetInfo?.params?.map((param) => (
-                        <div className="grid gap-2" key={param.id}>
-                            <Label htmlFor={param.id}>{param.label}</Label>
-                            <Input
-                                id={param.id}
-                                type={param.type}
-                                placeholder={param.placeholder}
+                        <div key={param.id}>
+                            <WidgetParameterField
+                                param={param}
                                 value={params[param.id] || ''}
-                                onChange={(e) =>
-                                    setParams({ ...params, [param.id]: e.target.value })
-                                }
+                                onChange={(value) => setParams({ ...params, [param.id]: value })}
                             />
                         </div>
                     ))}

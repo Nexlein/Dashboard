@@ -13,7 +13,7 @@ import {
 import { deleteWidget, updateWidgetLayouts } from '@/lib/widgets';
 import { useRef, useState } from 'react';
 import WidgetRenderer from './WidgetRenderer';
-import { CloudSun, EllipsisVertical, Trash2, Edit2 } from 'lucide-react';
+import { Bitcoin, CloudSun, Edit2, EllipsisVertical, Trash2 } from 'lucide-react';
 import { WidgetEditDialog } from './WidgetEditDialog';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
@@ -83,6 +83,12 @@ export default function DashboardGrid() {
                                         <CloudSun
                                             aria-hidden="true"
                                             className="h-5 w-5 text-sky-500"
+                                        />
+                                    )}
+                                    {widget.serviceName === 'crypto' && (
+                                        <Bitcoin
+                                            aria-hidden="true"
+                                            className="h-5 w-5 text-amber-500"
                                         />
                                     )}
                                     <span>{widget.title}</span>

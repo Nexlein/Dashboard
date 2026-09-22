@@ -1,12 +1,14 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useWidgetTimer } from '@/lib/useWidgetTimer';
 import { Droplets, Loader2, Wind } from 'lucide-react';
-import { fetchWidgetData } from '@/lib/widgets';
+import { fetchWidgetData, updateWidget as updateWidgetRequest } from '@/lib/widgets';
+import { useStore } from '@/store/useStore';
 import {
     GithubRepoWidget,
     GithubProfileWidget,
     GithubCommitsWidget,
 } from './widgets/GithubWidgets';
+import { CryptoChartWidget } from './widgets/CryptoChartWidget';
 
 function WeatherIcon({ code, description }) {
     if (!code) return null;
@@ -77,12 +79,80 @@ function Forecast({ data }) {
     );
 }
 
+function formatCurrency(value, currency, compact = false) {
+    if (typeof value !== 'number') return '—';
+
+    try {
+        return new Intl.NumberFormat(undefined, {
+            style: 'currency',
+            currency: currency.toUpperCase(),
+            notation: compact ? 'compact' : 'standard',
+            maximumFractionDigits: compact ? 2 : value < 1 ? 6 : 2,
+        }).format(value);
+    } catch {
+        return `${value.toLocaleString()} ${currency.toUpperCase()}`;
+    }
+}
+
+function CryptoPrice({ data }) {
+    const change = typeof data.change24h === 'number' ? data.change24h : null;
+    const isPositive = change !== null && change >= 0;
+
+    return (
+        <div
+            className="flex h-full w-full flex-col justify-between gap-4"
+            data-testid="crypto-price"
+        >
+            <div>
+                <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-medium capitalize">
+                        {data.coin.replaceAll('-', ' ')}
+                    </p>
+                    {change !== null && (
+                        <span
+                            className={`rounded-full px-2 py-1 text-xs font-semibold ${
+                                isPositive
+                                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                    : 'bg-red-500/10 text-red-600 dark:text-red-400'
+                            }`}
+                        >
+                            {isPositive ? '+' : ''}
+                            {change.toFixed(2)}%
+                        </span>
+                    )}
+                </div>
+                <p className="mt-2 text-3xl font-semibold tracking-tight">
+                    {formatCurrency(data.price, data.currency)}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">24-hour market change</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3 border-t pt-3 text-sm">
+                <div>
+                    <p className="text-xs text-muted-foreground">Market cap</p>
+                    <p className="font-medium">
+                        {formatCurrency(data.marketCap, data.currency, true)}
+                    </p>
+                </div>
+                <div>
+                    <p className="text-xs text-muted-foreground">24h volume</p>
+                    <p className="font-medium">
+                        {formatCurrency(data.volume24h, data.currency, true)}
+                    </p>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function WidgetRenderer({ widget }) {
     const { id, serviceName, widgetName, refreshRate } = widget;
-    const isWeatherWidget = serviceName === 'weather';
+    const isCryptoWidget = serviceName === 'crypto' && widgetName === 'crypto_price';
+    const isCryptoChart = serviceName === 'crypto' && widgetName === 'crypto_chart';
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [periodUpdating, setPeriodUpdating] = useState(false);
+    const updateWidgetInStore = useStore((state) => state.updateWidget);
 
     const fetchData = useCallback(async () => {
         try {
@@ -97,7 +167,27 @@ export default function WidgetRenderer({ widget }) {
         }
     }, [id]);
 
-    const isSupportedService = ['weather', 'github'].includes(serviceName);
+    const handlePeriodChange = useCallback(
+        async (days) => {
+            if (!isCryptoChart || String(widget.params?.days) === days) return;
+
+            setPeriodUpdating(true);
+            setError(null);
+            try {
+                const updated = await updateWidgetRequest(id, {
+                    params: { ...widget.params, days },
+                });
+                updateWidgetInStore(String(id), { params: updated.params });
+            } catch (err) {
+                setError(err.message || 'Failed to update chart period');
+            } finally {
+                setPeriodUpdating(false);
+            }
+        },
+        [id, isCryptoChart, updateWidgetInStore, widget.params],
+    );
+
+    const isSupportedService = ['weather', 'github', 'crypto'].includes(serviceName);
     useWidgetTimer(isSupportedService ? refreshRate : 0, fetchData);
 
     // Refetch when params change via editing
@@ -143,6 +233,17 @@ export default function WidgetRenderer({ widget }) {
         return <CurrentWeather data={data} />;
     }
     if (['forecast', 'weather-forecast'].includes(widgetName)) return <Forecast data={data} />;
+    if (isCryptoWidget) return <CryptoPrice data={data} />;
+    if (isCryptoChart)
+        return (
+            <CryptoChartWidget
+                key={data.series.map((series) => series.coin).join(':')}
+                data={data}
+                selectedPeriod={widget.params?.days}
+                onPeriodChange={handlePeriodChange}
+                periodUpdating={periodUpdating}
+            />
+        );
 
     if (['repo_stats', 'github-repo'].includes(widgetName)) return <GithubRepoWidget data={data} />;
     if (['latest_commits', 'github-commits'].includes(widgetName))

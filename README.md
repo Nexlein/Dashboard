@@ -13,11 +13,18 @@ A customizable web dashboard that allows authenticated users to monitor digital 
   - Multiple instances of the same widget can display distinct data.
 - **Auto-Refresh Engine**: Widget data updates automatically based on a configured timer.
 
-### Included Services (Planned)
+### Included Services
 
 1. **Weather**: Current Temperature, 5-Day Forecast.
 2. **GitHub**: Repository Stats, Latest Commits, User Profile. (Also supports GitHub Login / Account Creation)
-3. **YouTube**: Video Stats, Channel Subscribers.
+3. **CoinGecko**: Cryptocurrency Price & Market Stats, Crypto Market Comparison Chart.
+
+CoinGecko and OpenWeather use a personal API key entered by each authenticated
+user from the **Services** page. These keys are verified before storage,
+encrypted in PostgreSQL, and never exposed to the frontend after connection.
+
+The Crypto Market widget supports one to eight CoinGecko assets, EUR/USD/GBP,
+individually toggleable normalized curves, and 1W, 1M, 3M, and 1Y periods.
 
 ## Tech Stack
 
@@ -99,5 +106,6 @@ before running `prisma db push`. Run either the Docker backend or the local back
 on port 8080, not both at once.
 
 See the [manual browser flow](docs/api.md#manual-browser-flow) to test GitHub
-linking without a frontend. Run backend tests with `npm test` from `backend/`;
-the OAuth tests mock GitHub and Prisma and do not require real credentials or a database.
+linking without a frontend. Run backend tests with `npm test` from `backend/`
+and frontend tests with `npm test` from `frontend/`. Provider tests mock remote
+APIs and do not require real OpenWeather, GitHub, or CoinGecko credentials.
