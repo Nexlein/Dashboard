@@ -2,8 +2,8 @@
 
 ## Group Size: 2
 
-- [ ] **Required Services**: 3 (1 + 2)
-- [ ] **Required Widgets**: 6 (3 * 2)
+- [x] **Required Services**: 3 (OpenWeather, GitHub, CoinGecko)
+- [x] **Required Widgets**: 6 minimum (7 implemented across the three services)
 
 ## Core Features
 
@@ -14,14 +14,15 @@
 - [ ] **Service Subscriptions**:
     - [x] Authenticated users select services to subscribe to.
     - [x] OpenWeather subscription requires a verified, user-owned API key.
+    - [x] CoinGecko subscription requires a verified, user-owned API key.
     - [x] Add OAuth linking for every remaining account-based service (GitHub done).
 - [ ] **Dashboard & Widgets**:
     - [ ] Connect `about.json` dynamically to the frontend Configurator.
     - [ ] Sync Dashboard Grid layout with Postgres Database via PUT/POST routes.
     - [x] Add widget (select type, configure, set refresh rate).
-    - [ ] Reconfigure, move, delete widgets. (Move is done)
+    - [x] Reconfigure, move, delete widgets.
     - [x] **Crucial**: Widget _must_ have configurable parameters.
-    - [ ] **Crucial**: Two instances of same widget with different configs must display distinct info.
+    - [x] **Crucial**: Two instances of same widget with different configs display distinct info.
 - [ ] **Accessibility (a11y)**:
     - [ ] Full keyboard navigation support.
     - [ ] Screen reader compatibility (ARIA labels).
@@ -40,7 +41,7 @@
 - [x] **API Security**: Encrypt widget parameters and user-owned service credentials in the database.
 - [x] **Rate Limiting**: Protect authentication endpoints against brute-force attacks.
 - [ ] **CORS**: Restrict API access to the frontend origin.
-- [ ] **Backend Cache**: In-memory cache for external API calls to prevent rate-limiting/bans.
+- [x] **Backend Cache**: In-memory cache for external API calls to prevent rate-limiting/bans.
 - [ ] **UI Error Boundaries**: Individual widget failures must not crash the entire dashboard.
 
 ## UX / UI Polish
@@ -69,7 +70,7 @@
 
 - [x] **Source Code**: No binaries or temp files.
 - [ ] **README.md**:
-    - [ ] List of key features, services, and widgets.
+    - [x] List of key features, services, and widgets.
     - [ ] Precise steps to install and build.
     - [ ] Overview of app purpose and use cases.
     - [ ] Clear instructions to run and use.

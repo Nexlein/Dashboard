@@ -16,7 +16,7 @@ flowchart TB
     end
 
     subgraph External[External Services]
-        ExtAPIs["External APIs (Weather, GitHub, YouTube)"]
+        ExtAPIs["External APIs (OpenWeather, GitHub, CoinGecko)"]
         OAuth["OAuth Providers (Google/Github)"]
     end
 
@@ -35,7 +35,7 @@ flowchart TB
 - **Framework**: React via Vite.
 - **Role**: Renders the drag-and-drop grid (`react-grid-layout`) and handles user interactions.
 - **State**: Manages widget configurations, OAuth states, and user sessions.
-- **Widgets**: Uses a custom `useWidgetTimer` hook embedded in `WidgetRenderer` to independently auto-refresh widget data based on the database `refreshRate`.
+- **Widgets**: Uses a custom `useWidgetTimer` hook embedded in `WidgetRenderer` to independently auto-refresh widget data based on the database `refreshRate`. Crypto comparison widgets render normalized SVG curves without a charting dependency.
 
 ### 2. Backend (Server)
 
@@ -48,7 +48,7 @@ flowchart TB
 
 ### 3. Caching Layer
 
-- **Role**: Sits inside the Backend container. Intercepts outgoing requests to external APIs. Weather cache entries are scoped to the authenticated user's service connection and expire according to the widget refresh interval.
+- **Role**: Sits inside the Backend container. Intercepts outgoing requests to external APIs. Weather and CoinGecko cache entries are scoped to the authenticated user's service connection and expire according to the widget refresh interval, capped at five minutes.
 
 ### 4. Database
 

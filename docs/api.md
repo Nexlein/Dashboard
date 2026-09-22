@@ -177,6 +177,13 @@ Weather responses are cached for at most the configured refresh interval, so the
 refresh can request fresh provider data.
 Creating a weather widget returns `409 Conflict` until the authenticated user has connected
 OpenWeather through `/services/weather/connection`.
+Creating a crypto widget similarly requires a verified CoinGecko connection.
+
+CoinGecko widgets use the following parameters:
+
+- `crypto_price`: `coin` (CoinGecko asset ID) and `currency`.
+- `crypto_chart`: `coins` (comma-separated CoinGecko asset IDs), `currency`,
+  and `days` (`7`, `30`, `90`, or `365`). The comparison accepts one to eight assets.
 
 ### `PUT /widgets/:id`
 
@@ -206,7 +213,7 @@ Delete a widget.
 ### `GET /widgets/:id/data`
 
 Executes a saved widget and returns its normalized service data. The widget must
-belong to the authenticated user. Weather responses are cached in memory per
+belong to the authenticated user. Weather and CoinGecko responses are cached in memory per
 user connection and never beyond the widget refresh interval. Provider credentials
 are decrypted only for the outgoing request and are never exposed to the client.
 
@@ -214,12 +221,18 @@ Current weather widgets return the resolved location, temperature, perceived
 temperature, humidity, wind and condition. Forecast widgets return five daily
 entries aggregated from OpenWeather's three-hour forecast.
 
+`crypto_price` returns the selected asset's current price, market cap, 24-hour
+volume, 24-hour change, and provider update time. `crypto_chart` returns
+historical price series, current prices, period changes, symbols, and secure
+CoinGecko logo URLs. The frontend normalizes each curve to percentage change so
+assets with different price scales can be compared.
+
 - `400 Bad Request` for an invalid id or unsupported widget.
 - `403 Forbidden` when the widget belongs to another user.
 - `404 Not Found` when the widget or requested city does not exist.
-- `409 Conflict` when the widget owner has not connected OpenWeather.
-- `502 Bad Gateway` when OpenWeather cannot answer.
-- `503 Service Unavailable` when OpenWeather rejects requests temporarily or reaches its limit.
+- `409 Conflict` when the widget owner has not connected the required provider.
+- `502 Bad Gateway` when an external provider cannot answer.
+- `503 Service Unavailable` when a provider rejects requests temporarily or reaches its limit.
 
 ## Service connections
 
@@ -241,6 +254,9 @@ Verifies and creates or replaces the authenticated user's provider credentials.
 ```
 
 For `weather`, the key is checked against OpenWeather before it is encrypted and stored.
+For `crypto`, a CoinGecko Demo API key is checked with a simple Bitcoin price
+request before it is encrypted and stored. API keys belong to the authenticated
+user and are never read from the project `.env`.
 Invalid or inactive keys return `400 Bad Request` and are not saved.
 
 ### `DELETE /services/:serviceName/connection`

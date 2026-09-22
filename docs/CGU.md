@@ -22,7 +22,7 @@ Les informations nécessaires au compte, aux préférences et aux widgets sont e
 
 ## 5. Services externes
 
-Certaines fonctionnalités reposent sur des services tiers (ex: météo, GitHub, YouTube). Leur disponibilité et le traitement des données qu'ils réalisent dépendent également de leurs propres règles et politiques (ex: CGU de YouTube, de GitHub).
+Certaines fonctionnalités reposent sur des services tiers (ex: OpenWeather, GitHub, CoinGecko). Leur disponibilité et le traitement des données qu'ils réalisent dépendent également de leurs propres règles et politiques.
 
 ## 6. Disponibilité et responsabilité
 
