@@ -227,10 +227,14 @@ export function WidgetConfigurator() {
                                 <div className="flex items-start gap-2">
                                     <KeyRound className="mt-0.5 size-4 shrink-0 text-sky-500" />
                                     <div>
-                                        <p className="font-medium">OpenWeather is not connected</p>
+                                        <p className="font-medium">
+                                            {selectedConnection?.displayName || service} is not
+                                            connected
+                                        </p>
                                         <p className="mt-1 text-muted-foreground">
-                                            Add and verify your personal API key before creating a
-                                            weather widget.
+                                            {selectedConnection?.connectionType === 'oauth'
+                                                ? `Please link your ${selectedConnection?.displayName || service} account in Services before creating this widget.`
+                                                : `Add and verify your personal API key in Services before creating a ${service} widget.`}
                                         </p>
                                         <Button
                                             type="button"
