@@ -10,6 +10,10 @@ export type ServiceConnection = {
     connected: boolean;
     keyHint: string | null;
     verifiedAt: string | null;
+    accountInfo?: {
+        username: string;
+        avatarUrl: string;
+    } | null;
 };
 
 function authHeaders() {

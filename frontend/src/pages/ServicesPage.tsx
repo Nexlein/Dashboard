@@ -146,6 +146,18 @@ export default function ServicesPage() {
                                                         ? 'Compte lié'
                                                         : 'API key verified'}
                                                 </p>
+                                                {service.accountInfo && (
+                                                    <div className="mt-1 flex items-center gap-2">
+                                                        <img
+                                                            src={service.accountInfo.avatarUrl}
+                                                            alt={service.accountInfo.username}
+                                                            className="size-5 rounded-full"
+                                                        />
+                                                        <p className="text-xs font-medium text-muted-foreground">
+                                                            {service.accountInfo.username}
+                                                        </p>
+                                                    </div>
+                                                )}
                                                 {service.connectionType !== 'oauth' && (
                                                     <p className="text-xs text-muted-foreground">
                                                         Key ending in ••••{service.keyHint}
