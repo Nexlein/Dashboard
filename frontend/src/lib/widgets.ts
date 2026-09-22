@@ -14,6 +14,8 @@ export type ApiWidget = {
 type WidgetPresentation = {
     title: string;
     defaultLayout?: ApiWidget['layout'];
+    minW?: number;
+    minH?: number;
 };
 
 const DEFAULT_WIDGET_LAYOUT: ApiWidget['layout'] = { x: 0, y: 0, w: 4, h: 2 };
@@ -38,14 +40,20 @@ const WIDGET_PRESENTATION: Record<string, WidgetPresentation> = {
     'github:repo_stats': {
         title: 'GitHub - Repository Stats',
         defaultLayout: { x: 0, y: 0, w: 3, h: 2 },
+        minW: 3,
+        minH: 2,
     },
     'github:latest_commits': {
         title: 'GitHub - Latest Commits',
         defaultLayout: { x: 0, y: 0, w: 4, h: 3 },
+        minW: 3,
+        minH: 3,
     },
     'github:user_profile': {
         title: 'GitHub - User Profile',
         defaultLayout: { x: 0, y: 0, w: 3, h: 3 },
+        minW: 3,
+        minH: 3,
     },
 };
 
@@ -71,6 +79,8 @@ export function toDashboardWidget(
         y: widget.layout.y,
         w: widget.layout.w,
         h: widget.layout.h,
+        minW: WIDGET_PRESENTATION[widgetKey(widget.serviceName, widget.widgetName)]?.minW,
+        minH: WIDGET_PRESENTATION[widgetKey(widget.serviceName, widget.widgetName)]?.minH,
         title,
     };
 }
