@@ -39,9 +39,9 @@ const WIDGET_PRESENTATION: Record<string, WidgetPresentation> = {
     },
     'github:repo_stats': {
         title: 'GitHub - Repository Stats',
-        defaultLayout: { x: 0, y: 0, w: 3, h: 2 },
+        defaultLayout: { x: 0, y: 0, w: 3, h: 3 },
         minW: 3,
-        minH: 2,
+        minH: 3,
     },
     'github:latest_commits': {
         title: 'GitHub - Latest Commits',
