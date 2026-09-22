@@ -30,7 +30,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 
-const SERVICES = {
+export const SERVICES = {
     weather: {
         name: 'Weather',
         widgets: [

@@ -12,6 +12,12 @@ export const useStore = create(
                 set((state) => ({
                     widgets: [...state.widgets, widget],
                 })),
+            updateWidget: (id, updates) =>
+                set((state) => ({
+                    widgets: state.widgets.map((widget) =>
+                        widget.i === String(id) ? { ...widget, ...updates } : widget,
+                    ),
+                })),
             removeWidget: (id) =>
                 set((state) => ({
                     widgets: state.widgets.filter((widget) => widget.i !== String(id)),

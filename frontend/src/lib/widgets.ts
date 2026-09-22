@@ -143,6 +143,22 @@ export async function updateWidgetLayouts(layouts) {
     }
 }
 
+export async function updateWidget(id: number, widgetData): Promise<ApiWidget> {
+    const token = localStorage.getItem('dashboard-auth-token');
+    const response = await fetch(`${API_URL}/widgets/${id}`, {
+        method: 'PUT',
+        headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(widgetData),
+    });
+
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body.error || 'Failed to update widget');
+    return body;
+}
+
 export async function deleteWidget(id) {
     const token = localStorage.getItem('dashboard-auth-token');
     const response = await fetch(`${API_URL}/widgets/${id}`, {
