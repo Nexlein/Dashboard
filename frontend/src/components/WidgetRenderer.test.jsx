@@ -41,8 +41,8 @@ describe('WidgetRenderer', () => {
             <WidgetRenderer
                 widget={{
                     id: 2,
-                    serviceName: 'github',
-                    widgetName: 'github-user',
+                    serviceName: 'unsupported-service',
+                    widgetName: 'unsupported-widget',
                     refreshRate: 60,
                 }}
             />,

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { CheckCircle2, CloudSun, ExternalLink, KeyRound, Loader2, Unplug } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Github } from '@/components/ui/Github';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,6 +9,7 @@ import {
     connectService,
     disconnectService,
     fetchServices,
+    getOAuthUrl,
     type ServiceConnection,
 } from '@/lib/services';
 
@@ -102,12 +104,18 @@ export default function ServicesPage() {
                                 <CardHeader className="flex flex-row items-start justify-between gap-4 border-b">
                                     <div className="flex items-center gap-3">
                                         <span className="flex size-11 items-center justify-center rounded-xl bg-sky-500/10 text-sky-500">
-                                            <CloudSun className="size-6" />
+                                            {service.name === 'github' ? (
+                                                <Github className="size-6" />
+                                            ) : (
+                                                <CloudSun className="size-6" />
+                                            )}
                                         </span>
                                         <div>
                                             <CardTitle>{service.displayName}</CardTitle>
                                             <p className="mt-1 text-sm text-muted-foreground">
-                                                Current weather and forecasts
+                                                {service.name === 'github'
+                                                    ? 'Statistiques et activité des dépôts'
+                                                    : 'Current weather and forecasts'}
                                             </p>
                                         </div>
                                     </div>
@@ -127,16 +135,60 @@ export default function ServicesPage() {
                                             <CheckCircle2 className="size-5 text-emerald-500" />
                                             <div className="min-w-0 flex-1">
                                                 <p className="text-sm font-medium">
-                                                    API key verified
+                                                    {service.connectionType === 'oauth'
+                                                        ? 'Compte lié'
+                                                        : 'API key verified'}
                                                 </p>
-                                                <p className="text-xs text-muted-foreground">
-                                                    Key ending in ••••{service.keyHint}
-                                                </p>
+                                                {service.accountInfo && (
+                                                    <div className="mt-1 flex items-center gap-2">
+                                                        <img
+                                                            src={service.accountInfo.avatarUrl}
+                                                            alt={service.accountInfo.username}
+                                                            className="size-5 rounded-full"
+                                                        />
+                                                        <p className="text-xs font-medium text-muted-foreground">
+                                                            {service.accountInfo.username}
+                                                        </p>
+                                                    </div>
+                                                )}
+                                                {service.connectionType !== 'oauth' && (
+                                                    <p className="text-xs text-muted-foreground">
+                                                        Key ending in ••••{service.keyHint}
+                                                    </p>
+                                                )}
                                             </div>
                                         </div>
                                     )}
 
-                                    {showForm && (
+                                    {showForm && service.connectionType === 'oauth' && (
+                                        <div className="space-y-2">
+                                            <Button
+                                                onClick={async () => {
+                                                    try {
+                                                        const url = await getOAuthUrl(service.name);
+                                                        window.location.href = url;
+                                                    } catch (err) {
+                                                        setError(
+                                                            err instanceof Error
+                                                                ? err.message
+                                                                : 'Unable to start linking flow',
+                                                        );
+                                                    }
+                                                }}
+                                                className="w-full"
+                                                variant="outline"
+                                            >
+                                                <ExternalLink className="mr-2 size-4" />
+                                                Lier mon compte {service.displayName}
+                                            </Button>
+                                            <p className="text-xs text-muted-foreground">
+                                                Vous allez être redirigé vers {service.displayName}{' '}
+                                                pour autoriser l'accès.
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {showForm && service.connectionType !== 'oauth' && (
                                         <div className="space-y-2">
                                             <Label htmlFor={`${service.name}-api-key`}>
                                                 {service.credentialLabel || 'API key'}
@@ -177,19 +229,21 @@ export default function ServicesPage() {
                                     )}
 
                                     <div className="flex flex-wrap items-center gap-2">
-                                        {service.connected && !showForm && (
-                                            <Button
-                                                variant="outline"
-                                                onClick={() =>
-                                                    setEditing((current) => ({
-                                                        ...current,
-                                                        [service.name]: true,
-                                                    }))
-                                                }
-                                            >
-                                                Replace key
-                                            </Button>
-                                        )}
+                                        {service.connected &&
+                                            !showForm &&
+                                            service.connectionType !== 'oauth' && (
+                                                <Button
+                                                    variant="outline"
+                                                    onClick={() =>
+                                                        setEditing((current) => ({
+                                                            ...current,
+                                                            [service.name]: true,
+                                                        }))
+                                                    }
+                                                >
+                                                    Replace key
+                                                </Button>
+                                            )}
                                         {service.connected && (
                                             <Button
                                                 variant="ghost"

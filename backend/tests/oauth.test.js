@@ -122,7 +122,7 @@ describe('GitHub account linking', () => {
             .expect(403);
         expect(global.fetch).not.toHaveBeenCalled();
         expect(prisma.oAuthToken.upsert).not.toHaveBeenCalled();
-        await callback(link).expect(200);
+        await callback(link).expect(302);
     });
 
     it('rejects a different browser secret even with a valid state', async () => {
@@ -132,15 +132,15 @@ describe('GitHub account linking', () => {
         await callback({ ...first, cookie: wrongCookie }).expect(403);
         expect(global.fetch).not.toHaveBeenCalled();
         expect(prisma.oAuthToken.upsert).not.toHaveBeenCalled();
-        await callback(first).expect(200);
-        await callback(second).expect(200);
+        await callback(first).expect(302);
+        await callback(second).expect(302);
     });
 
     it('stores the token for the initiating user, clears its cookie and rejects replay', async () => {
         const link = await startLink(42);
-        const response = await callback(link).expect(200);
-        expect(response.body).toEqual({ message: 'GitHub account linked', userId: 42 });
-        expect(JSON.stringify(response.body)).not.toContain('github-access-token');
+        const response = await callback(link).expect(302);
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        expect(response.headers.location).toBe(`${frontendUrl}/services?linked=github`);
         expect(response.headers['set-cookie'][0]).toContain(`github_link_${link.state}=;`);
         expect(response.headers['set-cookie'][0]).toContain('Path=/auth/github/callback');
         expect(prisma.oAuthToken.upsert).toHaveBeenCalledWith({
@@ -166,8 +166,8 @@ describe('GitHub account linking', () => {
         const first = await startLink();
         const second = await startLink();
         const bothCookies = `${first.cookie}; ${second.cookie}`;
-        await callback({ ...first, cookie: bothCookies }).expect(200);
-        await callback({ ...second, cookie: bothCookies }).expect(200);
+        await callback({ ...first, cookie: bothCookies }).expect(302);
+        await callback({ ...second, cookie: bothCookies }).expect(302);
         expect(prisma.oAuthToken.upsert).toHaveBeenCalledTimes(2);
     });
 
@@ -204,7 +204,8 @@ describe('GitHub account linking', () => {
     it('handles refusal and missing code without exchanging or storing tokens', async () => {
         for (const query of [{ error: 'access_denied' }, {}]) {
             const link = await startLink();
-            await callback(link, query).expect(400);
+            let res = await callback(link, query).expect(302);
+            expect(res.headers.location).toContain('error=');
             await callback(link).expect(400);
         }
         expect(global.fetch).not.toHaveBeenCalled();
@@ -216,17 +217,30 @@ describe('GitHub account linking', () => {
             ok: true,
             json: async () => ({ error: 'bad_verification_code' }),
         });
-        await callback(await startLink()).expect(502);
+        const response = await callback(await startLink()).expect(302);
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        expect(response.headers.location).toBe(`${frontendUrl}/services?error=github_flow_failed`);
         expect(prisma.oAuthToken.upsert).not.toHaveBeenCalled();
     });
 
     it('handles a network failure and database failure without exposing secrets', async () => {
         global.fetch.mockRejectedValueOnce(new Error('private upstream details'));
-        let response = await callback(await startLink()).expect(500);
-        expect(response.body).toEqual({ error: 'GitHub linking failed' });
+        let response = await callback(await startLink()).expect(302);
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        expect(response.headers.location).toBe(`${frontendUrl}/services?error=github_flow_failed`);
         expect(prisma.oAuthToken.upsert).not.toHaveBeenCalled();
         prisma.oAuthToken.upsert.mockRejectedValueOnce(new Error('private database details'));
-        response = await callback(await startLink()).expect(500);
-        expect(response.body).toEqual({ error: 'GitHub linking failed' });
+        response = await callback(await startLink()).expect(302);
+        expect(response.headers.location).toBe(`${frontendUrl}/services?error=github_flow_failed`);
+    });
+
+    describe('GitHub Login Flow (/auth/github/login)', () => {
+        it('starts the login flow without needing authorization', async () => {
+            const response = await request(app).get('/auth/github/login').expect(302);
+            const url = new URL(response.headers.location);
+            expect(url.origin).toBe('https://github.com');
+            expect(url.pathname).toBe('/login/oauth/authorize');
+            expect(url.searchParams.get('client_id')).toBe('test-client-id');
+        });
     });
 });

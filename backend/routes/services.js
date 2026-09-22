@@ -17,16 +17,53 @@ function publicConnection(service, connection) {
         connected: Boolean(connection),
         keyHint: connection?.keyHint || null,
         verifiedAt: connection?.verifiedAt || null,
+        accountInfo: connection?.accountInfo || null,
     };
 }
 
 router.get('/', async (req, res) => {
     try {
-        const connections = await prisma.serviceConnection.findMany({
-            where: { userId: req.user.userId },
-        });
-        const byService = new Map(
-            connections.map((connection) => [connection.serviceName, connection]),
+        const [connections, oauthTokens] = await Promise.all([
+            prisma.serviceConnection.findMany({
+                where: { userId: req.user.userId },
+            }),
+            prisma.oAuthToken.findMany({
+                where: { userId: req.user.userId },
+            }),
+        ]);
+
+        const byService = new Map();
+        connections.forEach((conn) => byService.set(conn.serviceName, conn));
+
+        await Promise.all(
+            oauthTokens.map(async (token) => {
+                let accountInfo = null;
+                if (token.provider === 'github') {
+                    try {
+                        const res = await fetch('https://api.github.com/user', {
+                            headers: {
+                                Authorization: `Bearer ${token.accessToken}`,
+                                'User-Agent': 'Dashboard-App',
+                            },
+                        });
+                        if (res.ok) {
+                            const data = await res.json();
+                            accountInfo = {
+                                username: data.login,
+                                avatarUrl: data.avatar_url,
+                            };
+                        }
+                    } catch (e) {
+                        // Ignore
+                    }
+                }
+                byService.set(token.provider, {
+                    serviceName: token.provider,
+                    keyHint: 'OAuth',
+                    verifiedAt: token.expiresAt || new Date(),
+                    accountInfo,
+                });
+            }),
         );
 
         return res.json(
@@ -93,12 +130,21 @@ router.delete('/:serviceName/connection', async (req, res) => {
     }
 
     try {
-        await prisma.serviceConnection.deleteMany({
-            where: {
-                userId: req.user.userId,
-                serviceName: service.name,
-            },
-        });
+        if (service.connection.type === 'oauth') {
+            await prisma.oAuthToken.deleteMany({
+                where: {
+                    userId: req.user.userId,
+                    provider: service.name,
+                },
+            });
+        } else {
+            await prisma.serviceConnection.deleteMany({
+                where: {
+                    userId: req.user.userId,
+                    serviceName: service.name,
+                },
+            });
+        }
         service.clearCache?.();
         return res.status(204).send();
     } catch {

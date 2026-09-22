@@ -90,6 +90,21 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
     return hasValidAuthToken() ? children : <Navigate to="/login" replace />;
 }
 
+function OAuthCallback() {
+    const navigate = useNavigate();
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+        if (token) {
+            localStorage.setItem('dashboard-auth-token', token);
+            navigate('/', { replace: true });
+        } else {
+            navigate('/login', { replace: true });
+        }
+    }, [navigate]);
+    return <div>Connexion en cours...</div>;
+}
+
 export default function App() {
     return (
         <Router>
@@ -111,6 +126,7 @@ export default function App() {
                     }
                 />
                 <Route path="/login" element={<AuthPage />} />
+                <Route path="/login/oauth" element={<OAuthCallback />} />
                 <Route path="/register" element={<AuthPage />} />
                 <Route path="/cgu" element={<TermsPage />} />
             </Routes>

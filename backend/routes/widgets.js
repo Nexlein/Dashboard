@@ -1,6 +1,6 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
-const { encryptParams, decryptParams, decryptJson } = require('../utils/encryption');
+const { encryptParams, decryptParams, decryptJson, encryptJson } = require('../utils/encryption');
 const registry = require('../services/registry');
 
 const router = express.Router();
@@ -13,6 +13,26 @@ function isValidRefreshRate(refreshRate) {
 
 async function getServiceConnection(userId, service) {
     if (!service.connection) return null;
+
+    if (service.connection.type === 'oauth') {
+        const token = await prisma.oAuthToken.findUnique({
+            where: {
+                userId_provider: {
+                    userId,
+                    provider: service.name,
+                },
+            },
+        });
+        if (!token) return null;
+        return {
+            id: token.id,
+            userId,
+            serviceName: service.name,
+            encryptedCredentials: encryptJson({ accessToken: token.accessToken }),
+            keyHint: 'OAuth',
+            verifiedAt: token.expiresAt || new Date(),
+        };
+    }
 
     return prisma.serviceConnection.findUnique({
         where: {
@@ -59,10 +79,29 @@ router.post('/', async (req, res) => {
 
         const service = registry.getService(serviceName);
         if (!service) return res.status(400).json({ error: 'Unsupported widget service' });
-        if (service.connection && !(await getServiceConnection(req.user.userId, service))) {
+
+        const connection = await getServiceConnection(req.user.userId, service);
+        if (service.connection && !connection) {
             return res.status(409).json({
                 error: `${service.displayName || service.name} is not connected. Configure it in Services.`,
             });
+        }
+
+        if (service.execute) {
+            try {
+                await service.execute(widgetName, params, {
+                    userId: req.user.userId,
+                    refreshRate: Math.max(refreshRate, MIN_REFRESH_RATE_SECONDS),
+                    credentials: connection
+                        ? decryptJson(connection.encryptedCredentials)
+                        : undefined,
+                    cacheScope: connection ? `${req.user.userId}:${connection.id}` : undefined,
+                });
+            } catch (err) {
+                return res.status(err.statusCode || 400).json({
+                    error: err.statusCode ? err.message : 'Invalid widget configuration',
+                });
+            }
         }
 
         const widget = await prisma.widgetConfig.create({
@@ -137,6 +176,7 @@ router.get('/:id/data', async (req, res) => {
         }
 
         const data = await service.execute(widget.widgetName, decryptParams(widget.params), {
+            userId: req.user.userId,
             refreshRate: Math.max(widget.refreshRate, MIN_REFRESH_RATE_SECONDS),
             credentials: connection ? decryptJson(connection.encryptedCredentials) : undefined,
             cacheScope: connection ? `${req.user.userId}:${connection.id}` : undefined,

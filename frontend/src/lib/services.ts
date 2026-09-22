@@ -10,6 +10,10 @@ export type ServiceConnection = {
     connected: boolean;
     keyHint: string | null;
     verifiedAt: string | null;
+    accountInfo?: {
+        username: string;
+        avatarUrl: string;
+    } | null;
 };
 
 function authHeaders() {
@@ -48,4 +52,14 @@ export async function disconnectService(serviceName: string) {
         const body = await responseBody(response);
         throw new Error(body.error || 'Unable to disconnect service');
     }
+}
+
+export async function getOAuthUrl(serviceName: string) {
+    const response = await fetch(`${API_URL}/auth/${serviceName}?format=json`, {
+        headers: authHeaders(),
+        credentials: 'include',
+    });
+    const body = await responseBody(response);
+    if (!response.ok) throw new Error(body.error || 'Unable to start linking flow');
+    return body.authorizationUrl;
 }

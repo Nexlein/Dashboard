@@ -26,6 +26,12 @@ jest.mock('@prisma/client', () => {
             upsert: jest.fn(),
             deleteMany: jest.fn(),
         },
+        oAuthToken: {
+            findMany: jest.fn(),
+            findUnique: jest.fn(),
+            upsert: jest.fn(),
+            deleteMany: jest.fn(),
+        },
         $transaction: jest.fn(),
     };
     return { PrismaClient: jest.fn(() => mPrisma) };
@@ -254,8 +260,13 @@ describe('API Endpoints', () => {
         });
 
         it('should create a widget with encrypted params and return the public contract', async () => {
-            prisma.serviceConnection.findUnique.mockResolvedValue({ id: 9 });
+            const { encryptJson } = require('../utils/encryption');
+            prisma.serviceConnection.findUnique.mockResolvedValue({
+                id: 9,
+                encryptedCredentials: encryptJson({ apiKey: 'test' }),
+            });
             prisma.widgetConfig.create.mockResolvedValue(mockWidget);
+            const executeSpy = jest.spyOn(weatherService, 'execute').mockResolvedValue({});
 
             const res = await request(app)
                 .post('/widgets')
@@ -279,6 +290,7 @@ describe('API Endpoints', () => {
                     refreshRate: 60,
                 }),
             });
+            executeSpy.mockRestore();
         });
 
         it('should reject a refresh rate below 60 seconds', async () => {
@@ -338,6 +350,7 @@ describe('API Endpoints', () => {
                 'current_weather',
                 { city: 'Paris' },
                 {
+                    userId: 1,
                     refreshRate: 60,
                     credentials: { apiKey: 'test-key' },
                     cacheScope: '1:9',
@@ -380,6 +393,7 @@ describe('API Endpoints', () => {
 
         it('lists services without exposing credentials', async () => {
             prisma.serviceConnection.findMany.mockResolvedValue([connection]);
+            prisma.oAuthToken.findMany.mockResolvedValue([]);
 
             const res = await request(app).get('/services').set('Authorization', `Bearer ${token}`);
 

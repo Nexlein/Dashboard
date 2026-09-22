@@ -1,19 +1,12 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import {
-    Activity,
-    BarChart3,
-    CheckCircle2,
-    CloudSun,
-    GitFork,
-    LayoutDashboard,
-    Plus,
-} from 'lucide-react';
+import { Activity, BarChart3, CheckCircle2, CloudSun, LayoutDashboard, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Github } from '@/components/ui/Github';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { login, register } from '@/lib/auth';
+import { login, register, API_URL } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 
 function DashboardBackdrop() {
@@ -97,9 +90,9 @@ function DashboardBackdrop() {
 
                     <div className="col-span-4 h-48 rounded-2xl border border-slate-200/80 bg-white/90 p-6 shadow-sm">
                         <div className="flex items-center gap-3">
-                            <span className="flex size-10 items-center justify-center rounded-xl bg-slate-900 text-white">
-                                <GitFork className="size-5" />
-                            </span>
+                            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                                <Github className="size-5" />
+                            </div>
                             <div>
                                 <p className="font-semibold text-slate-900">GitHub</p>
                                 <p className="text-xs text-slate-500">Activité récente</p>
@@ -256,6 +249,25 @@ export default function AuthPage() {
                             Compte créé. Vous pouvez maintenant vous connecter.
                         </p>
                     )}
+
+                    <Button
+                        type="button"
+                        variant="outline"
+                        className="mb-4 h-10 w-full"
+                        onClick={() => (window.location.href = `${API_URL}/auth/github/login`)}
+                    >
+                        <Github className="mr-2 size-4" />
+                        Continuer avec GitHub
+                    </Button>
+
+                    <div className="relative mb-6">
+                        <div className="absolute inset-0 flex items-center">
+                            <span className="w-full border-t" />
+                        </div>
+                        <div className="relative flex justify-center text-xs uppercase">
+                            <span className="bg-white/88 px-2 text-muted-foreground">Ou</span>
+                        </div>
+                    </div>
 
                     <form className="space-y-4" onSubmit={handleSubmit}>
                         {isRegister && (

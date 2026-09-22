@@ -11,15 +11,17 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { deleteWidget, updateWidgetLayouts } from '@/lib/widgets';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import WidgetRenderer from './WidgetRenderer';
-import { CloudSun, EllipsisVertical, Trash2 } from 'lucide-react';
+import { CloudSun, EllipsisVertical, Trash2, Edit2 } from 'lucide-react';
+import { WidgetEditDialog } from './WidgetEditDialog';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
 export default function DashboardGrid() {
     const { widgets, setWidgets, removeWidget } = useStore();
     const timeoutRef = useRef(null);
+    const [editingWidget, setEditingWidget] = useState(null);
 
     const handleDelete = async (widget) => {
         if (!window.confirm(`Delete ${widget.title}?`)) return;
@@ -106,11 +108,18 @@ export default function DashboardGrid() {
                                         className="w-36"
                                     >
                                         <DropdownMenuItem
-                                            variant="destructive"
                                             className="min-h-9 px-2"
+                                            onClick={() => setEditingWidget(widget)}
+                                        >
+                                            <Edit2 className="mr-2 h-4 w-4" />
+                                            Edit
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            variant="destructive"
+                                            className="min-h-9 px-2 text-destructive"
                                             onClick={() => handleDelete(widget)}
                                         >
-                                            <Trash2 />
+                                            <Trash2 className="mr-2 h-4 w-4" />
                                             Delete
                                         </DropdownMenuItem>
                                     </DropdownMenuContent>
@@ -123,6 +132,12 @@ export default function DashboardGrid() {
                     </div>
                 ))}
             </ResponsiveGridLayout>
+
+            <WidgetEditDialog
+                widget={editingWidget}
+                open={!!editingWidget}
+                onOpenChange={(open) => !open && setEditingWidget(null)}
+            />
         </div>
     );
 }

@@ -14,6 +14,8 @@ export type ApiWidget = {
 type WidgetPresentation = {
     title: string;
     defaultLayout?: ApiWidget['layout'];
+    minW?: number;
+    minH?: number;
 };
 
 const DEFAULT_WIDGET_LAYOUT: ApiWidget['layout'] = { x: 0, y: 0, w: 4, h: 2 };
@@ -35,8 +37,24 @@ const WIDGET_PRESENTATION: Record<string, WidgetPresentation> = {
         title: 'Weather',
         defaultLayout: { x: 0, y: 0, w: 4, h: 3 },
     },
-    'github:github-user': { title: 'GitHub - User Profile' },
-    'github:github-repo': { title: 'GitHub - Repository Stats' },
+    'github:repo_stats': {
+        title: 'GitHub - Repository Stats',
+        defaultLayout: { x: 0, y: 0, w: 3, h: 3 },
+        minW: 3,
+        minH: 3,
+    },
+    'github:latest_commits': {
+        title: 'GitHub - Latest Commits',
+        defaultLayout: { x: 0, y: 0, w: 4, h: 3 },
+        minW: 3,
+        minH: 3,
+    },
+    'github:user_profile': {
+        title: 'GitHub - User Profile',
+        defaultLayout: { x: 0, y: 0, w: 3, h: 3 },
+        minW: 3,
+        minH: 3,
+    },
 };
 
 function widgetKey(serviceName: string, widgetName: string) {
@@ -61,6 +79,8 @@ export function toDashboardWidget(
         y: widget.layout.y,
         w: widget.layout.w,
         h: widget.layout.h,
+        minW: WIDGET_PRESENTATION[widgetKey(widget.serviceName, widget.widgetName)]?.minW,
+        minH: WIDGET_PRESENTATION[widgetKey(widget.serviceName, widget.widgetName)]?.minH,
         title,
     };
 }
@@ -121,6 +141,22 @@ export async function updateWidgetLayouts(layouts) {
     if (!response.ok) {
         throw new Error('Failed to update widget layouts');
     }
+}
+
+export async function updateWidget(id: number, widgetData): Promise<ApiWidget> {
+    const token = localStorage.getItem('dashboard-auth-token');
+    const response = await fetch(`${API_URL}/widgets/${id}`, {
+        method: 'PUT',
+        headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(widgetData),
+    });
+
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body.error || 'Failed to update widget');
+    return body;
 }
 
 export async function deleteWidget(id) {

@@ -183,7 +183,7 @@ router.get('/github', requireAuth, (req, res) => {
     const params = new URLSearchParams({
         client_id: process.env.GITHUB_CLIENT_ID,
         redirect_uri: process.env.GITHUB_CALLBACK_URL,
-        scope: 'read:user',
+        scope: 'user:email read:user repo',
         state,
     });
 
@@ -202,20 +202,25 @@ router.get('/github/callback', async (req, res) => {
         return res.status(400).json({ error: 'Missing or invalid state' });
     }
 
-    const pendingLink = pendingGithubLinks.get(state);
+    const isLogin = pendingGithubLogins.has(state);
+    const pendingLink = isLogin ? pendingGithubLogins.get(state) : pendingGithubLinks.get(state);
 
     if (!pendingLink) {
         return res.status(400).json({ error: 'Unknown or already used state' });
     }
 
+    const cookieName = isLogin ? `github_login_${state}` : `github_link_${state}`;
+    const cookieOptions = isLogin ? githubLoginCookieOptions(req) : githubCookieOptions(req);
+
     if (pendingLink.expiresAt <= Date.now()) {
         clearTimeout(pendingLink.cleanupTimer);
-        pendingGithubLinks.delete(state);
-        res.clearCookie(`github_link_${state}`, githubCookieOptions(req));
+        if (isLogin) pendingGithubLogins.delete(state);
+        else pendingGithubLinks.delete(state);
+        res.clearCookie(cookieName, cookieOptions);
         return res.status(400).json({ error: 'Expired state' });
     }
 
-    const browserSecret = req.cookies[`github_link_${state}`];
+    const browserSecret = req.cookies[cookieName];
     if (
         typeof browserSecret !== 'string' ||
         !/^[a-f0-9]{64}$/.test(browserSecret) ||
@@ -227,19 +232,22 @@ router.get('/github/callback', async (req, res) => {
         // Do not consume a valid request when another browser tries its URL.
         return res
             .status(403)
-            .json({ error: 'GitHub linking must finish in the browser that started it' });
+            .json({ error: 'GitHub flow must finish in the browser that started it' });
     }
 
     clearTimeout(pendingLink.cleanupTimer);
-    pendingGithubLinks.delete(state);
-    res.clearCookie(`github_link_${state}`, githubCookieOptions(req));
+    if (isLogin) pendingGithubLogins.delete(state);
+    else pendingGithubLinks.delete(state);
+    res.clearCookie(cookieName, cookieOptions);
+
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
 
     if (req.query.error) {
-        return res.status(400).json({ error: 'GitHub authorization failed or refused' });
+        return res.redirect(`${frontendUrl}/services?error=github_auth_failed`);
     }
 
     if (typeof code !== 'string' || !code) {
-        return res.status(400).json({ error: 'Missing or invalid code' });
+        return res.redirect(`${frontendUrl}/services?error=github_missing_code`);
     }
 
     try {
@@ -266,37 +274,140 @@ router.get('/github/callback', async (req, res) => {
             typeof data.access_token !== 'string' ||
             !data.access_token
         ) {
-            return res.status(502).json({ error: 'Could not obtain GitHub token' });
+            throw new Error('Could not obtain GitHub token');
         }
 
+        const accessToken = data.access_token;
         const tokenData = {
             accessToken: data.access_token,
             refreshToken: data.refresh_token ?? null,
             expiresAt: data.expires_in ? new Date(Date.now() + data.expires_in * 1000) : null,
         };
 
+        let userId = pendingLink.userId;
+
+        if (isLogin) {
+            const userRes = await fetch('https://api.github.com/user', {
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                    Accept: 'application/json',
+                },
+            });
+            const userData = await userRes.json();
+
+            let email = userData.email;
+            if (!email) {
+                const emailsRes = await fetch('https://api.github.com/user/emails', {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                        Accept: 'application/json',
+                    },
+                });
+                const emailsData = await emailsRes.json();
+                const primaryEmail =
+                    emailsData.find((e) => e.primary && e.verified) || emailsData[0];
+                if (primaryEmail) email = primaryEmail.email;
+            }
+
+            if (!email) {
+                return res.status(400).json({ error: 'GitHub account must have an email address' });
+            }
+
+            const normalizedEmail = normalizeEmail(email);
+
+            let user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+            if (!user) {
+                user = await prisma.user.create({
+                    data: {
+                        email: normalizedEmail,
+                        displayName: userData.name || userData.login || null,
+                        password: null, // OAuth-only user
+                        cguAcceptedAt: new Date(),
+                    },
+                });
+            }
+            userId = user.id;
+        }
+
         await prisma.oAuthToken.upsert({
             where: {
                 userId_provider: {
-                    userId: pendingLink.userId,
+                    userId,
                     provider: 'github',
                 },
             },
             create: {
-                userId: pendingLink.userId,
+                userId,
                 provider: 'github',
                 ...tokenData,
             },
             update: tokenData,
         });
 
-        res.json({
-            message: 'GitHub account linked',
-            userId: pendingLink.userId,
-        });
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        if (isLogin) {
+            const user = await prisma.user.findUnique({ where: { id: userId } });
+            const token = jwt.sign({ userId: user.id, isAdmin: user.isAdmin }, JWT_SECRET, {
+                expiresIn: '24h',
+            });
+            res.redirect(`${frontendUrl}/login/oauth?token=${token}`);
+        } else {
+            res.redirect(`${frontendUrl}/services?linked=github`);
+        }
     } catch {
-        res.status(500).json({ error: 'GitHub linking failed' });
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        res.redirect(`${frontendUrl}/services?error=github_flow_failed`);
     }
+});
+
+const pendingGithubLogins = new Map();
+
+function githubLoginCookieOptions(req) {
+    return {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: req.secure || process.env.NODE_ENV === 'production',
+        path: '/auth/github/callback',
+    };
+}
+
+router.get('/github/login', (req, res) => {
+    if (
+        !process.env.GITHUB_CLIENT_ID ||
+        !process.env.GITHUB_CLIENT_SECRET ||
+        !process.env.GITHUB_CALLBACK_URL
+    ) {
+        return res.status(503).json({ error: 'GitHub login is not configured' });
+    }
+
+    const state = crypto.randomBytes(32).toString('hex');
+    const browserSecret = crypto.randomBytes(32).toString('hex');
+    const cleanupTimer = setTimeout(() => pendingGithubLogins.delete(state), GITHUB_LINK_TTL);
+    cleanupTimer.unref();
+
+    pendingGithubLogins.set(state, {
+        browserSecretHash: crypto.createHash('sha256').update(browserSecret).digest(),
+        expiresAt: Date.now() + GITHUB_LINK_TTL,
+        cleanupTimer,
+    });
+
+    res.cookie(`github_login_${state}`, browserSecret, {
+        ...githubLoginCookieOptions(req),
+        maxAge: GITHUB_LINK_TTL,
+    });
+
+    const params = new URLSearchParams({
+        client_id: process.env.GITHUB_CLIENT_ID,
+        redirect_uri: process.env.GITHUB_CALLBACK_URL,
+        scope: 'user:email read:user repo',
+        state,
+    });
+
+    const authorizationUrl = `https://github.com/login/oauth/authorize?${params.toString()}`;
+    if (req.query.format === 'json') {
+        return res.json({ authorizationUrl });
+    }
+    res.redirect(authorizationUrl);
 });
 
 module.exports = router;
