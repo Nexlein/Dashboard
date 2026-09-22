@@ -102,8 +102,8 @@ export default function WidgetRenderer({ widget }) {
 
     // Refetch when params change via editing
     useEffect(() => {
-        fetchData();
-    }, [widget.params, fetchData]);
+        if (isSupportedService) fetchData();
+    }, [widget.params, fetchData, isSupportedService]);
 
     if (!isSupportedService) {
         return (

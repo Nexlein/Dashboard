@@ -187,6 +187,10 @@ When supplied, `refreshRate` must be an integer greater than or equal to `60`.
 
 ```json
 {
+    "params": {
+        "repository": "Nexlein/Dashboard"
+    },
+    "refreshRate": 120,
     "layout": { "x": 2, "y": 0, "w": 2, "h": 2 }
 }
 ```
