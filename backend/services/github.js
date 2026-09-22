@@ -79,7 +79,6 @@ module.exports = {
     connection: {
         type: 'oauth',
         label: 'GitHub Account',
-        documentationUrl: 'https://github.com/settings/tokens',
     },
     widgets: [
         {

@@ -12,11 +12,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { API_URL } from '@/lib/auth';
 import {
     connectService,
     disconnectService,
     fetchServices,
+    getOAuthUrl,
     type ServiceConnection,
 } from '@/lib/services';
 
@@ -158,9 +158,18 @@ export default function ServicesPage() {
                                     {showForm && service.connectionType === 'oauth' && (
                                         <div className="space-y-2">
                                             <Button
-                                                onClick={() =>
-                                                    (window.location.href = `${API_URL}/auth/${service.name}?format=redirect`)
-                                                }
+                                                onClick={async () => {
+                                                    try {
+                                                        const url = await getOAuthUrl(service.name);
+                                                        window.location.href = url;
+                                                    } catch (err) {
+                                                        setError(
+                                                            err instanceof Error
+                                                                ? err.message
+                                                                : 'Unable to start linking flow',
+                                                        );
+                                                    }
+                                                }}
                                                 className="w-full"
                                                 variant="outline"
                                             >

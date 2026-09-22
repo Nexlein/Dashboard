@@ -49,3 +49,12 @@ export async function disconnectService(serviceName: string) {
         throw new Error(body.error || 'Unable to disconnect service');
     }
 }
+
+export async function getOAuthUrl(serviceName: string) {
+    const response = await fetch(`${API_URL}/auth/${serviceName}?format=json`, {
+        headers: authHeaders(),
+    });
+    const body = await responseBody(response);
+    if (!response.ok) throw new Error(body.error || 'Unable to start linking flow');
+    return body.authorizationUrl;
+}
