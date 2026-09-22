@@ -139,9 +139,8 @@ describe('GitHub account linking', () => {
     it('stores the token for the initiating user, clears its cookie and rejects replay', async () => {
         const link = await startLink(42);
         const response = await callback(link).expect(302);
-        expect(response.headers.location).toBe(
-            `${process.env.FRONTEND_URL}/services?linked=github`,
-        );
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        expect(response.headers.location).toBe(`${frontendUrl}/services?linked=github`);
         expect(response.headers['set-cookie'][0]).toContain(`github_link_${link.state}=;`);
         expect(response.headers['set-cookie'][0]).toContain('Path=/auth/github/callback');
         expect(prisma.oAuthToken.upsert).toHaveBeenCalledWith({
@@ -219,24 +218,20 @@ describe('GitHub account linking', () => {
             json: async () => ({ error: 'bad_verification_code' }),
         });
         const response = await callback(await startLink()).expect(302);
-        expect(response.headers.location).toBe(
-            `${process.env.FRONTEND_URL}/services?error=github_flow_failed`,
-        );
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        expect(response.headers.location).toBe(`${frontendUrl}/services?error=github_flow_failed`);
         expect(prisma.oAuthToken.upsert).not.toHaveBeenCalled();
     });
 
     it('handles a network failure and database failure without exposing secrets', async () => {
         global.fetch.mockRejectedValueOnce(new Error('private upstream details'));
         let response = await callback(await startLink()).expect(302);
-        expect(response.headers.location).toBe(
-            `${process.env.FRONTEND_URL}/services?error=github_flow_failed`,
-        );
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        expect(response.headers.location).toBe(`${frontendUrl}/services?error=github_flow_failed`);
         expect(prisma.oAuthToken.upsert).not.toHaveBeenCalled();
         prisma.oAuthToken.upsert.mockRejectedValueOnce(new Error('private database details'));
         response = await callback(await startLink()).expect(302);
-        expect(response.headers.location).toBe(
-            `${process.env.FRONTEND_URL}/services?error=github_flow_failed`,
-        );
+        expect(response.headers.location).toBe(`${frontendUrl}/services?error=github_flow_failed`);
     });
 
     describe('GitHub Login Flow (/auth/github/login)', () => {
