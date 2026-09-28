@@ -259,4 +259,40 @@ router.delete('/:id', async (req, res) => {
     }
 });
 
+// POST /widgets/:id/chat -> Send message to chatbot widget
+router.post('/:id/chat', async (req, res) => {
+    try {
+        const widgetId = parseInt(req.params.id, 10);
+        const { messages } = req.body;
+
+        if (!Array.isArray(messages)) {
+            return res.status(400).json({ error: 'Messages array is required' });
+        }
+
+        const widget = await prisma.widgetConfig.findUnique({ where: { id: widgetId } });
+        if (!widget) return res.status(404).json({ error: 'Widget not found' });
+        if (widget.userId !== req.user.userId) {
+            return res.status(403).json({ error: 'Unauthorized to access this widget' });
+        }
+
+        const service = registry.getService(widget.serviceName);
+        if (!service?.chat) {
+            return res.status(400).json({ error: 'Service does not support chat' });
+        }
+
+        const data = await service.chat(
+            decryptParams(widget.params),
+            { userId: req.user.userId },
+            messages,
+        );
+        return res.json(data);
+    } catch (error) {
+        console.error('Chat widget error:', error);
+        const errorMsg = error.cause ? `${error.message} (${error.cause.message})` : error.message;
+        return res.status(error.statusCode || 500).json({
+            error: error.statusCode ? error.message : `Internal server error: ${errorMsg}`,
+        });
+    }
+});
+
 module.exports = router;

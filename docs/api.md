@@ -234,6 +234,28 @@ assets with different price scales can be compared.
 - `502 Bad Gateway` when an external provider cannot answer.
 - `503 Service Unavailable` when a provider rejects requests temporarily or reaches its limit.
 
+### `POST /widgets/:id/chat`
+
+Executes a chat completion request for the `ai_chat` widget, proxying the payload to the configured LLM API (e.g. OpenAI, Ollama). 
+
+**Request Body:**
+
+```json
+{
+    "messages": [
+        { "role": "user", "content": "Hello!" }
+    ]
+}
+```
+
+**Response (200 OK):**
+
+```json
+{
+    "reply": "Hello! How can I help you today?"
+}
+```
+
 ## Service connections
 
 All `/services` endpoints require the `Authorization: Bearer <token>` header.

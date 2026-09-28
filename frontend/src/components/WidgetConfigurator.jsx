@@ -1,18 +1,18 @@
 import { useState } from 'react';
-import { KeyRound, Loader2, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { KeyRound, Loader2 } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import {
-    createWidget,
-    getDefaultWidgetLayout,
     MIN_REFRESH_RATE_SECONDS,
+    getDefaultWidgetLayout,
+    createWidget,
     toDashboardWidget,
 } from '@/lib/widgets';
 import { fetchServices } from '@/lib/services';
-import { WidgetParameterField } from './WidgetParameterField';
+import { REGISTRY } from '@/lib/registry';
+import { WidgetForm } from './WidgetForm';
 
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
     Dialog,
@@ -31,164 +31,23 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 
-export const SERVICES = {
-    weather: {
-        name: 'Weather',
-        widgets: [
-            {
-                id: 'current_weather',
-                name: 'Current Temperature',
-                params: [
-                    { id: 'city', label: 'City Name', type: 'text', placeholder: 'e.g. Paris' },
-                ],
-            },
-            {
-                id: 'forecast',
-                name: '5-Day Forecast',
-                params: [
-                    { id: 'city', label: 'City Name', type: 'text', placeholder: 'e.g. Paris' },
-                ],
-            },
-        ],
-    },
-    github: {
-        name: 'GitHub',
-        widgets: [
-            {
-                id: 'repo_stats',
-                name: 'Repository Stats',
-                params: [
-                    {
-                        id: 'owner',
-                        label: 'Owner (Organization/User)',
-                        type: 'text',
-                        placeholder: 'e.g. facebook',
-                    },
-                    {
-                        id: 'repo',
-                        label: 'Repository Name',
-                        type: 'text',
-                        placeholder: 'e.g. react',
-                    },
-                ],
-            },
-            {
-                id: 'latest_commits',
-                name: 'Latest Commits',
-                params: [
-                    { id: 'owner', label: 'Owner', type: 'text', placeholder: 'e.g. facebook' },
-                    {
-                        id: 'repo',
-                        label: 'Repository Name',
-                        type: 'text',
-                        placeholder: 'e.g. react',
-                    },
-                    {
-                        id: 'branch',
-                        label: 'Branch (optional)',
-                        type: 'text',
-                        placeholder: 'e.g. main',
-                    },
-                ],
-            },
-            {
-                id: 'user_profile',
-                name: 'User Profile',
-                params: [
-                    {
-                        id: 'username',
-                        label: 'GitHub Username (leave empty for your profile)',
-                        type: 'text',
-                        placeholder: 'e.g. nexlein',
-                    },
-                ],
-            },
-        ],
-    },
-    crypto: {
-        name: 'Crypto',
-        widgets: [
-            {
-                id: 'crypto_price',
-                name: 'Price & Market Stats',
-                params: [
-                    {
-                        id: 'coin',
-                        label: 'CoinGecko Coin ID',
-                        type: 'text',
-                        placeholder: 'e.g. bitcoin, ethereum, solana',
-                    },
-                    {
-                        id: 'currency',
-                        label: 'Currency',
-                        type: 'text',
-                        placeholder: 'e.g. eur or usd',
-                    },
-                ],
-            },
-            {
-                id: 'crypto_chart',
-                name: 'Market Comparison Chart',
-                params: [
-                    {
-                        id: 'coins',
-                        label: 'Cryptocurrencies',
-                        type: 'coin-multiselect',
-                        placeholder: 'CoinGecko ID, e.g. dogecoin',
-                        options: [
-                            { value: 'bitcoin', label: 'BTC' },
-                            { value: 'ethereum', label: 'ETH' },
-                            { value: 'solana', label: 'SOL' },
-                            { value: 'binancecoin', label: 'BNB' },
-                            { value: 'ripple', label: 'XRP' },
-                            { value: 'cardano', label: 'ADA' },
-                            { value: 'dogecoin', label: 'DOGE' },
-                            { value: 'avalanche-2', label: 'AVAX' },
-                            { value: 'chainlink', label: 'LINK' },
-                            { value: 'polkadot', label: 'DOT' },
-                        ],
-                    },
-                    {
-                        id: 'currency',
-                        label: 'Currency',
-                        type: 'select',
-                        placeholder: 'Select a currency',
-                        options: [
-                            { value: 'eur', label: 'EUR (€)' },
-                            { value: 'usd', label: 'USD ($)' },
-                            { value: 'gbp', label: 'GBP (£)' },
-                        ],
-                    },
-                    {
-                        id: 'days',
-                        label: 'Period',
-                        type: 'select',
-                        placeholder: 'Select a period',
-                        options: [
-                            { value: '7', label: '1 week' },
-                            { value: '30', label: '1 month' },
-                            { value: '90', label: '3 months' },
-                            { value: '365', label: '1 year' },
-                        ],
-                    },
-                ],
-            },
-        ],
-    },
-};
-
 function areParamsComplete(service, widgetType, params) {
     if (!service || !widgetType) return false;
-    const widgetInfo = SERVICES[service]?.widgets?.find((w) => w.id === widgetType);
+    const widgetInfo = REGISTRY[service]?.widgets?.find(
+        (w) => w.id === widgetType || w.aliases?.includes(widgetType),
+    );
     if (!widgetInfo || !widgetInfo.params) return true;
     return widgetInfo.params.every((param) => {
-        // if optional (e.g. branch, or username), don't require it
         if (param.label.includes('optional') || param.label.includes('leave empty')) return true;
-        return params[param.id]?.trim();
+        const val = params[param.id];
+        if (Array.isArray(val)) return val.length > 0;
+        if (typeof val === 'string') return val.trim().length > 0;
+        return !!val;
     });
 }
 
-function isRefreshRateValid(refreshTimer) {
+function isRefreshRateValid(refreshTimer, serviceDef) {
+    if (serviceDef?.hasRefresh === false) return true;
     const refreshRate = Number(refreshTimer);
     return Number.isInteger(refreshRate) && refreshRate >= MIN_REFRESH_RATE_SECONDS;
 }
@@ -223,56 +82,65 @@ export function WidgetConfigurator() {
 
     const handleServiceChange = (val) => {
         setService(val);
-        setWidgetType('');
+        const widgets = REGISTRY[val]?.widgets || [];
+        if (widgets.length === 1) {
+            setWidgetType(widgets[0].id);
+        } else {
+            setWidgetType('');
+        }
         setParams({});
         setError('');
     };
+
+    const serviceDef = REGISTRY[service];
+    const widgetDef = serviceDef?.widgets?.find(
+        (w) => w.id === widgetType || w.aliases?.includes(widgetType),
+    );
 
     const handleSave = async () => {
         if (
             !service ||
             !widgetType ||
             !areParamsComplete(service, widgetType, params) ||
-            !serviceConnected ||
-            !isRefreshRateValid(refreshTimer)
-        )
+            !isRefreshRateValid(refreshTimer, serviceDef)
+        ) {
             return;
+        }
+
+        setError('');
 
         try {
             const apiWidget = await createWidget({
                 serviceName: service,
                 widgetName: widgetType,
-                params,
-                refreshRate: parseInt(refreshTimer, 10),
+                params: params,
+                refreshRate: Number(refreshTimer),
                 layout: getDefaultWidgetLayout(service, widgetType),
             });
 
             addWidget(toDashboardWidget(apiWidget));
 
-            setOpen(false);
-            // Reset form
+            // reset form
             setService('');
             setWidgetType('');
             setParams({});
             setRefreshTimer('60');
-        } catch (error) {
-            setError(error.message || 'Failed to create widget');
+            setOpen(false);
+        } catch (err) {
+            setError(err.message || 'Failed to create widget');
         }
     };
 
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
-                <Button className="h-11 px-4" aria-label="Add widget">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Widget
-                </Button>
+                <Button>Add Widget</Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
-                    <DialogTitle>Configure New Widget</DialogTitle>
+                    <DialogTitle>Add New Widget</DialogTitle>
                     <DialogDescription>
-                        Select a service and widget type, then configure its parameters.
+                        Configure a new widget for your dashboard.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
@@ -283,7 +151,7 @@ export function WidgetConfigurator() {
                                 <SelectValue placeholder="Select a service..." />
                             </SelectTrigger>
                             <SelectContent>
-                                {Object.entries(SERVICES).map(([key, svc]) => (
+                                {Object.entries(REGISTRY).map(([key, svc]) => (
                                     <SelectItem key={key} value={key}>
                                         {svc.name}
                                     </SelectItem>
@@ -322,21 +190,23 @@ export function WidgetConfigurator() {
                                 </div>
                             </div>
                         ) : (
-                            <div className="grid gap-2 animate-in fade-in slide-in-from-top-2">
-                                <Label htmlFor="widgetType">Widget Type</Label>
-                                <Select value={widgetType} onValueChange={setWidgetType}>
-                                    <SelectTrigger id="widgetType">
-                                        <SelectValue placeholder="Select a widget type..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {SERVICES[service].widgets.map((w) => (
-                                            <SelectItem key={w.id} value={w.id}>
-                                                {w.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
+                            REGISTRY[service]?.widgets?.length > 1 && (
+                                <div className="grid gap-2 animate-in fade-in slide-in-from-top-2">
+                                    <Label htmlFor="widgetType">Widget Type</Label>
+                                    <Select value={widgetType} onValueChange={setWidgetType}>
+                                        <SelectTrigger id="widgetType">
+                                            <SelectValue placeholder="Select a widget type..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {REGISTRY[service].widgets.map((w) => (
+                                                <SelectItem key={w.id} value={w.id}>
+                                                    {w.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )
                         ))}
 
                     {connectionsLoading && service && (
@@ -346,42 +216,18 @@ export function WidgetConfigurator() {
                         </div>
                     )}
 
-                    {widgetType &&
-                        SERVICES[service]?.widgets
-                            ?.find((w) => w.id === widgetType)
-                            ?.params?.map((param) => (
-                                <div
-                                    className="grid gap-2 animate-in fade-in slide-in-from-top-2"
-                                    key={param.id}
-                                >
-                                    <WidgetParameterField
-                                        param={param}
-                                        value={params[param.id] || ''}
-                                        onChange={(value) =>
-                                            setParams({ ...params, [param.id]: value })
-                                        }
-                                    />
-                                </div>
-                            ))}
-
-                    {widgetType && (
-                        <div className="grid gap-2 animate-in fade-in slide-in-from-top-2">
-                            <Label htmlFor="refreshTimer">Refresh Interval (seconds)</Label>
-                            <Input
-                                id="refreshTimer"
-                                type="number"
-                                min={MIN_REFRESH_RATE_SECONDS}
-                                value={refreshTimer}
-                                onChange={(e) => setRefreshTimer(e.target.value)}
-                            />
-                        </div>
+                    {serviceDef && widgetDef && (
+                        <WidgetForm
+                            serviceDef={serviceDef}
+                            widgetDef={widgetDef}
+                            params={params}
+                            setParams={setParams}
+                            refreshTimer={refreshTimer}
+                            setRefreshTimer={setRefreshTimer}
+                        />
                     )}
 
-                    {error && (
-                        <p role="alert" className="text-sm text-destructive">
-                            {error}
-                        </p>
-                    )}
+                    {error && <p className="text-sm font-medium text-destructive">{error}</p>}
                 </div>
                 <DialogFooter>
                     <Button
@@ -389,9 +235,7 @@ export function WidgetConfigurator() {
                             !service ||
                             !widgetType ||
                             !areParamsComplete(service, widgetType, params) ||
-                            !serviceConnected ||
-                            connectionsLoading ||
-                            !isRefreshRateValid(refreshTimer)
+                            !isRefreshRateValid(refreshTimer, serviceDef)
                         }
                         onClick={handleSave}
                     >

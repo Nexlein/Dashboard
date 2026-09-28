@@ -123,6 +123,8 @@ function CoinMultiSelectField({ param, value, onChange }) {
 }
 
 export function WidgetParameterField({ param, value, onChange }) {
+    if (param.type === 'hidden') return null;
+
     if (param.type === 'coin-multiselect') {
         return <CoinMultiSelectField param={param} value={value} onChange={onChange} />;
     }

@@ -65,6 +65,12 @@ const WIDGET_PRESENTATION: Record<string, WidgetPresentation> = {
         minW: 3,
         minH: 4,
     },
+    'chatbot:ai_chat': {
+        title: 'Ollama',
+        defaultLayout: { x: 0, y: 0, w: 2, h: 3 },
+        minW: 2,
+        minH: 3,
+    },
 };
 
 function widgetKey(serviceName: string, widgetName: string) {
@@ -76,11 +82,15 @@ export function getDefaultWidgetLayout(serviceName: string, widgetName: string) 
     return { ...(configuredLayout || DEFAULT_WIDGET_LAYOUT) };
 }
 
-export function toDashboardWidget(
-    widget: ApiWidget,
-    title = WIDGET_PRESENTATION[widgetKey(widget.serviceName, widget.widgetName)]?.title ||
-        widget.widgetName,
-) {
+export function toDashboardWidget(widget: ApiWidget) {
+    let title =
+        WIDGET_PRESENTATION[widgetKey(widget.serviceName, widget.widgetName)]?.title ||
+        widget.widgetName;
+
+    if (widget.serviceName === 'chatbot' && widget.params?.model) {
+        title = `Ollama - ${widget.params.model}`;
+    }
+
     return {
         ...widget,
         refreshRate: Math.max(widget.refreshRate, MIN_REFRESH_RATE_SECONDS),
