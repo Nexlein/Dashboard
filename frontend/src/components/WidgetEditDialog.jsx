@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
-import { updateWidget, MIN_REFRESH_RATE_SECONDS } from '@/lib/widgets';
+import { updateWidget, toDashboardWidget, MIN_REFRESH_RATE_SECONDS } from '@/lib/widgets';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -55,10 +55,13 @@ export function WidgetEditDialog({ widget, open, onOpenChange }) {
                 refreshRate: parseInt(refreshTimer, 10),
             });
 
+            const dashboardWidget = toDashboardWidget(updatedApiWidget);
+
             // update local store
             updateWidgetInStore(widget.i, {
-                params: updatedApiWidget.params,
-                refreshRate: updatedApiWidget.refreshRate,
+                params: dashboardWidget.params,
+                refreshRate: dashboardWidget.refreshRate,
+                title: dashboardWidget.title,
             });
             onOpenChange(false);
         } catch (err) {
