@@ -82,11 +82,15 @@ export function getDefaultWidgetLayout(serviceName: string, widgetName: string) 
     return { ...(configuredLayout || DEFAULT_WIDGET_LAYOUT) };
 }
 
-export function toDashboardWidget(
-    widget: ApiWidget,
-    title = WIDGET_PRESENTATION[widgetKey(widget.serviceName, widget.widgetName)]?.title ||
-        widget.widgetName,
-) {
+export function toDashboardWidget(widget: ApiWidget) {
+    let title =
+        WIDGET_PRESENTATION[widgetKey(widget.serviceName, widget.widgetName)]?.title ||
+        widget.widgetName;
+
+    if (widget.serviceName === 'chatbot' && widget.params?.model) {
+        title = `Ollama - ${widget.params.model}`;
+    }
+
     return {
         ...widget,
         refreshRate: Math.max(widget.refreshRate, MIN_REFRESH_RATE_SECONDS),

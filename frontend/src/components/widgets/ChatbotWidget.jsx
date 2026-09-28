@@ -125,11 +125,14 @@ export function ChatbotWidget({ widget }) {
                 <div ref={messagesEndRef} />
             </div>
 
-            <form onSubmit={handleSubmit} className="p-3 border-t bg-background flex gap-2">
+            <form
+                onSubmit={handleSubmit}
+                className="p-3 border-t bg-background flex items-center gap-2"
+            >
                 <Button
                     type="button"
                     variant="outline"
-                    size="icon"
+                    className="size-10 shrink-0"
                     disabled={loading || messages.length <= 1}
                     onClick={() => {
                         setMessages([
@@ -147,9 +150,13 @@ export function ChatbotWidget({ widget }) {
                     onChange={(e) => setInput(e.target.value)}
                     placeholder="Type a message..."
                     disabled={loading}
-                    className="flex-1"
+                    className="flex-1 h-10"
                 />
-                <Button type="submit" size="icon" disabled={!input.trim() || loading}>
+                <Button
+                    type="submit"
+                    className="size-10 shrink-0"
+                    disabled={!input.trim() || loading}
+                >
                     <Send className="size-4" />
                     <span className="sr-only">Send</span>
                 </Button>
