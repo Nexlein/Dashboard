@@ -2,8 +2,6 @@ import { useState, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import { updateWidget, MIN_REFRESH_RATE_SECONDS } from '@/lib/widgets';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
     Dialog,
     DialogContent,
@@ -12,10 +10,11 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { SERVICES } from './WidgetConfigurator'; // We'll need to export SERVICES from there
-import { WidgetParameterField } from './WidgetParameterField';
+import { REGISTRY } from '@/lib/registry';
+import { WidgetForm } from './WidgetForm';
 
-function isRefreshRateValid(refreshTimer) {
+function isRefreshRateValid(refreshTimer, serviceDef) {
+    if (serviceDef?.hasRefresh === false) return true;
     const refreshRate = Number(refreshTimer);
     return Number.isInteger(refreshRate) && refreshRate >= MIN_REFRESH_RATE_SECONDS;
 }
@@ -39,10 +38,12 @@ export function WidgetEditDialog({ widget, open, onOpenChange }) {
 
     const service = widget.serviceName;
     const widgetType = widget.widgetName;
-    const widgetInfo = SERVICES[service]?.widgets?.find((w) => w.id === widgetType);
+
+    const serviceDef = REGISTRY[service];
+    const widgetDef = serviceDef?.widgets?.find((w) => w.id === widgetType);
 
     const handleSave = async () => {
-        if (!isRefreshRateValid(refreshTimer)) return;
+        if (!isRefreshRateValid(refreshTimer, serviceDef)) return;
         setIsSaving(true);
         setError('');
 
@@ -71,36 +72,27 @@ export function WidgetEditDialog({ widget, open, onOpenChange }) {
                 <DialogHeader>
                     <DialogTitle>Edit Widget</DialogTitle>
                     <DialogDescription>
-                        Modify the settings for your {widgetInfo?.name || 'Widget'}.
+                        Modify the settings for your {widgetDef?.name || 'Widget'}.
                     </DialogDescription>
                 </DialogHeader>
-                <div className="grid gap-4 py-4">
-                    {widgetInfo?.params?.map((param) => (
-                        <div key={param.id}>
-                            <WidgetParameterField
-                                param={param}
-                                value={params[param.id] || ''}
-                                onChange={(value) => setParams({ ...params, [param.id]: value })}
-                            />
-                        </div>
-                    ))}
 
-                    <div className="grid gap-2 mt-2">
-                        <Label htmlFor="refreshTimer">Refresh Rate (seconds)</Label>
-                        <Input
-                            id="refreshTimer"
-                            type="number"
-                            min={MIN_REFRESH_RATE_SECONDS}
-                            value={refreshTimer}
-                            onChange={(e) => setRefreshTimer(e.target.value)}
-                        />
-                        <p className="text-[0.8rem] text-muted-foreground">
-                            Minimum refresh rate is {MIN_REFRESH_RATE_SECONDS}s.
-                        </p>
+                {serviceDef && widgetDef && (
+                    <WidgetForm
+                        serviceDef={serviceDef}
+                        widgetDef={widgetDef}
+                        params={params}
+                        setParams={setParams}
+                        refreshTimer={refreshTimer}
+                        setRefreshTimer={setRefreshTimer}
+                    />
+                )}
+
+                {error && (
+                    <div className="grid gap-4">
+                        <p className="text-sm font-medium text-destructive">{error}</p>
                     </div>
+                )}
 
-                    {error && <p className="text-sm font-medium text-destructive">{error}</p>}
-                </div>
                 <DialogFooter>
                     <Button
                         variant="outline"
@@ -109,7 +101,10 @@ export function WidgetEditDialog({ widget, open, onOpenChange }) {
                     >
                         Cancel
                     </Button>
-                    <Button onClick={handleSave} disabled={isSaving}>
+                    <Button
+                        onClick={handleSave}
+                        disabled={isSaving || !isRefreshRateValid(refreshTimer, serviceDef)}
+                    >
                         {isSaving ? 'Saving...' : 'Save Changes'}
                     </Button>
                 </DialogFooter>
