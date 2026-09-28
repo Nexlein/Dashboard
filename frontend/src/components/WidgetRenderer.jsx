@@ -51,7 +51,7 @@ export default function WidgetRenderer({ widget }) {
         [id, updateWidgetInStore, widget.params],
     );
 
-    const isDataFetchingWidget = serviceDef?.hasRefresh !== false;
+    const isDataFetchingWidget = serviceDef ? serviceDef.hasRefresh !== false : false;
     useWidgetTimer(isDataFetchingWidget && serviceDef?.hasRefresh ? refreshRate : 0, fetchData);
 
     useEffect(() => {

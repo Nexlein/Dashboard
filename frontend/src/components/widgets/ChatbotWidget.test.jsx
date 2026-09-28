@@ -15,6 +15,7 @@ describe('ChatbotWidget', () => {
         vi.clearAllMocks();
         localStorage.clear();
         global.fetch = vi.fn();
+        window.HTMLElement.prototype.scrollIntoView = vi.fn();
     });
 
     it('renders default message', () => {

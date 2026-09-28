@@ -12,14 +12,16 @@ describe('toDashboardWidget', () => {
             layout: { x: 1, y: 2, w: 4, h: 3 },
         };
 
-        expect(toDashboardWidget(widget, 'Weather - Current Temperature')).toEqual({
+        expect(toDashboardWidget(widget)).toEqual({
             ...widget,
             i: '42',
             x: 1,
             y: 2,
             w: 4,
             h: 3,
-            title: 'Weather - Current Temperature',
+            minW: undefined,
+            minH: undefined,
+            title: 'Weather',
         });
     });
 

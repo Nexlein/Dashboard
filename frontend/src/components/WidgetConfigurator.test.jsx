@@ -32,6 +32,6 @@ describe('WidgetConfigurator', () => {
         fireEvent.click(button);
 
         // Dialog title should appear
-        expect(screen.getByText('Configure New Widget')).toBeInTheDocument();
+        expect(screen.getByText('Add New Widget')).toBeInTheDocument();
     });
 });

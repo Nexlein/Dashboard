@@ -48,7 +48,7 @@ describe('WidgetRenderer', () => {
             />,
         );
 
-        expect(screen.getByText('This service is not implemented yet.')).toBeInTheDocument();
+        expect(screen.getByText('This widget is not implemented yet.')).toBeInTheDocument();
         expect(fetchWidgetData).not.toHaveBeenCalled();
     });
 
