@@ -33,7 +33,9 @@ import {
 
 function areParamsComplete(service, widgetType, params) {
     if (!service || !widgetType) return false;
-    const widgetInfo = REGISTRY[service]?.widgets?.find((w) => w.id === widgetType);
+    const widgetInfo = REGISTRY[service]?.widgets?.find(
+        (w) => w.id === widgetType || w.aliases?.includes(widgetType),
+    );
     if (!widgetInfo || !widgetInfo.params) return true;
     return widgetInfo.params.every((param) => {
         if (param.label.includes('optional') || param.label.includes('leave empty')) return true;
@@ -91,7 +93,9 @@ export function WidgetConfigurator() {
     };
 
     const serviceDef = REGISTRY[service];
-    const widgetDef = serviceDef?.widgets?.find((w) => w.id === widgetType);
+    const widgetDef = serviceDef?.widgets?.find(
+        (w) => w.id === widgetType || w.aliases?.includes(widgetType),
+    );
 
     const handleSave = async () => {
         if (

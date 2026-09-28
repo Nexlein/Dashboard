@@ -40,7 +40,9 @@ export function WidgetEditDialog({ widget, open, onOpenChange }) {
     const widgetType = widget.widgetName;
 
     const serviceDef = REGISTRY[service];
-    const widgetDef = serviceDef?.widgets?.find((w) => w.id === widgetType);
+    const widgetDef = serviceDef?.widgets?.find(
+        (w) => w.id === widgetType || w.aliases?.includes(widgetType),
+    );
 
     const handleSave = async () => {
         if (!isRefreshRateValid(refreshTimer, serviceDef)) return;

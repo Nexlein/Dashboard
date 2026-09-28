@@ -38,6 +38,7 @@ export const REGISTRY = {
         widgets: [
             {
                 id: 'repo_stats',
+                aliases: ['github-repo'],
                 name: 'Repository Stats',
                 component: GithubRepoWidget,
                 params: [
@@ -57,6 +58,7 @@ export const REGISTRY = {
             },
             {
                 id: 'latest_commits',
+                aliases: ['github-commits'],
                 name: 'Latest Commits',
                 component: GithubCommitsWidget,
                 params: [
@@ -77,6 +79,7 @@ export const REGISTRY = {
             },
             {
                 id: 'user_profile',
+                aliases: ['github-user'],
                 name: 'User Profile',
                 component: GithubProfileWidget,
                 params: [

@@ -14,7 +14,9 @@ export default function WidgetRenderer({ widget }) {
     const updateWidgetInStore = useStore((state) => state.updateWidget);
 
     const serviceDef = REGISTRY[serviceName];
-    const widgetDef = serviceDef?.widgets?.find((w) => w.id === widgetName);
+    const widgetDef = serviceDef?.widgets?.find(
+        (w) => w.id === widgetName || w.aliases?.includes(widgetName),
+    );
     const Component = widgetDef?.component;
 
     const fetchData = useCallback(async () => {
