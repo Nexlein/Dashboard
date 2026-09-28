@@ -36,6 +36,8 @@ app.use('/auth', authRoutes);
 app.use('/about.json', aboutRoutes);
 app.use('/widgets', authMiddleware, widgetRoutes);
 app.use('/services', authMiddleware, serviceRoutes);
+const chatbotRoutes = require('./routes/chatbot');
+app.use('/chatbot', authMiddleware, chatbotRoutes);
 
 if (require.main === module) {
     app.listen(PORT, () => {
