@@ -65,6 +65,12 @@ const WIDGET_PRESENTATION: Record<string, WidgetPresentation> = {
         minW: 3,
         minH: 4,
     },
+    'chatbot:ai_chat': {
+        title: 'Ollama',
+        defaultLayout: { x: 0, y: 0, w: 2, h: 3 },
+        minW: 2,
+        minH: 3,
+    },
 };
 
 function widgetKey(serviceName: string, widgetName: string) {
