@@ -7,7 +7,9 @@
         "start": "node index.js",
         "dev": "nodemon index.js",
         "test": "jest",
-        "test:load": "k6 run tests/load/k6-script.js"
+        "test:load": "k6 run tests/k6/load.js",
+        "test:stress": "k6 run tests/k6/stress.js",
+        "test:spike": "k6 run tests/k6/spike.js"
     },
     "keywords": [],
     "author": "",
