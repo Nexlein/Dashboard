@@ -326,26 +326,37 @@ export default function AuthPage() {
                         </div>
 
                         {isRegister && (
-                            <label className="flex cursor-pointer items-start gap-3 text-sm text-muted-foreground">
-                                <input
-                                    name="cguAccepted"
-                                    type="checkbox"
-                                    required
-                                    className="mt-0.5 size-4 rounded border-input accent-foreground"
-                                />
-                                <span>
-                                    J’accepte les{' '}
-                                    <Link
-                                        className="font-medium text-foreground underline underline-offset-4"
-                                        to="/cgu"
-                                        target="_blank"
-                                        rel="noreferrer"
-                                    >
-                                        conditions générales d’utilisation
-                                    </Link>
-                                    .
-                                </span>
-                            </label>
+                            <div className="space-y-3">
+                                <label className="flex cursor-pointer items-start gap-3 text-sm text-muted-foreground">
+                                    <input
+                                        name="cguAccepted"
+                                        type="checkbox"
+                                        required
+                                        className="mt-0.5 size-4 rounded border-input accent-foreground"
+                                    />
+                                    <span>
+                                        J’accepte les{' '}
+                                        <Link
+                                            className="font-medium text-foreground underline underline-offset-4"
+                                            to="/cgu"
+                                            target="_blank"
+                                            rel="noreferrer"
+                                        >
+                                            conditions générales d’utilisation
+                                        </Link>
+                                        .
+                                    </span>
+                                </label>
+                                <label className="flex cursor-pointer items-start gap-3 text-sm text-muted-foreground">
+                                    <input
+                                        name="is16OrOlder"
+                                        type="checkbox"
+                                        required
+                                        className="mt-0.5 size-4 rounded border-input accent-foreground"
+                                    />
+                                    <span>Je confirme avoir 16 ans ou plus.</span>
+                                </label>
+                            </div>
                         )}
 
                         {error && (

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { Button } from '@/components/ui/button';
@@ -11,8 +11,12 @@ import {
     Plug,
     Sun,
     UserRound,
+    Download,
+    Trash2,
+    Shield,
 } from 'lucide-react';
 import { WidgetConfigurator } from '@/components/WidgetConfigurator';
+import { ProfileSettingsModal } from '@/components/ProfileSettingsModal';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -25,6 +29,7 @@ import {
 
 export default function Navbar({ user, onLogout, showWidgetConfigurator = true }) {
     const { theme, setTheme } = useStore();
+    const [profileOpen, setProfileOpen] = useState(false);
     const accountLabel = user?.displayName || user?.email || 'Compte';
     const initial = accountLabel.charAt(0).toUpperCase();
 
@@ -127,18 +132,105 @@ export default function Navbar({ user, onLogout, showWidgetConfigurator = true }
                             </DropdownMenuItem>
                         </DropdownMenuGroup>
 
+                        <DropdownMenuItem
+                            className="min-h-9 px-2 cursor-pointer"
+                            onClick={() => setProfileOpen(true)}
+                        >
+                            <UserRound className="mr-2 size-4" />
+                            Edit Profile
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuGroup>
+                            <DropdownMenuLabel className="px-2 pt-2">
+                                Data & Privacy (GDPR)
+                            </DropdownMenuLabel>
+                            <DropdownMenuItem className="min-h-9 px-2" asChild>
+                                <NavLink
+                                    to="/privacy"
+                                    className="flex items-center w-full cursor-pointer"
+                                >
+                                    <Shield className="mr-2 size-4" />
+                                    Privacy Policy
+                                </NavLink>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                                className="min-h-9 px-2 cursor-pointer"
+                                onClick={async () => {
+                                    try {
+                                        const token = localStorage.getItem('dashboard-auth-token');
+                                        const { API_URL } = await import('@/lib/auth');
+                                        const response = await fetch(
+                                            `${API_URL}/auth/download-data`,
+                                            {
+                                                headers: { Authorization: `Bearer ${token}` },
+                                            },
+                                        );
+                                        if (response.ok) {
+                                            const data = await response.json();
+                                            const blob = new Blob([JSON.stringify(data, null, 2)], {
+                                                type: 'application/json',
+                                            });
+                                            const url = URL.createObjectURL(blob);
+                                            const a = document.createElement('a');
+                                            a.href = url;
+                                            a.download = 'my-dashboard-data.json';
+                                            a.click();
+                                            URL.revokeObjectURL(url);
+                                        }
+                                    } catch (err) {
+                                        console.error('Failed to download data', err);
+                                    }
+                                }}
+                            >
+                                <Download className="mr-2 size-4" />
+                                Download My Data
+                            </DropdownMenuItem>
+                        </DropdownMenuGroup>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                             variant="destructive"
-                            className="min-h-9 px-2"
+                            className="min-h-9 px-2 cursor-pointer text-red-500 focus:text-red-500"
+                            onClick={async () => {
+                                if (
+                                    window.confirm(
+                                        'Are you sure you want to permanently delete your account and all data? This cannot be undone.',
+                                    )
+                                ) {
+                                    try {
+                                        const token = localStorage.getItem('dashboard-auth-token');
+                                        const { API_URL } = await import('@/lib/auth');
+                                        await fetch(`${API_URL}/auth/delete-account`, {
+                                            method: 'DELETE',
+                                            headers: { Authorization: `Bearer ${token}` },
+                                        });
+                                        onLogout();
+                                    } catch (err) {
+                                        console.error('Failed to delete account', err);
+                                    }
+                                }
+                            }}
+                        >
+                            <Trash2 className="mr-2 size-4" />
+                            Delete My Account
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            variant="destructive"
+                            className="min-h-9 px-2 cursor-pointer"
                             onClick={onLogout}
                         >
-                            <LogOut />
+                            <LogOut className="mr-2 size-4" />
                             Se déconnecter
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
             </div>
+
+            <ProfileSettingsModal
+                open={profileOpen}
+                onOpenChange={setProfileOpen}
+                user={user}
+                onUserUpdated={() => window.location.reload()}
+            />
         </nav>
     );
 }
