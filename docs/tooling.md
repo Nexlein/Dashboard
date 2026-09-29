@@ -21,11 +21,15 @@
 
 - **docker-compose.yml**: Orchestrates the entire app.
   - `client`: React Vite frontend (port 8081).
-  - `server`: Express Node.js backend (port 8080).
-  - `db`: PostgreSQL 15 database (port 5432).
+  - `nginx`: Load balancer for backend replicas (port 8080).
+  - `server`: Express Node.js backend replicas (internal).
+  - `redis`: Centralized caching and state store (internal).
+  - `db`: PostgreSQL 15 database (port 5433).
 
 ## 5. Testing
 
 - **Vitest & React Testing Library**: Frontend unit and component testing.
 
 - **Jest & Supertest**: Used for backend API integration tests (`backend/tests/`). Ensures routes like `/auth/login` and `/about.json` function correctly.
+
+- **K6**: Used for backend load, stress, and spike testing (`backend/tests/k6/`). Ensures Nginx routing and Redis caching remain stable under extreme concurrency.

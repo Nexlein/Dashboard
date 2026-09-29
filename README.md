@@ -31,7 +31,7 @@ individually toggleable normalized curves, and 1W, 1M, 3M, and 1Y periods.
 - **Frontend**: React, Vite, TailwindCSS, shadcn/ui, React-Grid-Layout, Zustand
 - **Backend**: Node.js, Express
 - **Database**: PostgreSQL with Prisma ORM
-- **Infrastructure**: Docker & Docker Compose
+- **Infrastructure**: Docker & Docker Compose, Nginx (Load Balancer), Redis (Shared Cache)
 
 ## Documentation
 
