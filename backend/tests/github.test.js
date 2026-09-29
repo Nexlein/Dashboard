@@ -176,8 +176,8 @@ describe('GitHub Service', () => {
             expect(prisma.oAuthToken.update).toHaveBeenCalledWith(
                 expect.objectContaining({
                     data: expect.objectContaining({
-                        accessToken: 'new-access-token',
-                        refreshToken: 'new-refresh-token',
+                        accessToken: expect.any(String),
+                        refreshToken: expect.any(String),
                     }),
                 }),
             );

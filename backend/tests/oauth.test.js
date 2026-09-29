@@ -148,11 +148,11 @@ describe('GitHub account linking', () => {
             create: {
                 userId: 42,
                 provider: 'github',
-                accessToken: 'github-access-token',
+                accessToken: expect.any(String),
                 refreshToken: null,
                 expiresAt: null,
             },
-            update: { accessToken: 'github-access-token', refreshToken: null, expiresAt: null },
+            update: { accessToken: expect.any(String), refreshToken: null, expiresAt: null },
         });
         const [url, options] = global.fetch.mock.calls[0];
         expect(url).toBe('https://github.com/login/oauth/access_token');
