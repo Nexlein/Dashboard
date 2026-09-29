@@ -10,7 +10,7 @@ const router = express.Router();
 const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET;
 const crypto = require('node:crypto');
-const pendingGithubLinks = new Map();
+const { getCache, setCache, deleteCache } = require('../utils/redisCache');
 const GITHUB_LINK_TTL = 10 * 60 * 1000;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -18,11 +18,19 @@ if (!JWT_SECRET) {
     throw new Error('JWT_SECRET environment variable is required');
 }
 
+const RedisStore = require('rate-limit-redis').default || require('rate-limit-redis');
+const { redisClient } = require('../utils/redisCache');
+
 const credentialsLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     limit: 20,
     standardHeaders: 'draft-8',
     legacyHeaders: false,
+    store: redisClient
+        ? new RedisStore({
+              sendCommand: (...args) => redisClient.sendCommand(args),
+          })
+        : undefined,
     message: { error: 'Too many authentication attempts. Please try again later.' },
 });
 
@@ -151,7 +159,7 @@ router.get('/me', requireAuth, async (req, res) => {
     }
 });
 
-router.get('/github', requireAuth, (req, res) => {
+router.get('/github', requireAuth, async (req, res) => {
     if (
         !process.env.GITHUB_CLIENT_ID ||
         !process.env.GITHUB_CLIENT_SECRET ||
@@ -163,16 +171,16 @@ router.get('/github', requireAuth, (req, res) => {
     const userId = req.user.userId;
     const state = crypto.randomBytes(32).toString('hex');
     const browserSecret = crypto.randomBytes(32).toString('hex');
-    // Remove abandoned requests too, even if their callback never arrives.
-    const cleanupTimer = setTimeout(() => pendingGithubLinks.delete(state), GITHUB_LINK_TTL);
-    cleanupTimer.unref();
-
-    pendingGithubLinks.set(state, {
-        userId,
-        browserSecretHash: crypto.createHash('sha256').update(browserSecret).digest(),
-        expiresAt: Date.now() + GITHUB_LINK_TTL,
-        cleanupTimer,
-    });
+    // Store state in Redis (no cleanup timer needed, Redis handles TTL)
+    await setCache(
+        `github_link:${state}`,
+        {
+            userId,
+            browserSecretHash: crypto.createHash('sha256').update(browserSecret).digest('hex'),
+            expiresAt: Date.now() + GITHUB_LINK_TTL,
+        },
+        GITHUB_LINK_TTL,
+    );
 
     // A cookie per request allows separate tabs to complete their own linking flow.
     res.cookie(`github_link_${state}`, browserSecret, {
@@ -202,8 +210,13 @@ router.get('/github/callback', async (req, res) => {
         return res.status(400).json({ error: 'Missing or invalid state' });
     }
 
-    const isLogin = pendingGithubLogins.has(state);
-    const pendingLink = isLogin ? pendingGithubLogins.get(state) : pendingGithubLinks.get(state);
+    let isLogin = true;
+    let pendingLink = await getCache(`github_login:${state}`);
+
+    if (!pendingLink) {
+        isLogin = false;
+        pendingLink = await getCache(`github_link:${state}`);
+    }
 
     if (!pendingLink) {
         return res.status(400).json({ error: 'Unknown or already used state' });
@@ -213,9 +226,7 @@ router.get('/github/callback', async (req, res) => {
     const cookieOptions = isLogin ? githubLoginCookieOptions(req) : githubCookieOptions(req);
 
     if (pendingLink.expiresAt <= Date.now()) {
-        clearTimeout(pendingLink.cleanupTimer);
-        if (isLogin) pendingGithubLogins.delete(state);
-        else pendingGithubLinks.delete(state);
+        await deleteCache(isLogin ? `github_login:${state}` : `github_link:${state}`);
         res.clearCookie(cookieName, cookieOptions);
         return res.status(400).json({ error: 'Expired state' });
     }
@@ -226,7 +237,7 @@ router.get('/github/callback', async (req, res) => {
         !/^[a-f0-9]{64}$/.test(browserSecret) ||
         !crypto.timingSafeEqual(
             crypto.createHash('sha256').update(browserSecret).digest(),
-            pendingLink.browserSecretHash,
+            Buffer.from(pendingLink.browserSecretHash, 'hex'),
         )
     ) {
         // Do not consume a valid request when another browser tries its URL.
@@ -235,9 +246,7 @@ router.get('/github/callback', async (req, res) => {
             .json({ error: 'GitHub flow must finish in the browser that started it' });
     }
 
-    clearTimeout(pendingLink.cleanupTimer);
-    if (isLogin) pendingGithubLogins.delete(state);
-    else pendingGithubLinks.delete(state);
+    await deleteCache(isLogin ? `github_login:${state}` : `github_link:${state}`);
     res.clearCookie(cookieName, cookieOptions);
 
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
@@ -360,8 +369,6 @@ router.get('/github/callback', async (req, res) => {
     }
 });
 
-const pendingGithubLogins = new Map();
-
 function githubLoginCookieOptions(req) {
     return {
         httpOnly: true,
@@ -371,7 +378,7 @@ function githubLoginCookieOptions(req) {
     };
 }
 
-router.get('/github/login', (req, res) => {
+router.get('/github/login', async (req, res) => {
     if (
         !process.env.GITHUB_CLIENT_ID ||
         !process.env.GITHUB_CLIENT_SECRET ||
@@ -382,14 +389,14 @@ router.get('/github/login', (req, res) => {
 
     const state = crypto.randomBytes(32).toString('hex');
     const browserSecret = crypto.randomBytes(32).toString('hex');
-    const cleanupTimer = setTimeout(() => pendingGithubLogins.delete(state), GITHUB_LINK_TTL);
-    cleanupTimer.unref();
-
-    pendingGithubLogins.set(state, {
-        browserSecretHash: crypto.createHash('sha256').update(browserSecret).digest(),
-        expiresAt: Date.now() + GITHUB_LINK_TTL,
-        cleanupTimer,
-    });
+    await setCache(
+        `github_login:${state}`,
+        {
+            browserSecretHash: crypto.createHash('sha256').update(browserSecret).digest('hex'),
+            expiresAt: Date.now() + GITHUB_LINK_TTL,
+        },
+        GITHUB_LINK_TTL,
+    );
 
     res.cookie(`github_login_${state}`, browserSecret, {
         ...githubLoginCookieOptions(req),

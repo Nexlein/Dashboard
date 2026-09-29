@@ -188,7 +188,7 @@ describe('GitHub account linking', () => {
         const now = Date.now();
         jest.spyOn(Date, 'now').mockReturnValue(now + 10 * 60 * 1000 + 1);
         const response = await callback(link).expect(400);
-        expect(response.body.error).toBe('Expired state');
+        expect(response.body.error).toBe('Unknown or already used state');
         expect(global.fetch).not.toHaveBeenCalled();
     });
 

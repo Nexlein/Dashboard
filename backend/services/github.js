@@ -3,7 +3,7 @@ const prisma = new PrismaClient();
 
 const MAX_CACHE_TTL_MS = 5 * 60 * 1000;
 const MIN_REFRESH_RATE_SECONDS = 60;
-const cache = new Map();
+const { getCache, setCache, clearCache } = require('../utils/redisCache');
 
 async function refreshGitHubToken(userId, refreshToken) {
     if (!process.env.GITHUB_CLIENT_ID || !process.env.GITHUB_CLIENT_SECRET) {
@@ -119,8 +119,8 @@ module.exports = {
             ? Math.max(requestedRefreshRate, MIN_REFRESH_RATE_SECONDS)
             : MIN_REFRESH_RATE_SECONDS;
         const cacheTtlMs = Math.min(refreshRate * 1000, MAX_CACHE_TTL_MS);
-        const cached = cache.get(cacheKey);
-        if (cached && Date.now() - cached.fetchedAt < cacheTtlMs) return cached.data;
+        const cached = await getCache(cacheKey);
+        if (cached) return cached;
 
         if (widgetName === 'repo_stats' || widgetName === 'github-repo') {
             const { owner, repo } = params;
@@ -136,7 +136,7 @@ module.exports = {
                 name: data.full_name,
                 description: data.description,
             };
-            cache.set(cacheKey, { data: result, fetchedAt: Date.now() });
+            await setCache(cacheKey, result, cacheTtlMs);
             return result;
         }
 
@@ -155,7 +155,7 @@ module.exports = {
                 avatar: commit.author?.avatar_url,
                 url: commit.html_url,
             }));
-            cache.set(cacheKey, { data: result, fetchedAt: Date.now() });
+            await setCache(cacheKey, result, cacheTtlMs);
             return result;
         }
 
@@ -175,11 +175,11 @@ module.exports = {
                 following: data.following,
                 bio: data.bio,
             };
-            cache.set(cacheKey, { data: result, fetchedAt: Date.now() });
+            await setCache(cacheKey, result, cacheTtlMs);
             return result;
         }
 
         throw new Error('Unknown widget name');
     },
-    clearCache: () => cache.clear(),
+    clearCache,
 };
