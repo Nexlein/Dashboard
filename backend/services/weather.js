@@ -1,6 +1,6 @@
 const MAX_CACHE_TTL_MS = 5 * 60 * 1000;
 const MIN_REFRESH_RATE_SECONDS = 60;
-const cache = new Map();
+const { getCache, setCache, clearCache } = require('../utils/redisCache');
 
 class WeatherServiceError extends Error {
     constructor(message, statusCode = 502) {
@@ -131,8 +131,8 @@ async function execute(widgetName, params = {}, options = {}) {
         ? Math.max(requestedRefreshRate, MIN_REFRESH_RATE_SECONDS)
         : MIN_REFRESH_RATE_SECONDS;
     const cacheTtlMs = Math.min(refreshRate * 1000, MAX_CACHE_TTL_MS);
-    const cached = cache.get(cacheKey);
-    if (cached && Date.now() - cached.fetchedAt < cacheTtlMs) return cached.data;
+    const cached = await getCache(cacheKey);
+    if (cached) return cached;
 
     const location = await resolveCity(city, apiKey);
     const commonParams = {
@@ -160,7 +160,7 @@ async function execute(widgetName, params = {}, options = {}) {
         data = aggregateForecast(payload, location);
     }
 
-    cache.set(cacheKey, { data, fetchedAt: Date.now() });
+    await setCache(cacheKey, data, cacheTtlMs);
     return data;
 }
 
@@ -193,5 +193,5 @@ module.exports = {
     execute,
     verifyCredentials,
     WeatherServiceError,
-    clearCache: () => cache.clear(),
+    clearCache,
 };

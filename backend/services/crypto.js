@@ -3,7 +3,7 @@ const MAX_CACHE_TTL_MS = 5 * 60 * 1000;
 const MIN_REFRESH_RATE_SECONDS = 60;
 const MAX_CHART_COINS = 8;
 const COINGECKO_HISTORY_START = 1230768000; // 2009-01-01, before the first crypto market data.
-const cache = new Map();
+const { getCache, setCache, clearCache } = require('../utils/redisCache');
 
 class CryptoServiceError extends Error {
     constructor(message, statusCode = 502) {
@@ -201,9 +201,9 @@ async function execute(widgetName, params = {}, options = {}) {
         const coins = normalizedCoins(params.coins);
         const days = normalizedDays(params.days);
         const cacheKey = `${cacheScope}:${widgetName}:${coins.join(',')}:${currency}:${days}`;
-        const cached = cache.get(cacheKey);
+        const cached = await getCache(cacheKey);
 
-        if (cached && Date.now() - cached.fetchedAt < cacheTtlMs) return cached.data;
+        if (cached) return cached;
 
         const chartResults = await Promise.all(
             coins.map(async (coin) => {
@@ -248,15 +248,15 @@ async function execute(widgetName, params = {}, options = {}) {
             series: enrichedSeries,
         };
 
-        cache.set(cacheKey, { data, fetchedAt: Date.now() });
+        await setCache(cacheKey, data, cacheTtlMs);
         return data;
     }
 
     const coin = normalizedParam(params.coin, 'Coin', 100);
     const cacheKey = `${cacheScope}:${widgetName}:${coin}:${currency}`;
-    const cached = cache.get(cacheKey);
+    const cached = await getCache(cacheKey);
 
-    if (cached && Date.now() - cached.fetchedAt < cacheTtlMs) return cached.data;
+    if (cached) return cached;
 
     const payload = await fetchCoinGecko(
         '/simple/price',
@@ -287,7 +287,7 @@ async function execute(widgetName, params = {}, options = {}) {
         lastUpdatedAt: market.last_updated_at ?? null,
     };
 
-    cache.set(cacheKey, { data, fetchedAt: Date.now() });
+    await setCache(cacheKey, data, cacheTtlMs);
     return data;
 }
 
@@ -322,5 +322,5 @@ module.exports = {
     execute,
     verifyCredentials,
     CryptoServiceError,
-    clearCache: () => cache.clear(),
+    clearCache,
 };
