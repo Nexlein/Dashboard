@@ -29,11 +29,16 @@ async function refreshGitHubToken(userId, refreshToken) {
         throw new Error('Could not refresh GitHub token');
     }
 
+    const { encrypt } = require('../utils/crypto');
     await prisma.oAuthToken.update({
         where: { userId_provider: { userId, provider: 'github' } },
         data: {
-            accessToken: data.access_token,
-            refreshToken: data.refresh_token ?? refreshToken,
+            accessToken: encrypt(data.access_token),
+            refreshToken: data.refresh_token
+                ? encrypt(data.refresh_token)
+                : refreshToken
+                  ? encrypt(refreshToken)
+                  : null,
             expiresAt: data.expires_in ? new Date(Date.now() + data.expires_in * 1000) : null,
         },
     });

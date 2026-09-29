@@ -11,6 +11,7 @@ const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET;
 const crypto = require('node:crypto');
 const { getCache, setCache, deleteCache } = require('../utils/redisCache');
+const { encrypt } = require('../utils/crypto');
 const GITHUB_LINK_TTL = 10 * 60 * 1000;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -159,6 +160,35 @@ router.get('/me', requireAuth, async (req, res) => {
     }
 });
 
+router.put('/me', requireAuth, async (req, res) => {
+    try {
+        const { displayName, email } = req.body;
+        const normalizedEmail = email ? normalizeEmail(email) : undefined;
+
+        const updateData = {};
+        if (displayName !== undefined) updateData.displayName = displayName;
+        if (normalizedEmail) {
+            if (normalizedEmail.length > 254 || !EMAIL_PATTERN.test(normalizedEmail)) {
+                return res.status(400).json({ error: 'Invalid email address' });
+            }
+            updateData.email = normalizedEmail;
+        }
+
+        const user = await prisma.user.update({
+            where: { id: req.user.userId },
+            data: updateData,
+            select: { id: true, email: true, displayName: true },
+        });
+
+        res.json(user);
+    } catch (error) {
+        if (error.code === 'P2002') {
+            return res.status(409).json({ error: 'Email already in use' });
+        }
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 router.get('/github', requireAuth, async (req, res) => {
     if (
         !process.env.GITHUB_CLIENT_ID ||
@@ -288,8 +318,8 @@ router.get('/github/callback', async (req, res) => {
 
         const accessToken = data.access_token;
         const tokenData = {
-            accessToken: data.access_token,
-            refreshToken: data.refresh_token ?? null,
+            accessToken: encrypt(data.access_token),
+            refreshToken: data.refresh_token ? encrypt(data.refresh_token) : null,
             expiresAt: data.expires_in ? new Date(Date.now() + data.expires_in * 1000) : null,
         };
 
@@ -415,6 +445,37 @@ router.get('/github/login', async (req, res) => {
         return res.json({ authorizationUrl });
     }
     res.redirect(authorizationUrl);
+});
+
+router.get('/download-data', requireAuth, async (req, res) => {
+    try {
+        const user = await prisma.user.findUnique({
+            where: { id: req.user.userId },
+            include: {
+                widgets: true,
+                serviceConnections: {
+                    select: { id: true, serviceName: true, createdAt: true },
+                },
+            },
+        });
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        res.json(user);
+    } catch (error) {
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+router.delete('/delete-account', requireAuth, async (req, res) => {
+    try {
+        await prisma.user.delete({
+            where: { id: req.user.userId },
+        });
+        res.json({ message: 'Account deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ error: 'Internal server error' });
+    }
 });
 
 module.exports = router;

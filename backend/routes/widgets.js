@@ -24,11 +24,17 @@ async function getServiceConnection(userId, service) {
             },
         });
         if (!token) return null;
+
+        const { decrypt } = require('../utils/crypto');
+
         return {
             id: token.id,
             userId,
             serviceName: service.name,
-            encryptedCredentials: encryptJson({ accessToken: token.accessToken }),
+            encryptedCredentials: encryptJson({
+                accessToken: decrypt(token.accessToken),
+                refreshToken: token.refreshToken ? decrypt(token.refreshToken) : undefined,
+            }),
             keyHint: 'OAuth',
             verifiedAt: token.expiresAt || new Date(),
         };
