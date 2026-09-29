@@ -2,6 +2,26 @@
 
 ## System
 
+### `GET /health`
+
+Returns the health status of the API, including database connection status and server uptime.
+
+**Response (200 OK):**
+```json
+{
+  "status": "ok",
+  "uptime": 123.45,
+  "timestamp": "2026-09-28T15:00:00.000Z"
+}
+```
+
+**Response (503 Service Unavailable):**
+If database connection fails.
+
+### `GET /api-docs`
+
+Serves the Swagger UI documentation for all endpoints.
+
 ### `GET /about.json`
 
 Returns the application's supported services and widgets in the format required by Epitech grading.

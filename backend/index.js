@@ -31,6 +31,43 @@ app.use(
 );
 app.use(express.json());
 
+const healthRoutes = require('./routes/health');
+const swaggerUi = require('swagger-ui-express');
+const swaggerJsdoc = require('swagger-jsdoc');
+
+const swaggerOptions = {
+    definition: {
+        openapi: '3.0.0',
+        info: {
+            title: 'Dashboard API',
+            version: '1.0.0',
+            description: 'API documentation for the Dashboard project',
+        },
+        servers: [
+            {
+                url: 'http://localhost:8080',
+            },
+        ],
+        components: {
+            securitySchemes: {
+                bearerAuth: {
+                    type: 'http',
+                    scheme: 'bearer',
+                    bearerFormat: 'JWT',
+                },
+            },
+        },
+        security: [
+            {
+                bearerAuth: [],
+            },
+        ],
+    },
+    apis: ['./routes/*.js', './swagger-docs.js'],
+};
+
+const swaggerSpec = swaggerJsdoc(swaggerOptions);
+
 app.use('/admin', authMiddleware, adminMiddleware, adminRoutes);
 app.use('/auth', authRoutes);
 app.use('/about.json', aboutRoutes);
@@ -38,6 +75,8 @@ app.use('/widgets', authMiddleware, widgetRoutes);
 app.use('/services', authMiddleware, serviceRoutes);
 const chatbotRoutes = require('./routes/chatbot');
 app.use('/chatbot', authMiddleware, chatbotRoutes);
+app.use('/health', healthRoutes);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 if (require.main === module) {
     app.listen(PORT, () => {

@@ -33,6 +33,7 @@ jest.mock('@prisma/client', () => {
             deleteMany: jest.fn(),
         },
         $transaction: jest.fn(),
+        $queryRaw: jest.fn(),
     };
     return { PrismaClient: jest.fn(() => mPrisma) };
 });
@@ -43,6 +44,27 @@ const prisma = new PrismaClient();
 describe('API Endpoints', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+    });
+
+    describe('GET /health', () => {
+        it('should return 200 and ok status when DB is connected', async () => {
+            prisma.$queryRaw.mockResolvedValue([1]);
+
+            const res = await request(app).get('/health');
+            expect(res.statusCode).toBe(200);
+            expect(res.body.status).toBe('ok');
+            expect(res.body).toHaveProperty('uptime');
+            expect(res.body).toHaveProperty('timestamp');
+        });
+
+        it('should return 503 when DB connection fails', async () => {
+            prisma.$queryRaw.mockRejectedValue(new Error('Connection failed'));
+
+            const res = await request(app).get('/health');
+            expect(res.statusCode).toBe(503);
+            expect(res.body.status).toBe('error');
+            expect(res.body.message).toBe('Database connection failed');
+        });
     });
 
     describe('GET /about.json', () => {
