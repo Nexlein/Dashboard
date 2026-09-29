@@ -12,10 +12,10 @@
 
 ## Backend: Node.js (Express)
 
-- **Security & Caching**: `express-rate-limit` to prevent attacks, and `node-cache` to protect external APIs.
+- **Security & Caching**: `express-rate-limit` (backed by Redis) to prevent attacks, and Redis to protect external APIs.
 - **OAuth2 Support**: Passport.js simplifies integration with external services.
 - **JSON Native**: Makes serving the required `about.json` and API routes trivial.
-- **Port 8080**: Easy to isolate and map in Docker.
+- **Port 8080**: Replicas sit behind an Nginx reverse proxy.
 
 ## Database: PostgreSQL
 
@@ -30,5 +30,9 @@
 
 ## Infrastructure: Docker Compose
 
-- Separates frontend, backend, and database into distinct containers.
-- Meets Epitech grading requirements.
+- Orchestrates the full stateless architecture with dedicated containers for:
+  - Frontend (React/Vite)
+  - Backend API Replicas (x3)
+  - Nginx Load Balancer
+  - Redis Cache
+  - PostgreSQL Database

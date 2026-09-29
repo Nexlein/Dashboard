@@ -28,8 +28,16 @@ All backend tests are located in `backend/tests/`.
 - `crypto.test.js`: CoinGecko credential verification, normalized price and
   historical responses, caching, multi-asset limits, supported periods, provider
   errors, and legacy full-history fallback. All CoinGecko calls are mocked.
+- `redisCache.test.js`: Validates graceful fallback to local memory maps when Redis is unavailable.
 
 *Note: For tests requiring the database, ensure you mock Prisma or use a separate test database.*
+
+## Load & Performance Testing
+
+The backend includes a **K6** testing suite in `backend/tests/k6/` to guarantee load balancing and rate limiting stability:
+- `load.js`: Verifies sustained traffic processing capabilities.
+- `stress.js`: Pushes the Nginx and Redis boundaries to determine breaking points.
+- `spike.js`: Simulates sudden surges to ensure replicas can absorb viral traffic without cascading failures.
 
 ## Frontend Tests
 

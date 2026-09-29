@@ -10,8 +10,9 @@ The Dashboard follows a modern decoupled architecture. The frontend and backend 
 flowchart TB
     subgraph Docker[Docker Compose Environment]
         UI["Frontend (React / Vite)"]
-        API["Backend API (Express.js)"]
-        Cache["In-Memory Cache"]
+        LB["Nginx Load Balancer"]
+        API["Backend API Replicas (x3)"]
+        Cache[("Redis Cache")]
         DB[("PostgreSQL")]
     end
 
@@ -21,9 +22,10 @@ flowchart TB
     end
 
     User(["User (Browser)"]) -->|"Interacts with"| UI
-    UI -->|"REST requests (JWT)"| API
+    UI -->|"REST requests (JWT)"| LB
+    LB -->|"Round-robin"| API
     API -->|"Read/Write (Prisma ORM)"| DB
-    API -->|"Check Data"| Cache
+    API -->|"Check Data / Rate Limit"| Cache
     Cache -->|"Cache Miss (Fetch)"| ExtAPIs
     API -->|"Authenticate"| OAuth
 ```
@@ -40,15 +42,16 @@ flowchart TB
 ### 2. Backend (Server)
 
 - **Framework**: Node.js with Express.
-- **Role**: Acts as the central orchestrator.
+- **Role**: Acts as the central orchestrator running as 3 scaled replicas.
     - Handles Authentication (`/auth/login`, `/auth/register`).
     - Stores and verifies user-owned service connections (`/services`).
     - Serves the dynamic Service Registry (`/about.json`).
     - Proxies widget requests to external APIs.
 
-### 3. Caching Layer
+### 3. Caching & Load Balancing
 
-- **Role**: Sits inside the Backend container. Intercepts outgoing requests to external APIs. Weather and CoinGecko cache entries are scoped to the authenticated user's service connection and expire according to the widget refresh interval, capped at five minutes.
+- **Load Balancer**: Nginx routes incoming API requests across the 3 backend replicas using dynamic Docker DNS resolution.
+- **Redis Cache**: A centralized Redis container manages widget data caching, global rate-limiting (`rate-limit-redis`), and transient OAuth states. Cache entries expire according to the widget refresh interval, capped at five minutes.
 
 ### 4. Database
 
