@@ -37,8 +37,6 @@ jobs:
                   TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/dashboard_gdpr_test
               run: |
                   npx prisma db push
-                  npm run migrate:github-identity
-                  npm run migrate:github-identity
                   npm run test:gdpr-integration
             - name: Test Docker Compose Build
               run: docker compose build
