@@ -30,11 +30,15 @@ jobs:
               run: |
                   echo "Waiting for services to be ready..."
                   for i in $(seq 1 30); do
-                    curl -sf http://localhost:8080/health && echo "Service ready" && exit 0
-                    echo "Attempt $i/30 failed, retrying in 5s..."
-                    sleep 5
+                    if curl -sf http://localhost:8080/health > /dev/null; then
+                      echo "Service ready"
+                      exit 0
+                    fi
+                    echo "Attempt $i/30 failed, retrying in 2s..."
+                    sleep 2
                   done
-                  echo "Service failed to start after 150s"
+                  echo "Service failed to start after 60s"
+                  docker compose logs server
                   exit 1
 
             - name: Run Load Test
