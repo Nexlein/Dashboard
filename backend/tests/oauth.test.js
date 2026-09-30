@@ -21,7 +21,7 @@ process.env.GITHUB_CLIENT_ID = 'test-client-id';
 process.env.GITHUB_CLIENT_SECRET = 'test-client-secret';
 process.env.GITHUB_CALLBACK_URL = 'http://localhost:8080/auth/github/callback';
 
-const app = require('../index');
+const app = require('../app');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { decrypt } = require('../utils/crypto');

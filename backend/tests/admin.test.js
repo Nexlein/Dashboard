@@ -19,7 +19,7 @@ jest.mock('@prisma/client', () => {
 
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
-const app = require('../index');
+const app = require('../app');
 
 const adminToken = jwt.sign({ userId: 1, isAdmin: true }, process.env.JWT_SECRET);
 

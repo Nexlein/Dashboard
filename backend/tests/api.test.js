@@ -2,7 +2,7 @@ process.env.JWT_SECRET = 'api-test-secret-that-is-long-enough-for-authentication
 
 const request = require('supertest');
 const jwt = require('jsonwebtoken');
-const app = require('../index');
+const app = require('../app');
 const weatherService = require('../services/weather');
 
 // Mock Prisma Client

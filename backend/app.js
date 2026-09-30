@@ -10,10 +10,14 @@ const widgetRoutes = require('./routes/widgets');
 const serviceRoutes = require('./routes/services');
 const authMiddleware = require('./middleware/auth');
 const adminMiddleware = require('./middleware/admin');
+const healthRoutes = require('./routes/health');
+const chatbotRoutes = require('./routes/chatbot');
+const swaggerUi = require('swagger-ui-express');
+const swaggerJsdoc = require('swagger-jsdoc');
 
 const app = express();
 app.set('trust proxy', 1); // Trust first proxy (Docker) for accurate IP rate limiting
-const PORT = process.env.PORT || 8080;
+
 const allowedOrigins = (
     process.env.CORS_ORIGINS || 'http://localhost:5173,http://localhost:5174,http://localhost:8081'
 )
@@ -30,10 +34,6 @@ app.use(
     }),
 );
 app.use(express.json());
-
-const healthRoutes = require('./routes/health');
-const swaggerUi = require('swagger-ui-express');
-const swaggerJsdoc = require('swagger-jsdoc');
 
 const swaggerOptions = {
     definition: {
@@ -73,24 +73,11 @@ app.use('/auth', authRoutes);
 app.use('/about.json', aboutRoutes);
 app.use('/widgets', authMiddleware, widgetRoutes);
 app.use('/services', authMiddleware, serviceRoutes);
-const chatbotRoutes = require('./routes/chatbot');
 app.use('/chatbot', authMiddleware, chatbotRoutes);
 app.use('/health', healthRoutes);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-if (require.main === module) {
-    const { PrismaClient } = require('@prisma/client');
-    const { migrateOAuthTokens } = require('./utils/migrateOAuthTokens');
-    const migrationClient = new PrismaClient();
-    migrateOAuthTokens(migrationClient)
-        .then(() => app.listen(PORT, () => console.log(`Server running on port ${PORT}`)))
-        .catch(() => {
-            console.error(
-                'OAuth token migration failed; server not started. Check database and encryption key.',
-            );
-            process.exit(1);
-        })
-        .finally(() => migrationClient.$disconnect());
-}
+const errorHandler = require('./middleware/errorHandler');
+app.use(errorHandler);
 
 module.exports = app;
