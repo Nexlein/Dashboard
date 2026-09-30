@@ -37,6 +37,15 @@ jobs:
                   languages: javascript, typescript
             - name: Perform CodeQL Analysis
               uses: github/codeql-action/analyze@v3
+              with:
+                  upload: false
+                  output: sarif-results
+            
+            - name: Upload CodeQL Results
+              uses: actions/upload-artifact@v4
+              with:
+                  name: codeql-results
+                  path: sarif-results
 
     trivy:
         runs-on: ubuntu-latest
