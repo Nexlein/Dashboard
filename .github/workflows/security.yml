@@ -13,7 +13,7 @@ jobs:
     secret-scan:
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v5
               with:
                   fetch-depth: 0
             - name: TruffleHog Secret Scan
@@ -30,19 +30,19 @@ jobs:
             contents: read
         steps:
             - name: Checkout repository
-              uses: actions/checkout@v4
+              uses: actions/checkout@v5
             - name: Initialize CodeQL
-              uses: github/codeql-action/init@v3
+              uses: github/codeql-action/init@v4
               with:
                   languages: javascript, typescript
             - name: Perform CodeQL Analysis
-              uses: github/codeql-action/analyze@v3
+              uses: github/codeql-action/analyze@v4
               with:
                   upload: false
                   output: sarif-results
 
             - name: Upload CodeQL Results
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v5
               with:
                   name: codeql-results
                   path: sarif-results
@@ -50,7 +50,7 @@ jobs:
     trivy:
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v5
             - name: Build Backend Image
               run: docker build -t backend:latest ./backend
             - name: Run Trivy vulnerability scanner on Backend

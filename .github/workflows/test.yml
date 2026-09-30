@@ -13,8 +13,8 @@ jobs:
     frontend-test:
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v4
-            - uses: actions/setup-node@v4
+            - uses: actions/checkout@v5
+            - uses: actions/setup-node@v5
               with:
                   node-version: 24
                   cache: 'npm'
@@ -23,7 +23,7 @@ jobs:
             - working-directory: frontend
               run: npm test -- --coverage
             - name: Upload Frontend Coverage
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v5
               if: always()
               with:
                   name: frontend-coverage
@@ -47,8 +47,8 @@ jobs:
                     --health-timeout 5s
                     --health-retries 10
         steps:
-            - uses: actions/checkout@v4
-            - uses: actions/setup-node@v4
+            - uses: actions/checkout@v5
+            - uses: actions/setup-node@v5
               with:
                   node-version: 24
                   cache: 'npm'
@@ -61,7 +61,7 @@ jobs:
                   ENCRYPTION_KEY: ci-test-encryption-key-for-backend-unit-tests
               run: npm test -- --coverage
             - name: Upload Backend Coverage
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v5
               if: always()
               with:
                   name: backend-coverage
@@ -78,7 +78,7 @@ jobs:
     e2e-test:
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v5
             - run: cp backend/.env.example backend/.env
             - run: docker compose up -d --build
             - name: Wait for services to be ready
@@ -94,7 +94,7 @@ jobs:
                   echo "Backend failed to start after 60s"
                   docker compose logs server
                   exit 1
-            - uses: actions/setup-node@v4
+            - uses: actions/setup-node@v5
               with:
                   node-version: 24
                   cache: 'npm'
@@ -106,7 +106,7 @@ jobs:
                   BASE_URL: http://localhost:8081
               run: npx playwright test --project=chromium
             - name: Upload Playwright Report
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v5
               if: failure()
               with:
                   name: playwright-report
