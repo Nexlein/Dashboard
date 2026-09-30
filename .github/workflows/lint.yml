@@ -27,6 +27,8 @@ jobs:
               run: npm run lint --if-present
             - name: Prisma Validate
               working-directory: backend
+              env:
+                  DATABASE_URL: postgresql://dummy:dummy@localhost:5432/dummy
               run: npx prisma validate
             - name: Knip Check
               run: npx knip
