@@ -17,12 +17,18 @@
     "keywords": [],
     "author": "",
     "license": "ISC",
+    "workspaces": [
+        "frontend",
+        "backend"
+    ],
     "bugs": {
         "url": "https://github.com/Nexlein/Dashboard/issues"
     },
     "homepage": "https://github.com/Nexlein/Dashboard#readme",
     "devDependencies": {
+        "cspell": "^10.3.6",
         "husky": "^9.1.7",
+        "knip": "^6.38.0",
         "lint-staged": "^17.5.1",
         "prettier": "^3.9.6"
     }

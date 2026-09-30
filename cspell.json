@@ -1,0 +1,6 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "words": ["nexlein", "epitech", "vite", "vitest", "oxlint", "prisma", "k6", "radix", "lucide", "shadcn", "tailwindcss"],
+  "ignorePaths": ["node_modules", "dist", "public", ".git"]
+}
