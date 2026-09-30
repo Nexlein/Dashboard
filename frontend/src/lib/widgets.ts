@@ -1,6 +1,6 @@
 import { API_URL } from './auth';
 
-export const MIN_REFRESH_RATE_SECONDS = 60;
+const MIN_REFRESH_RATE_SECONDS = 60;
 
 export type ApiWidget = {
     id: number;
@@ -120,7 +120,7 @@ export async function fetchWidgets() {
     return response.json();
 }
 
-export async function createWidget(widgetData): Promise<ApiWidget> {
+async function createWidget(widgetData): Promise<ApiWidget> {
     const token = localStorage.getItem('dashboard-auth-token');
     const response = await fetch(`${API_URL}/widgets`, {
         method: 'POST',
@@ -147,7 +147,7 @@ export async function fetchWidgetData(id: number) {
     return body;
 }
 
-export async function updateWidgetLayouts(layouts) {
+async function updateWidgetLayouts(layouts) {
     const token = localStorage.getItem('dashboard-auth-token');
     const response = await fetch(`${API_URL}/widgets/layout`, {
         method: 'PUT',

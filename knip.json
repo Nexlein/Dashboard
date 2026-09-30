@@ -1,24 +1,17 @@
 {
-    "ignoreDependencies": [
-        "@radix-ui/*",
-        "shadcn",
-        "react-grid-layout",
-        "zustand",
-        "tw-animate-css",
-        "@fontsource-variable/geist",
-        "@testing-library/user-event",
-        "k6"
-    ],
+    "ignoreDependencies": ["shadcn", "@fontsource-variable/geist", "tw-animate-css"],
     "ignoreBinaries": ["commitlint", "k6"],
     "ignore": [
         "frontend/src/components/ui/**",
-        "backend/swagger-docs.js",
-        "frontend/src/lib/widgets.ts"
+        "backend/tests/k6/**"
     ],
-    "rules": {
-        "exports": "warn",
-        "files": "warn",
-        "dependencies": "warn",
-        "unlisted": "warn"
+    "ignoreExportsUsedInFile": true,
+    "workspaces": {
+        "frontend": {
+            "project": ["src/**/*.{ts,tsx,js,jsx}"]
+        },
+        "backend": {
+            "project": ["**/*.js"]
+        }
     }
 }

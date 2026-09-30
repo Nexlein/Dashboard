@@ -1,4 +1,4 @@
-export function formatCurrency(value, currency, compact = false) {
+function formatCurrency(value, currency, compact = false) {
     if (typeof value !== 'number') return '—';
 
     try {
