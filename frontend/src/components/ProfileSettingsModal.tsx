@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,7 +8,6 @@ import { Label } from '@/components/ui/label';
 export function ProfileSettingsModal({ open, onOpenChange, user, onUserUpdated }) {
     const [displayName, setDisplayName] = useState(user?.displayName || '');
     const [email, setEmail] = useState(user?.email || '');
-    const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
 
@@ -20,13 +20,10 @@ export function ProfileSettingsModal({ open, onOpenChange, user, onUserUpdated }
         }
     }, [open, user]);
 
-    async function handleSubmit(e) {
-        e.preventDefault();
-        setLoading(true);
-        setError('');
-        setSuccess('');
+    const queryClient = useQueryClient();
 
-        try {
+    const updateProfileMutation = useMutation({
+        mutationFn: async ({ displayName, email }) => {
             const token = localStorage.getItem('dashboard-auth-token');
             const { API_URL } = await import('@/lib/auth');
             const res = await fetch(`${API_URL}/auth/me`, {
@@ -43,14 +40,26 @@ export function ProfileSettingsModal({ open, onOpenChange, user, onUserUpdated }
                 throw new Error(data.error || 'Failed to update profile');
             }
 
-            const updatedUser = await res.json();
+            return res.json();
+        },
+        onMutate: () => {
+            setError('');
+            setSuccess('');
+        },
+        onSuccess: (updatedUser) => {
             onUserUpdated(updatedUser);
+            queryClient.setQueryData(['currentUser'], updatedUser);
             setSuccess('Profile updated successfully');
-        } catch (err) {
-            setError(err.message);
-        } finally {
-            setLoading(false);
-        }
+            setTimeout(() => onOpenChange(false), 1500);
+        },
+        onError: (err) => setError(err.message),
+    });
+
+    const loading = updateProfileMutation.isPending;
+
+    async function handleSubmit(e) {
+        e.preventDefault();
+        updateProfileMutation.mutate({ displayName, email });
     }
 
     return (
@@ -80,10 +89,14 @@ export function ProfileSettingsModal({ open, onOpenChange, user, onUserUpdated }
                         />
                     </div>
                     {error && <p className="text-sm text-destructive">{error}</p>}
-                    {success && <p className="text-sm text-emerald-500">{success}</p>}
-                    <Button type="submit" className="w-full" disabled={loading}>
-                        {loading ? 'Saving...' : 'Save Changes'}
-                    </Button>
+                    {success && (
+                        <p className="text-sm text-green-600 dark:text-green-400">{success}</p>
+                    )}
+                    <div className="flex justify-end pt-4">
+                        <Button type="submit" disabled={loading}>
+                            {loading ? 'Saving...' : 'Save Changes'}
+                        </Button>
+                    </div>
                 </form>
             </DialogContent>
         </Dialog>

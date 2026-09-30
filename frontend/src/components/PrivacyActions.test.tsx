@@ -1,8 +1,14 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { render as _originalRender, screen, fireEvent, waitFor } from '@testing-library/react';
 import { it, expect, vi, afterEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import Navbar from './Navbar';
 import { ProfileSettingsModal } from './ProfileSettingsModal';
+
+const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+const customRender = (ui: React.ReactElement) => {
+    return _originalRender(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+};
 
 afterEach(() => {
     vi.restoreAllMocks();
@@ -12,7 +18,7 @@ afterEach(() => {
 
 function openAccount(onLogout = vi.fn()) {
     localStorage.setItem('dashboard-auth-token', 'test-token');
-    render(
+    customRender(
         <MemoryRouter>
             <Navbar user={{ id: 42, email: 'user@example.com' }} onLogout={onLogout} />
         </MemoryRouter>,
@@ -97,7 +103,7 @@ it('allows both display name and email changes for an OAuth profile', async () =
         .mockResolvedValue({ ok: true, json: async () => ({ displayName: 'New name' }) });
     vi.stubGlobal('fetch', fetchMock);
     const onUserUpdated = vi.fn();
-    render(
+    customRender(
         <ProfileSettingsModal
             open
             onOpenChange={vi.fn()}

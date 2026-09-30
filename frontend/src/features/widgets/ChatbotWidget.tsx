@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useMutation } from '@tanstack/react-query';
 import { Send, User, Loader2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,7 +22,7 @@ export function ChatbotWidget({ widget }) {
     });
 
     const [input, setInput] = useState('');
-    const [loading, setLoading] = useState(false);
+
     const [error, setError] = useState(null);
     const messagesEndRef = useRef(null);
 
@@ -29,6 +30,35 @@ export function ChatbotWidget({ widget }) {
         localStorage.setItem(storageKey, JSON.stringify(messages));
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages, storageKey]);
+
+    const chatMutation = useMutation({
+        mutationFn: async (payloadMessages) => {
+            const token = localStorage.getItem('dashboard-auth-token');
+            const res = await fetch(`${API_URL}/widgets/${id}/chat`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ messages: payloadMessages }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to get response');
+            return data;
+        },
+        onSuccess: (data) => {
+            setMessages((prev) => [...prev, { role: 'assistant', content: data.reply }]);
+        },
+        onError: (err) => {
+            setError(err.message);
+            setMessages((prev) => [
+                ...prev,
+                { role: 'assistant', content: 'Error: Could not get a response.' },
+            ]);
+        },
+    });
+
+    const loading = chatMutation.isPending;
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -38,7 +68,6 @@ export function ChatbotWidget({ widget }) {
         const newMessages = [...messages, userMsg];
         setMessages(newMessages);
         setInput('');
-        setLoading(true);
         setError(null);
 
         // Sliding window: keep only the most recent messages that fit under ~12,000 chars (~3k tokens)
@@ -51,30 +80,7 @@ export function ChatbotWidget({ widget }) {
             payloadMessages.unshift(newMessages[i]);
         }
 
-        try {
-            const token = localStorage.getItem('dashboard-auth-token');
-            const res = await fetch(`${API_URL}/widgets/${id}/chat`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({ messages: payloadMessages }),
-            });
-
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Failed to get response');
-
-            setMessages((prev) => [...prev, { role: 'assistant', content: data.reply }]);
-        } catch (err) {
-            setError(err.message);
-            setMessages((prev) => [
-                ...prev,
-                { role: 'assistant', content: 'Error: Could not get a response.' },
-            ]);
-        } finally {
-            setLoading(false);
-        }
+        chatMutation.mutate(payloadMessages);
     };
 
     return (

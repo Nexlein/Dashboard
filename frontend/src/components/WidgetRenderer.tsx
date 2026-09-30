@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect } from 'react';
-import { useWidgetTimer } from '@/lib/useWidgetTimer';
+import { useState, useCallback } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
 import { fetchWidgetData, updateWidget as updateWidgetRequest } from '@/lib/widgets';
 import { useStore } from '@/store/useStore';
@@ -7,10 +7,6 @@ import { REGISTRY } from '@/lib/registry';
 
 export default function WidgetRenderer({ widget }) {
     const { id, serviceName, widgetName, refreshRate } = widget;
-    const [data, setData] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [periodUpdating, setPeriodUpdating] = useState(false);
     const updateWidgetInStore = useStore((state) => state.updateWidget);
 
     const serviceDef = REGISTRY[serviceName];
@@ -19,44 +15,39 @@ export default function WidgetRenderer({ widget }) {
     );
     const Component = widgetDef?.component;
 
-    const fetchData = useCallback(async () => {
-        try {
-            setLoading(true);
-            setError(null);
-            setData(await fetchWidgetData(id));
-        } catch (err) {
-            setError(err.message || 'Failed to fetch widget data');
-        } finally {
-            setLoading(false);
-        }
-    }, [id]);
+    const isDataFetchingWidget = serviceDef ? serviceDef.hasRefresh !== false : false;
+
+    const {
+        data,
+        isLoading: loading,
+        error: queryError,
+    } = useQuery({
+        queryKey: ['widget', id, widget.params],
+        queryFn: () => fetchWidgetData(id),
+        refetchInterval:
+            isDataFetchingWidget && serviceDef?.hasRefresh ? refreshRate * 1000 : false,
+        enabled: isDataFetchingWidget,
+        retry: false,
+    });
+
+    const error = queryError?.message || null;
+
+    const periodMutation = useMutation({
+        mutationFn: (days) => updateWidgetRequest(id, { params: { ...widget.params, days } }),
+        onSuccess: (updated) => {
+            updateWidgetInStore(String(id), { params: updated.params });
+        },
+    });
+
+    const periodUpdating = periodMutation.isPending;
 
     const handlePeriodChange = useCallback(
-        async (days) => {
+        (days) => {
             if (String(widget.params?.days) === String(days)) return;
-
-            setPeriodUpdating(true);
-            setError(null);
-            try {
-                const updated = await updateWidgetRequest(id, {
-                    params: { ...widget.params, days },
-                });
-                updateWidgetInStore(String(id), { params: updated.params });
-            } catch (err) {
-                setError(err.message || 'Failed to update widget param');
-            } finally {
-                setPeriodUpdating(false);
-            }
+            periodMutation.mutate(days);
         },
-        [id, updateWidgetInStore, widget.params],
+        [widget.params, periodMutation],
     );
-
-    const isDataFetchingWidget = serviceDef ? serviceDef.hasRefresh !== false : false;
-    useWidgetTimer(isDataFetchingWidget && serviceDef?.hasRefresh ? refreshRate : 0, fetchData);
-
-    useEffect(() => {
-        if (isDataFetchingWidget) fetchData();
-    }, [widget.params, fetchData, isDataFetchingWidget]);
 
     if (!serviceDef || !widgetDef) {
         return (

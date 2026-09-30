@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Download, Check, Loader2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { API_URL } from '@/lib/auth';
@@ -10,37 +11,34 @@ const RECOMMENDED_MODELS = [
 ];
 
 export function OllamaModelManager({ selectedModel, onSelectModel }) {
-    const [installedModels, setInstalledModels] = useState([]);
-    const [loading, setLoading] = useState(false);
     const [pulling, setPulling] = useState(false);
     const [error, setError] = useState(null);
 
-    const fetchModels = async () => {
-        try {
-            setLoading(true);
-            setError(null);
+    const queryClient = useQueryClient();
+
+    const {
+        data: installedModels = [],
+        isLoading: loading,
+        error: queryError,
+        refetch: fetchModels,
+    } = useQuery({
+        queryKey: ['ollamaModels'],
+        queryFn: async () => {
             const token = localStorage.getItem('dashboard-auth-token');
             const res = await fetch(`${API_URL}/chatbot/models`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             if (!res.ok) throw new Error('Failed to fetch models');
             const data = await res.json();
-            setInstalledModels(data.models?.map((m) => m.name) || []);
-        } catch (err) {
-            setError(err.message);
-        } finally {
-            setLoading(false);
-        }
-    };
+            return data.models?.map((m) => m.name) || [];
+        },
+    });
 
-    useEffect(() => {
-        fetchModels();
-    }, []);
+    // sync error state
+    if (queryError && !error) setError(queryError.message);
 
-    const pullModel = async (modelId) => {
-        try {
-            setPulling(modelId);
-            setError(null);
+    const pullMutation = useMutation({
+        mutationFn: async (modelId) => {
             const token = localStorage.getItem('dashboard-auth-token');
             const res = await fetch(`${API_URL}/chatbot/pull`, {
                 method: 'POST',
@@ -51,16 +49,23 @@ export function OllamaModelManager({ selectedModel, onSelectModel }) {
                 body: JSON.stringify({ model: modelId }),
             });
             if (!res.ok) throw new Error('Failed to pull model');
-            await fetchModels();
+            return modelId;
+        },
+        onMutate: (modelId) => {
+            setPulling(modelId);
+            setError(null);
+        },
+        onSuccess: (modelId) => {
+            queryClient.invalidateQueries({ queryKey: ['ollamaModels'] });
             onSelectModel(modelId);
             const input = document.getElementById('customModelInput');
             if (input) input.value = '';
-        } catch (err) {
-            setError(err.message);
-        } finally {
-            setPulling(false);
-        }
-    };
+        },
+        onError: (err) => setError(err.message),
+        onSettled: () => setPulling(false),
+    });
+
+    const pullModel = (modelId) => pullMutation.mutate(modelId);
 
     return (
         <div className="space-y-3 mt-4 border rounded-md p-3 bg-muted/20">

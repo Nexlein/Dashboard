@@ -1,4 +1,5 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { render as _originalRender, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ChatbotWidget } from './ChatbotWidget';
 import { API_URL } from '@/lib/auth';
@@ -10,6 +11,10 @@ const mockWidget = {
     params: { model: 'llama3' },
 };
 
+const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+const customRender = (ui: React.ReactElement) => {
+    return _originalRender(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+};
 describe('ChatbotWidget', () => {
     beforeEach(() => {
         vi.clearAllMocks();
@@ -19,7 +24,7 @@ describe('ChatbotWidget', () => {
     });
 
     it('renders default message', () => {
-        render(<ChatbotWidget widget={mockWidget} />);
+        customRender(<ChatbotWidget widget={mockWidget} />);
         expect(screen.getByText('Hello! How can I help you today?')).toBeInTheDocument();
     });
 
@@ -29,7 +34,7 @@ describe('ChatbotWidget', () => {
             json: async () => ({ reply: 'I am doing well, thanks!' }),
         });
 
-        render(<ChatbotWidget widget={mockWidget} />);
+        customRender(<ChatbotWidget widget={mockWidget} />);
 
         const input = screen.getByPlaceholderText('Type a message...');
         const sendBtn = screen.getByRole('button', { name: /send/i });
@@ -64,7 +69,7 @@ describe('ChatbotWidget', () => {
             json: async () => ({ error: 'API Error' }),
         });
 
-        render(<ChatbotWidget widget={mockWidget} />);
+        customRender(<ChatbotWidget widget={mockWidget} />);
 
         fireEvent.change(screen.getByPlaceholderText('Type a message...'), {
             target: { value: 'Hi' },

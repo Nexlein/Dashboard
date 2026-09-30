@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
     connectService,
     disconnectService,
@@ -9,38 +10,63 @@ import {
 import { ServiceCard } from '@/features/services/ServiceCard';
 
 export default function ServicesPage() {
-    const [services, setServices] = useState<ServiceConnection[]>([]);
-    const [loading, setLoading] = useState(true);
+    const queryClient = useQueryClient();
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        fetchServices()
-            .then(setServices)
-            .catch((err) => setError(err.message))
-            .finally(() => setLoading(false));
-    }, []);
+    const {
+        data: services = [],
+        isLoading: loading,
+        isError,
+        error: queryError,
+    } = useQuery({
+        queryKey: ['services'],
+        queryFn: fetchServices,
+    });
+
+    const connectMutation = useMutation({
+        mutationFn: ({ serviceName, apiKey }: { serviceName: string; apiKey: string }) =>
+            connectService(serviceName, apiKey),
+        onSuccess: (updatedService) => {
+            setError(null);
+            queryClient.setQueryData(
+                ['services'],
+                (old: ServiceConnection[] | undefined) =>
+                    old?.map((item) =>
+                        item.name === updatedService.name ? updatedService : item,
+                    ) || [],
+            );
+        },
+        onError: (err: Error) => setError(err.message),
+    });
+
+    const disconnectMutation = useMutation({
+        mutationFn: (serviceName: string) => disconnectService(serviceName).then(() => serviceName),
+        onSuccess: (serviceName) => {
+            setError(null);
+            queryClient.setQueryData(
+                ['services'],
+                (old: ServiceConnection[] | undefined) =>
+                    old?.map((item) =>
+                        item.name === serviceName
+                            ? { ...item, connected: false, keyHint: null, verifiedAt: null }
+                            : item,
+                    ) || [],
+            );
+        },
+        onError: (err: Error) => setError(err.message),
+    });
 
     async function handleConnect(serviceName: string, apiKey: string) {
-        setError(null);
-        const updated = await connectService(serviceName, apiKey);
-        setServices((current) =>
-            current.map((item) => (item.name === serviceName ? updated : item)),
-        );
+        return connectMutation.mutateAsync({ serviceName, apiKey });
     }
 
     async function handleDisconnect(serviceName: string) {
-        setError(null);
-        await disconnectService(serviceName);
-        setServices((current) =>
-            current.map((item) =>
-                item.name === serviceName
-                    ? { ...item, connected: false, keyHint: null, verifiedAt: null }
-                    : item,
-            ),
-        );
+        return disconnectMutation.mutateAsync(serviceName);
     }
 
-    const configurableServices = services.filter((service) => service.configurable);
+    const configurableServices = services.filter(
+        (service: ServiceConnection) => service.configurable,
+    );
 
     return (
         <main className="mx-auto w-full max-w-5xl p-4 sm:p-8">
@@ -51,12 +77,12 @@ export default function ServicesPage() {
                 </p>
             </div>
 
-            {error && (
+            {(error || isError) && (
                 <div
                     role="alert"
                     className="mb-5 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
                 >
-                    {error}
+                    {error || (queryError as Error)?.message}
                 </div>
             )}
 
@@ -66,7 +92,7 @@ export default function ServicesPage() {
                 </div>
             ) : (
                 <div className="grid gap-5 md:grid-cols-2">
-                    {configurableServices.map((service) => (
+                    {configurableServices.map((service: ServiceConnection) => (
                         <ServiceCard
                             key={service.name}
                             service={service}

@@ -1,17 +1,22 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { render as _originalRender, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import Navbar from './Navbar';
 import { useStore } from '@/store/useStore';
 import { MemoryRouter } from 'react-router-dom';
 
 function renderNavbar(props = {}) {
-    return render(
+    return customRender(
         <MemoryRouter>
             <Navbar {...props} />
         </MemoryRouter>,
     );
 }
 
+const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+const customRender = (ui: React.ReactElement) => {
+    return _originalRender(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+};
 describe('Navbar Component', () => {
     beforeEach(() => {
         // Reset store before each test

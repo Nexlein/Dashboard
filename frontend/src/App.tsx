@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { BrowserRouter as Router, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import Navbar from '@/components/Navbar';
 import DashboardGrid from '@/components/DashboardGrid';
-import { getCurrentUser, hasValidAuthToken, logout, type AuthUser } from '@/lib/auth';
+import { getCurrentUser, hasValidAuthToken, logout } from '@/lib/auth';
 import AuthPage from '@/pages/AuthPage';
 import TermsPage from '@/pages/TermsPage';
 import ServicesPage from '@/pages/ServicesPage';
@@ -21,25 +22,19 @@ function AuthenticatedShell({
     showWidgetConfigurator?: boolean;
 }) {
     const navigate = useNavigate();
-    const [user, setUser] = useState<AuthUser | null>(null);
+
+    const { data: user, isError } = useQuery({
+        queryKey: ['currentUser'],
+        queryFn: getCurrentUser,
+        retry: false,
+    });
 
     useEffect(() => {
-        let isActive = true;
-
-        getCurrentUser()
-            .then((profile) => {
-                if (isActive) setUser(profile);
-            })
-            .catch(() => {
-                if (!isActive) return;
-                logout();
-                navigate('/login', { replace: true });
-            });
-
-        return () => {
-            isActive = false;
-        };
-    }, [navigate]);
+        if (isError) {
+            logout();
+            navigate('/login', { replace: true });
+        }
+    }, [isError, navigate]);
 
     function handleLogout() {
         logout();
@@ -49,7 +44,7 @@ function AuthenticatedShell({
     return (
         <div className="min-h-screen bg-background text-foreground transition-colors duration-200">
             <Navbar
-                user={user}
+                user={user || null}
                 onLogout={handleLogout}
                 showWidgetConfigurator={showWidgetConfigurator}
             />
@@ -62,16 +57,28 @@ function Dashboard() {
     const navigate = useNavigate();
     const setWidgets = useStore((state) => state.setWidgets);
 
+    const {
+        data: apiWidgets,
+        isError,
+        isSuccess,
+    } = useQuery({
+        queryKey: ['widgets'],
+        queryFn: fetchWidgets,
+        retry: false,
+    });
+
     useEffect(() => {
-        fetchWidgets()
-            .then((apiWidgets) => {
-                setWidgets(apiWidgets.map((widget: ApiWidget) => toDashboardWidget(widget)));
-            })
-            .catch(() => {
-                logout();
-                navigate('/login', { replace: true });
-            });
-    }, [navigate, setWidgets]);
+        if (isSuccess && apiWidgets) {
+            setWidgets(apiWidgets.map((widget: ApiWidget) => toDashboardWidget(widget)));
+        }
+    }, [isSuccess, apiWidgets, setWidgets]);
+
+    useEffect(() => {
+        if (isError) {
+            logout();
+            navigate('/login', { replace: true });
+        }
+    }, [isError, navigate]);
 
     return (
         <AuthenticatedShell showWidgetConfigurator>

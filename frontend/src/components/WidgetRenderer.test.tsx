@@ -1,10 +1,15 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { fireEvent, render as _originalRender, screen, waitFor } from '@testing-library/react';
 import WidgetRenderer from './WidgetRenderer';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { fetchWidgetData, updateWidget } from '@/lib/widgets';
 
 vi.mock('@/lib/widgets', () => ({ fetchWidgetData: vi.fn(), updateWidget: vi.fn() }));
 
+const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+const customRender = (ui: React.ReactElement) => {
+    return _originalRender(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+};
 describe('WidgetRenderer', () => {
     beforeEach(() => vi.clearAllMocks());
 
@@ -19,7 +24,7 @@ describe('WidgetRenderer', () => {
             icon: '01d',
         });
 
-        render(
+        customRender(
             <WidgetRenderer
                 widget={{
                     id: 1,
@@ -37,7 +42,7 @@ describe('WidgetRenderer', () => {
     });
 
     it('does not request data for services that are not implemented', () => {
-        render(
+        customRender(
             <WidgetRenderer
                 widget={{
                     id: 2,
@@ -64,7 +69,7 @@ describe('WidgetRenderer', () => {
             lastUpdatedAt: 1770000000,
         });
 
-        render(
+        customRender(
             <WidgetRenderer
                 widget={{
                     id: 3,
@@ -113,7 +118,7 @@ describe('WidgetRenderer', () => {
             ],
         });
 
-        render(
+        customRender(
             <WidgetRenderer
                 widget={{
                     id: 4,
