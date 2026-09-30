@@ -4,6 +4,10 @@ on:
     push:
         branches: ['main']
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
     mirror_to_epitech:
         if: github.repository == 'Nexlein/Dashboard'
@@ -11,7 +15,7 @@ jobs:
 
         steps:
             - name: Checkout Repository
-              uses: actions/checkout@v6
+              uses: actions/checkout@v4
               with:
                   fetch-depth: 0
 
@@ -24,4 +28,4 @@ jobs:
               run: |
                   ssh-keyscan github.com >> ~/.ssh/known_hosts
                   git remote add epitech git@github.com:EpitechPGE3-2026/G-WEB-500-MPL-5-1-dashboard-4.git
-                  git push epitech HEAD:main
+                  git push epitech HEAD:main --force
