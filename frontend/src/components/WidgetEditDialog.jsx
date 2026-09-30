@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useStore } from '@/store/useStore';
-import { updateWidget, toDashboardWidget, MIN_REFRESH_RATE_SECONDS } from '@/lib/widgets';
+import { MIN_REFRESH_RATE_SECONDS } from '@/lib/widgets';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -20,19 +20,23 @@ function isRefreshRateValid(refreshTimer, serviceDef) {
 }
 
 export function WidgetEditDialog({ widget, open, onOpenChange }) {
-    const updateWidgetInStore = useStore((state) => state.updateWidget);
-    const [params, setParams] = useState({});
-    const [refreshTimer, setRefreshTimer] = useState('60');
+    const updateWidgetAsync = useStore((state) => state.updateWidgetAsync);
+    const [params, setParams] = useState(() => widget?.params || {});
+    const [refreshTimer, setRefreshTimer] = useState(() => widget?.refreshRate?.toString() || '60');
     const [error, setError] = useState('');
     const [isSaving, setIsSaving] = useState(false);
 
-    useEffect(() => {
+    const [prevOpen, setPrevOpen] = useState(open);
+    const [prevWidgetId, setPrevWidgetId] = useState(widget?.id);
+    if (open !== prevOpen || widget?.id !== prevWidgetId) {
+        setPrevOpen(open);
+        setPrevWidgetId(widget?.id);
         if (open && widget) {
             setParams(widget.params || {});
             setRefreshTimer(widget.refreshRate?.toString() || '60');
             setError('');
         }
-    }, [open, widget]);
+    }
 
     if (!widget) return null;
 
@@ -50,18 +54,9 @@ export function WidgetEditDialog({ widget, open, onOpenChange }) {
         setError('');
 
         try {
-            const updatedApiWidget = await updateWidget(parseInt(widget.i, 10), {
+            await updateWidgetAsync(widget.i, {
                 params,
                 refreshRate: parseInt(refreshTimer, 10),
-            });
-
-            const dashboardWidget = toDashboardWidget(updatedApiWidget);
-
-            // update local store
-            updateWidgetInStore(widget.i, {
-                params: dashboardWidget.params,
-                refreshRate: dashboardWidget.refreshRate,
-                title: dashboardWidget.title,
             });
             onOpenChange(false);
         } catch (err) {

@@ -1,4 +1,3 @@
-process.env.JWT_SECRET = 'github-service-test-secret';
 const { decrypt } = require('../utils/crypto');
 const githubService = require('../services/github');
 
@@ -22,8 +21,6 @@ describe('GitHub Service', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         githubService.clearCache();
-        process.env.GITHUB_CLIENT_ID = 'test-client';
-        process.env.GITHUB_CLIENT_SECRET = 'test-secret';
 
         mockContext = {
             userId: 1,

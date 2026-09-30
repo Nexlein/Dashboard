@@ -238,7 +238,7 @@ async function execute(widgetName, params = {}, options = {}) {
         const metadata = await fetchCoinMetadata(coins, currency, apiKey);
         const enrichedSeries = series.map((item) => ({
             ...item,
-            ...(metadata.get(item.coin) || {}),
+            ...metadata.get(item.coin),
         }));
         const data = {
             type: 'crypto_chart',

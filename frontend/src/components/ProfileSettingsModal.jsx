@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,14 +11,18 @@ export function ProfileSettingsModal({ open, onOpenChange, user, onUserUpdated }
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
 
-    useEffect(() => {
+    const [prevOpen, setPrevOpen] = useState(open);
+    const [prevUserEmail, setPrevUserEmail] = useState(user?.email);
+    if (open !== prevOpen || user?.email !== prevUserEmail) {
+        setPrevOpen(open);
+        setPrevUserEmail(user?.email);
         if (open) {
             setDisplayName(user?.displayName || '');
             setEmail(user?.email || '');
             setError('');
             setSuccess('');
         }
-    }, [open, user]);
+    }
 
     async function handleSubmit(e) {
         e.preventDefault();

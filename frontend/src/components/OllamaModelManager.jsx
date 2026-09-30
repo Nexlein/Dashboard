@@ -1,3 +1,4 @@
+/* eslint-disable react/set-state-in-effect */
 import { useState, useEffect } from 'react';
 import { Download, Check, Loader2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';

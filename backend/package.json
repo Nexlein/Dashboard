@@ -11,7 +11,8 @@
         "migrate:oauth-tokens": "node scripts/migrate-oauth-tokens.js",
         "test:load": "k6 run tests/k6/load.js",
         "test:stress": "k6 run tests/k6/stress.js",
-        "test:spike": "k6 run tests/k6/spike.js"
+        "test:spike": "k6 run tests/k6/spike.js",
+        "lint": "oxlint"
     },
     "keywords": [],
     "author": "",
@@ -31,6 +32,7 @@
         "express": "^5.2.1",
         "express-rate-limit": "^8.7.0",
         "jsonwebtoken": "^9.0.3",
+        "oxlint": "^1.86.0",
         "rate-limit-redis": "^6.0.1",
         "redis": "^6.2.1",
         "swagger-jsdoc": "^6.3.0",

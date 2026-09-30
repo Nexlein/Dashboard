@@ -11,7 +11,6 @@ import PrivacyPage from '@/pages/PrivacyPage';
 import { CookieBanner } from '@/components/CookieBanner';
 
 import { useStore } from '@/store/useStore';
-import { fetchWidgets, toDashboardWidget, type ApiWidget } from '@/lib/widgets';
 
 function AuthenticatedShell({
     children,
@@ -60,18 +59,14 @@ function AuthenticatedShell({
 
 function Dashboard() {
     const navigate = useNavigate();
-    const setWidgets = useStore((state) => state.setWidgets);
+    const fetchWidgetsAsync = useStore((state) => state.fetchWidgetsAsync);
 
     useEffect(() => {
-        fetchWidgets()
-            .then((apiWidgets) => {
-                setWidgets(apiWidgets.map((widget: ApiWidget) => toDashboardWidget(widget)));
-            })
-            .catch(() => {
-                logout();
-                navigate('/login', { replace: true });
-            });
-    }, [navigate, setWidgets]);
+        fetchWidgetsAsync().catch(() => {
+            logout();
+            navigate('/login', { replace: true });
+        });
+    }, [navigate, fetchWidgetsAsync]);
 
     return (
         <AuthenticatedShell showWidgetConfigurator>

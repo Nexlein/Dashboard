@@ -59,6 +59,8 @@
         "frontend/src/pages/**",
         "frontend/src/components/Navbar*",
         "frontend/src/components/PrivacyActions*",
-        "frontend/src/App.tsx"
+        "frontend/src/App.tsx",
+        "frontend/playwright-report/**",
+        "frontend/test-results/**"
     ]
 }

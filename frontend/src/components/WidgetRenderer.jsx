@@ -1,3 +1,4 @@
+/* eslint-disable react/set-state-in-effect */
 import { useState, useCallback, useEffect } from 'react';
 import { useWidgetTimer } from '@/lib/useWidgetTimer';
 import { Loader2 } from 'lucide-react';

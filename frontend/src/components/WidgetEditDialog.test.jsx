@@ -1,8 +1,7 @@
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { WidgetEditDialog } from './WidgetEditDialog';
 import { useStore } from '@/store/useStore';
-import { updateWidget } from '@/lib/widgets';
 
 vi.mock('@/store/useStore', () => ({
     useStore: vi.fn(),
@@ -62,7 +61,6 @@ describe('WidgetEditDialog', () => {
 
     it('saves changes and calls onOpenChange on success', async () => {
         const onOpenChangeMock = vi.fn();
-        updateWidget.mockResolvedValue({ params: { city: 'Paris' }, refreshRate: 60 });
 
         render(
             <WidgetEditDialog open={true} onOpenChange={onOpenChangeMock} widget={mockWidget} />,
@@ -79,25 +77,16 @@ describe('WidgetEditDialog', () => {
             fireEvent.click(saveButton);
         });
 
-        expect(updateWidget).toHaveBeenCalledWith(10, {
+        expect(mockUpdateWidgetInStore).toHaveBeenCalledWith('10', {
             params: { city: 'Paris' },
             refreshRate: 60,
         });
 
-        expect(mockUpdateWidgetInStore).toHaveBeenCalledWith(
-            '10',
-            expect.objectContaining({
-                params: { city: 'Paris' },
-                refreshRate: 60,
-                title: 'Mocked Title',
-            }),
-        );
-
         expect(onOpenChangeMock).toHaveBeenCalledWith(false);
     });
 
-    it('displays error if updateWidget fails', async () => {
-        updateWidget.mockRejectedValue(new Error('Update failed'));
+    it('displays error if updateWidgetAsync fails', async () => {
+        mockUpdateWidgetInStore.mockRejectedValueOnce(new Error('Update failed'));
 
         render(<WidgetEditDialog open={true} onOpenChange={vi.fn()} widget={mockWidget} />);
 

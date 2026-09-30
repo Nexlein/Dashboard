@@ -1,4 +1,4 @@
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Activity, BarChart3, CheckCircle2, CloudSun, LayoutDashboard, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -159,18 +159,26 @@ export default function AuthPage() {
     const navigate = useNavigate();
     const { pathname } = location;
     const isRegister = pathname === '/register';
-    const [error, setError] = useState('');
+    const [error, setError] = useState(() => {
+        return new URLSearchParams(location.search).get('error') === 'github_not_configured'
+            ? 'GitHub login is not configured on the server.'
+            : '';
+    });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [cguAccepted, setCguAccepted] = useState(false);
     const [is16OrOlder, setIs16OrOlder] = useState(false);
     const searchParams = new URLSearchParams(location.search);
     const registrationRequired = searchParams.get('error') === 'github_registration_requirements';
 
-    useEffect(() => {
+    const [prevSearch, setPrevSearch] = useState(location.search);
+    if (location.search !== prevSearch) {
+        setPrevSearch(location.search);
         if (searchParams.get('error') === 'github_not_configured') {
             setError('GitHub login is not configured on the server.');
+        } else {
+            setError('');
         }
-    }, [location.search]);
+    }
 
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();

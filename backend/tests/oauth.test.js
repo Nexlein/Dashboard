@@ -15,12 +15,6 @@ jest.mock('@prisma/client', () => {
     };
 });
 
-const originalEnv = { ...process.env };
-process.env.JWT_SECRET = 'oauth-test-secret';
-process.env.GITHUB_CLIENT_ID = 'test-client-id';
-process.env.GITHUB_CLIENT_SECRET = 'test-client-secret';
-process.env.GITHUB_CALLBACK_URL = 'http://localhost:8080/auth/github/callback';
-
 const app = require('../index');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
@@ -65,18 +59,6 @@ describe('GitHub account linking', () => {
     afterEach(() => {
         jest.restoreAllMocks();
         jest.useRealTimers();
-    });
-
-    afterAll(() => {
-        for (const key of [
-            'JWT_SECRET',
-            'GITHUB_CLIENT_ID',
-            'GITHUB_CLIENT_SECRET',
-            'GITHUB_CALLBACK_URL',
-        ]) {
-            if (originalEnv[key] === undefined) delete process.env[key];
-            else process.env[key] = originalEnv[key];
-        }
     });
 
     it('requires a valid Dashboard token to start linking', async () => {

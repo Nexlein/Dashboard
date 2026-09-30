@@ -10,7 +10,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { deleteWidget, updateWidgetLayouts } from '@/lib/widgets';
+import { updateWidgetLayouts } from '@/lib/widgets';
 import { useRef, useState } from 'react';
 import WidgetRenderer from './WidgetRenderer';
 import { Bitcoin, CloudSun, Edit2, EllipsisVertical, Trash2 } from 'lucide-react';
@@ -19,7 +19,7 @@ import { WidgetEditDialog } from './WidgetEditDialog';
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
 export default function DashboardGrid() {
-    const { widgets, setWidgets, removeWidget } = useStore();
+    const { widgets, setWidgets, deleteWidgetAsync } = useStore();
     const timeoutRef = useRef(null);
     const [editingWidget, setEditingWidget] = useState(null);
 
@@ -27,8 +27,7 @@ export default function DashboardGrid() {
         if (!window.confirm(`Delete ${widget.title}?`)) return;
 
         try {
-            await deleteWidget(Number.parseInt(widget.i, 10));
-            removeWidget(widget.i);
+            await deleteWidgetAsync(widget.i);
         } catch (error) {
             console.error('Failed to delete widget:', error);
         }

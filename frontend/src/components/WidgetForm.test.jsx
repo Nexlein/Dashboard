@@ -1,7 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { WidgetForm } from './WidgetForm';
-import { MIN_REFRESH_RATE_SECONDS } from '@/lib/widgets';
 
 describe('WidgetForm', () => {
     const defaultProps = {

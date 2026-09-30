@@ -1,10 +1,3 @@
-process.env.JWT_SECRET = 'gdpr-test-secret';
-process.env.ENCRYPTION_KEY = 'gdpr-encryption-test-secret';
-process.env.GITHUB_CLIENT_ID = 'test-client';
-process.env.GITHUB_CLIENT_SECRET = 'test-client-secret';
-process.env.GITHUB_CALLBACK_URL = 'http://localhost:8080/auth/github/callback';
-process.env.REDIS_URL = '';
-
 const request = require('supertest');
 const jwt = require('jsonwebtoken');
 jest.mock('@prisma/client', () => ({

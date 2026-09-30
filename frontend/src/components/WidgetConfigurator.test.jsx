@@ -4,8 +4,6 @@ import { WidgetConfigurator } from './WidgetConfigurator';
 import { useStore } from '@/store/useStore';
 import { MemoryRouter } from 'react-router-dom';
 import { fetchServices } from '@/lib/services';
-import { createWidget } from '@/lib/widgets';
-import { REGISTRY } from '@/lib/registry';
 
 vi.mock('@/store/useStore', () => ({
     useStore: vi.fn(),
@@ -45,11 +43,11 @@ vi.mock('@/lib/registry', () => ({
 }));
 
 describe('WidgetConfigurator', () => {
-    const addWidgetMock = vi.fn();
+    const createWidgetAsyncMock = vi.fn();
 
     beforeEach(() => {
         vi.clearAllMocks();
-        useStore.mockReturnValue(addWidgetMock);
+        useStore.mockReturnValue(createWidgetAsyncMock);
         fetchServices.mockResolvedValue([{ name: 'weather', connected: true, configurable: true }]);
     });
 
@@ -127,8 +125,6 @@ describe('WidgetConfigurator', () => {
     });
 
     it('saves a widget correctly', async () => {
-        createWidget.mockResolvedValue({ id: '123' });
-
         render(
             <MemoryRouter>
                 <WidgetConfigurator />
@@ -150,18 +146,16 @@ describe('WidgetConfigurator', () => {
             fireEvent.click(addButton);
         });
 
-        expect(createWidget).toHaveBeenCalledWith(
+        expect(createWidgetAsyncMock).toHaveBeenCalledWith(
             expect.objectContaining({
                 serviceName: 'weather',
                 widgetName: 'current',
             }),
         );
-
-        expect(addWidgetMock).toHaveBeenCalledWith({ id: '123' });
     });
 
     it('shows error if createWidget fails', async () => {
-        createWidget.mockRejectedValue(new Error('Failed to create!'));
+        createWidgetAsyncMock.mockRejectedValue(new Error('Failed to create!'));
 
         render(
             <MemoryRouter>

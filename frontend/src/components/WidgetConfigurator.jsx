@@ -2,12 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { KeyRound, Loader2 } from 'lucide-react';
 import { useStore } from '@/store/useStore';
-import {
-    MIN_REFRESH_RATE_SECONDS,
-    getDefaultWidgetLayout,
-    createWidget,
-    toDashboardWidget,
-} from '@/lib/widgets';
+import { MIN_REFRESH_RATE_SECONDS, getDefaultWidgetLayout } from '@/lib/widgets';
 import { fetchServices } from '@/lib/services';
 import { REGISTRY } from '@/lib/registry';
 import { WidgetForm } from './WidgetForm';
@@ -54,7 +49,7 @@ function isRefreshRateValid(refreshTimer, serviceDef) {
 
 export function WidgetConfigurator() {
     const navigate = useNavigate();
-    const addWidget = useStore((state) => state.addWidget);
+    const createWidgetAsync = useStore((state) => state.createWidgetAsync);
     const [open, setOpen] = useState(false);
     const [service, setService] = useState('');
     const [widgetType, setWidgetType] = useState('');
@@ -110,15 +105,13 @@ export function WidgetConfigurator() {
         setError('');
 
         try {
-            const apiWidget = await createWidget({
+            await createWidgetAsync({
                 serviceName: service,
                 widgetName: widgetType,
                 params: params,
                 refreshRate: Number(refreshTimer),
                 layout: getDefaultWidgetLayout(service, widgetType),
             });
-
-            addWidget(toDashboardWidget(apiWidget));
 
             // reset form
             setService('');
