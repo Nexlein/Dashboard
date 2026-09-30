@@ -40,7 +40,7 @@ jobs:
               with:
                   upload: false
                   output: sarif-results
-            
+
             - name: Upload CodeQL Results
               uses: actions/upload-artifact@v4
               with:

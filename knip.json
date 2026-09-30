@@ -1,10 +1,7 @@
 {
     "ignoreDependencies": ["shadcn", "@fontsource-variable/geist", "tw-animate-css"],
     "ignoreBinaries": ["commitlint", "k6"],
-    "ignore": [
-        "frontend/src/components/ui/**",
-        "backend/tests/k6/**"
-    ],
+    "ignore": ["frontend/src/components/ui/**", "backend/tests/k6/**"],
     "ignoreExportsUsedInFile": true,
     "workspaces": {
         "frontend": {
