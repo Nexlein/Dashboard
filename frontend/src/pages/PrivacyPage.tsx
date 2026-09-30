@@ -24,9 +24,10 @@ export default function PrivacyPage() {
                             <p>We store the following user data:</p>
                             <ul className="list-disc pl-6 mt-2 space-y-1">
                                 <li>Email address (for authentication and account recovery)</li>
-                                <li>Encrypted passwords (if not using OAuth)</li>
-                                <li>OAuth tokens (for connected services like GitHub)</li>
+                                <li>Password hashes (if not using OAuth)</li>
+                                <li>Encrypted OAuth tokens (for connected services like GitHub)</li>
                                 <li>Widget configurations (parameters and layouts)</li>
+                                <li>Linked GitHub account ID (to preserve your login)</li>
                             </ul>
                         </section>
 
@@ -47,18 +48,36 @@ export default function PrivacyPage() {
 
                         <section>
                             <h2 className="text-2xl font-semibold mb-2">
+                                Profile and registration
+                            </h2>
+                            <p>
+                                You can edit your display name and email, including with a
+                                GitHub-only account. Your GitHub account ID keeps your login linked
+                                to the same Dashboard account after an email change.
+                            </p>
+                            <p>
+                                New accounts require accepting the terms and confirming that you are
+                                at least 16, including when signing up with GitHub. This is a
+                                self-declaration; we do not collect or verify your birth date.
+                            </p>
+                        </section>
+
+                        <section>
+                            <h2 className="text-2xl font-semibold mb-2">
                                 Your Rights (GDPR Compliance)
                             </h2>
                             <ul className="list-disc pl-6 mt-2 space-y-1">
                                 <li>
-                                    <strong>Right to Access</strong>: You can download all your data
-                                    stored on our platform via the "Download My Data" button in your
-                                    account settings.
+                                    <strong>Right to Access</strong>: "Download My Data" exports
+                                    your profile, readable widget configurations and
+                                    connected-service metadata. Password hashes, API keys and OAuth
+                                    tokens are excluded.
                                 </li>
                                 <li>
                                     <strong>Right to Erasure</strong>: You can permanently delete
-                                    your account and all associated data via the "Delete My Account"
-                                    button.
+                                    your account, widgets and stored service credentials from the
+                                    active database via "Delete My Account". This does not delete
+                                    data held by external providers or retained backups.
                                 </li>
                                 <li>
                                     <strong>Consent</strong>: By registering, you accept our Terms

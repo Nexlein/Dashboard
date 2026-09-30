@@ -10,6 +10,7 @@ datasource db {
 model User {
   id            Int       @id @default(autoincrement())
   email         String    @unique
+  githubId      String?   @unique // Stable login identity, independent of the editable email
   displayName   String?
   password      String? // Null for OAuth-only users
   isAdmin       Boolean   @default(false)

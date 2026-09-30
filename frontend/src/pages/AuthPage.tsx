@@ -6,7 +6,7 @@ import { Github } from '@/components/ui/Github';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { login, register, API_URL } from '@/lib/auth';
+import { login, register, startGitHubLogin } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 
 function DashboardBackdrop() {
@@ -161,6 +161,10 @@ export default function AuthPage() {
     const isRegister = pathname === '/register';
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [cguAccepted, setCguAccepted] = useState(false);
+    const [is16OrOlder, setIs16OrOlder] = useState(false);
+    const registrationRequired =
+        new URLSearchParams(location.search).get('error') === 'github_registration_requirements';
 
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
@@ -177,7 +181,8 @@ export default function AuthPage() {
                     displayName: String(formData.get('displayName') ?? '').trim() || undefined,
                     email,
                     password,
-                    cguAccepted: formData.get('cguAccepted') === 'on',
+                    cguAccepted,
+                    is16OrOlder,
                 });
                 navigate('/login', {
                     replace: true,
@@ -244,6 +249,12 @@ export default function AuthPage() {
                         </Link>
                     </div>
 
+                    {registrationRequired && (
+                        <p className="mb-4 text-sm text-destructive" role="alert">
+                            Pour créer un compte avec GitHub, acceptez les conditions et confirmez
+                            avoir 16 ans ou plus, puis cliquez sur « Continuer avec GitHub ».
+                        </p>
+                    )}
                     {location.state?.registered && (
                         <p className="mb-4 rounded-md bg-muted px-3 py-2 text-sm" role="status">
                             Compte créé. Vous pouvez maintenant vous connecter.
@@ -254,7 +265,15 @@ export default function AuthPage() {
                         type="button"
                         variant="outline"
                         className="mb-4 h-10 w-full"
-                        onClick={() => (window.location.href = `${API_URL}/auth/github/login`)}
+                        onClick={() => {
+                            if (isRegister && (!cguAccepted || !is16OrOlder)) {
+                                setError(
+                                    'Acceptez les conditions et confirmez avoir 16 ans ou plus avant de continuer avec GitHub.',
+                                );
+                                return;
+                            }
+                            startGitHubLogin(isRegister ? { cguAccepted, is16OrOlder } : undefined);
+                        }}
                     >
                         <Github className="mr-2 size-4" />
                         Continuer avec GitHub
@@ -330,6 +349,8 @@ export default function AuthPage() {
                                 <label className="flex cursor-pointer items-start gap-3 text-sm text-muted-foreground">
                                     <input
                                         name="cguAccepted"
+                                        checked={cguAccepted}
+                                        onChange={(event) => setCguAccepted(event.target.checked)}
                                         type="checkbox"
                                         required
                                         className="mt-0.5 size-4 rounded border-input accent-foreground"
@@ -350,6 +371,8 @@ export default function AuthPage() {
                                 <label className="flex cursor-pointer items-start gap-3 text-sm text-muted-foreground">
                                     <input
                                         name="is16OrOlder"
+                                        checked={is16OrOlder}
+                                        onChange={(event) => setIs16OrOlder(event.target.checked)}
                                         type="checkbox"
                                         required
                                         className="mt-0.5 size-4 rounded border-input accent-foreground"

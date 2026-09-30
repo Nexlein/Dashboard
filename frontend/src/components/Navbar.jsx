@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
+import { API_URL } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import {
     Check,
@@ -30,6 +31,8 @@ import {
 export default function Navbar({ user, onLogout, showWidgetConfigurator = true }) {
     const { theme, setTheme } = useStore();
     const [profileOpen, setProfileOpen] = useState(false);
+    const [privacyError, setPrivacyError] = useState('');
+    const [privacyBusy, setPrivacyBusy] = useState(false);
     const accountLabel = user?.displayName || user?.email || 'Compte';
     const initial = accountLabel.charAt(0).toUpperCase();
 
@@ -46,8 +49,60 @@ export default function Navbar({ user, onLogout, showWidgetConfigurator = true }
         };
     }, [theme]);
 
+    async function downloadData() {
+        setPrivacyError('');
+        setPrivacyBusy(true);
+        try {
+            const response = await fetch(`${API_URL}/auth/download-data`, {
+                headers: {
+                    Authorization: `Bearer ${localStorage.getItem('dashboard-auth-token')}`,
+                },
+            });
+            if (!response.ok) throw new Error('Download failed');
+            const data = await response.json();
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'my-dashboard-data.json';
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 0);
+        } catch {
+            setPrivacyError('Le téléchargement a échoué. Veuillez réessayer.');
+        } finally {
+            setPrivacyBusy(false);
+        }
+    }
+
+    async function deleteAccount() {
+        if (
+            !window.confirm(
+                'Supprimer définitivement votre compte et toutes ses données ? Cette action est irréversible.',
+            )
+        )
+            return;
+        setPrivacyError('');
+        setPrivacyBusy(true);
+        try {
+            const response = await fetch(`${API_URL}/auth/delete-account`, {
+                method: 'DELETE',
+                headers: {
+                    Authorization: `Bearer ${localStorage.getItem('dashboard-auth-token')}`,
+                },
+            });
+            if (!response.ok) throw new Error('Deletion failed');
+            onLogout();
+        } catch {
+            setPrivacyError('La suppression n’a pas pu être confirmée. Veuillez réessayer.');
+        } finally {
+            setPrivacyBusy(false);
+        }
+    }
+
     return (
-        <nav className="flex items-center justify-between gap-4 border-b border-border bg-card p-4 shadow-sm">
+        <nav className="flex flex-wrap items-center justify-between gap-4 border-b border-border bg-card p-4 shadow-sm">
             <div className="flex items-center gap-1">
                 <NavLink
                     to="/"
@@ -144,43 +199,17 @@ export default function Navbar({ user, onLogout, showWidgetConfigurator = true }
                             <DropdownMenuLabel className="px-2 pt-2">
                                 Data & Privacy (GDPR)
                             </DropdownMenuLabel>
-                            <DropdownMenuItem className="min-h-9 px-2" asChild>
-                                <NavLink
-                                    to="/privacy"
-                                    className="flex items-center w-full cursor-pointer"
-                                >
-                                    <Shield className="mr-2 size-4" />
-                                    Privacy Policy
-                                </NavLink>
+                            <DropdownMenuItem
+                                className="min-h-9 px-2"
+                                render={<NavLink to="/privacy" />}
+                            >
+                                <Shield className="mr-2 size-4" />
+                                Privacy Policy
                             </DropdownMenuItem>
                             <DropdownMenuItem
                                 className="min-h-9 px-2 cursor-pointer"
-                                onClick={async () => {
-                                    try {
-                                        const token = localStorage.getItem('dashboard-auth-token');
-                                        const { API_URL } = await import('@/lib/auth');
-                                        const response = await fetch(
-                                            `${API_URL}/auth/download-data`,
-                                            {
-                                                headers: { Authorization: `Bearer ${token}` },
-                                            },
-                                        );
-                                        if (response.ok) {
-                                            const data = await response.json();
-                                            const blob = new Blob([JSON.stringify(data, null, 2)], {
-                                                type: 'application/json',
-                                            });
-                                            const url = URL.createObjectURL(blob);
-                                            const a = document.createElement('a');
-                                            a.href = url;
-                                            a.download = 'my-dashboard-data.json';
-                                            a.click();
-                                            URL.revokeObjectURL(url);
-                                        }
-                                    } catch (err) {
-                                        console.error('Failed to download data', err);
-                                    }
-                                }}
+                                disabled={privacyBusy}
+                                onClick={downloadData}
                             >
                                 <Download className="mr-2 size-4" />
                                 Download My Data
@@ -190,25 +219,8 @@ export default function Navbar({ user, onLogout, showWidgetConfigurator = true }
                         <DropdownMenuItem
                             variant="destructive"
                             className="min-h-9 px-2 cursor-pointer text-red-500 focus:text-red-500"
-                            onClick={async () => {
-                                if (
-                                    window.confirm(
-                                        'Are you sure you want to permanently delete your account and all data? This cannot be undone.',
-                                    )
-                                ) {
-                                    try {
-                                        const token = localStorage.getItem('dashboard-auth-token');
-                                        const { API_URL } = await import('@/lib/auth');
-                                        await fetch(`${API_URL}/auth/delete-account`, {
-                                            method: 'DELETE',
-                                            headers: { Authorization: `Bearer ${token}` },
-                                        });
-                                        onLogout();
-                                    } catch (err) {
-                                        console.error('Failed to delete account', err);
-                                    }
-                                }
-                            }}
+                            disabled={privacyBusy}
+                            onClick={deleteAccount}
                         >
                             <Trash2 className="mr-2 size-4" />
                             Delete My Account
@@ -225,6 +237,11 @@ export default function Navbar({ user, onLogout, showWidgetConfigurator = true }
                 </DropdownMenu>
             </div>
 
+            {privacyError && (
+                <p role="alert" className="order-last w-full text-sm text-destructive">
+                    {privacyError}
+                </p>
+            )}
             <ProfileSettingsModal
                 open={profileOpen}
                 onOpenChange={setProfileOpen}

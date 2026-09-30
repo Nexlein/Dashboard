@@ -3,6 +3,8 @@ const jwt = require('jsonwebtoken');
 
 jest.mock('@prisma/client', () => {
     const mockPrisma = {
+        $transaction: jest.fn((transaction) => transaction(mockPrisma)),
+        user: { update: jest.fn() },
         oAuthToken: {
             upsert: jest.fn(),
         },
@@ -22,6 +24,7 @@ process.env.GITHUB_CALLBACK_URL = 'http://localhost:8080/auth/github/callback';
 const app = require('../index');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { decrypt } = require('../utils/crypto');
 
 function authToken(userId = 1) {
     return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '1h' });
@@ -50,10 +53,13 @@ function callback(link, query = { code: 'github-code' }) {
 describe('GitHub account linking', () => {
     beforeEach(() => {
         prisma.oAuthToken.upsert.mockReset().mockResolvedValue({ id: 1 });
-        jest.spyOn(global, 'fetch').mockResolvedValue({
+        jest.spyOn(global, 'fetch').mockImplementation(async (url) => ({
             ok: true,
-            json: async () => ({ access_token: 'github-access-token' }),
-        });
+            json: async () =>
+                url === 'https://api.github.com/user'
+                    ? { id: 142, email: 'github@example.com' }
+                    : { access_token: 'github-access-token' },
+        }));
     });
 
     afterEach(() => {
@@ -154,11 +160,14 @@ describe('GitHub account linking', () => {
             },
             update: { accessToken: expect.any(String), refreshToken: null, expiresAt: null },
         });
+        const saved = prisma.oAuthToken.upsert.mock.calls[0][0];
+        expect(decrypt(saved.create.accessToken)).toBe('github-access-token');
+        expect(saved.create.accessToken).not.toBe('github-access-token');
         const [url, options] = global.fetch.mock.calls[0];
         expect(url).toBe('https://github.com/login/oauth/access_token');
         expect(options.body.get('code')).toBe('github-code');
         await callback(link).expect(400);
-        expect(global.fetch).toHaveBeenCalledTimes(1);
+        expect(global.fetch).toHaveBeenCalledTimes(2);
         expect(prisma.oAuthToken.upsert).toHaveBeenCalledTimes(1);
     });
 

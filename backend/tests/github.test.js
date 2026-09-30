@@ -1,3 +1,5 @@
+process.env.JWT_SECRET = 'github-service-test-secret';
+const { decrypt } = require('../utils/crypto');
 const githubService = require('../services/github');
 
 jest.mock('@prisma/client', () => {
@@ -182,6 +184,9 @@ describe('GitHub Service', () => {
                 }),
             );
             expect(mockContext.credentials.accessToken).toBe('new-access-token');
+            const saved = prisma.oAuthToken.update.mock.calls[0][0].data;
+            expect(decrypt(saved.accessToken)).toBe('new-access-token');
+            expect(decrypt(saved.refreshToken)).toBe('new-refresh-token');
         });
 
         it('throws appropriate error if refresh fails', async () => {

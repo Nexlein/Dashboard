@@ -64,6 +64,7 @@ export function ProfileSettingsModal({ open, onOpenChange, user, onUserUpdated }
                         <Label htmlFor="displayName">Display Name</Label>
                         <Input
                             id="displayName"
+                            maxLength={50}
                             value={displayName}
                             onChange={(e) => setDisplayName(e.target.value)}
                         />

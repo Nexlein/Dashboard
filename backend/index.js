@@ -79,9 +79,18 @@ app.use('/health', healthRoutes);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 if (require.main === module) {
-    app.listen(PORT, () => {
-        console.log(`Server running on port ${PORT}`);
-    });
+    const { PrismaClient } = require('@prisma/client');
+    const { migrateOAuthTokens } = require('./utils/migrateOAuthTokens');
+    const migrationClient = new PrismaClient();
+    migrateOAuthTokens(migrationClient)
+        .then(() => app.listen(PORT, () => console.log(`Server running on port ${PORT}`)))
+        .catch(() => {
+            console.error(
+                'OAuth token migration failed; server not started. Check database and encryption key.',
+            );
+            process.exit(1);
+        })
+        .finally(() => migrationClient.$disconnect());
 }
 
 module.exports = app;

@@ -6,6 +6,7 @@ type RegisterPayload = {
     email: string;
     password: string;
     cguAccepted: boolean;
+    is16OrOlder: boolean;
 };
 
 type LoginPayload = {
@@ -88,4 +89,13 @@ export function hasValidAuthToken() {
 
 export function logout() {
     localStorage.removeItem(AUTH_TOKEN_KEY);
+}
+
+export function startGitHubLogin(registration?: { cguAccepted: boolean; is16OrOlder: boolean }) {
+    const params = new URLSearchParams();
+    if (registration) {
+        params.set('cguAccepted', String(registration.cguAccepted));
+        params.set('is16OrOlder', String(registration.is16OrOlder));
+    }
+    window.location.assign(`${API_URL}/auth/github/login?${params}`);
 }
