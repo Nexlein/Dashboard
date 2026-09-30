@@ -35,7 +35,10 @@ test.describe('Dashboard E2E & GDPR Flow', () => {
 
         // 3. Delete account (GDPR) via Navbar dropdown
         // Open user menu
-        await page.click(`button:has-text("${testEmail}")`);
+        await page
+            .locator('button')
+            .filter({ hasText: testEmail.split('@')[0] })
+            .click();
 
         // Handle window.confirm before clicking
         page.once('dialog', (dialog) => dialog.accept());
