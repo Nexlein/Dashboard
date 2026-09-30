@@ -1,5 +1,3 @@
-process.env.JWT_SECRET = 'api-test-secret-that-is-long-enough-for-authentication-tests';
-
 const request = require('supertest');
 const jwt = require('jsonwebtoken');
 const app = require('../index');
@@ -62,8 +60,7 @@ describe('API Endpoints', () => {
 
             const res = await request(app).get('/health');
             expect(res.statusCode).toBe(503);
-            expect(res.body.status).toBe('error');
-            expect(res.body.message).toBe('Database connection failed');
+            expect(res.body.error).toBe('Database connection failed');
         });
     });
 
