@@ -1,6 +1,6 @@
 import { API_URL } from './auth';
 
-const MIN_REFRESH_RATE_SECONDS = 60;
+export const MIN_REFRESH_RATE_SECONDS = 60;
 
 export type ApiWidget = {
     id: number;
@@ -116,11 +116,21 @@ export async function fetchWidgets() {
     if (!response.ok) {
         throw new Error('Failed to fetch widgets');
     }
-
     return response.json();
 }
 
-async function createWidget(widgetData: Omit<ApiWidget, 'id'>): Promise<ApiWidget> {
+export async function fetchWidgetData(id: number) {
+    const token = localStorage.getItem('dashboard-auth-token');
+    const response = await fetch(`${API_URL}/widgets/${id}/data`, {
+        headers: { Authorization: `Bearer ${token}` },
+    });
+
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body.error || 'Failed to fetch widget data');
+    return body;
+}
+
+export async function createWidget(widgetData: Omit<ApiWidget, 'id'>): Promise<ApiWidget> {
     const token = localStorage.getItem('dashboard-auth-token');
     const response = await fetch(`${API_URL}/widgets`, {
         method: 'POST',
@@ -136,18 +146,7 @@ async function createWidget(widgetData: Omit<ApiWidget, 'id'>): Promise<ApiWidge
     return body;
 }
 
-export async function fetchWidgetData(id: number) {
-    const token = localStorage.getItem('dashboard-auth-token');
-    const response = await fetch(`${API_URL}/widgets/${id}/data`, {
-        headers: { Authorization: `Bearer ${token}` },
-    });
-
-    const body = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(body.error || 'Failed to fetch widget data');
-    return body;
-}
-
-async function updateWidgetLayouts(layouts: Pick<ApiWidget, 'id' | 'layout'>[]) {
+export async function updateWidgetLayouts(layouts: Pick<ApiWidget, 'id' | 'layout'>[]) {
     const token = localStorage.getItem('dashboard-auth-token');
     const response = await fetch(`${API_URL}/widgets/layout`, {
         method: 'PUT',
