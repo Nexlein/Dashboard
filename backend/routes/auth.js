@@ -454,7 +454,11 @@ router.get('/github/login', async (req, res) => {
         !process.env.GITHUB_CLIENT_SECRET ||
         !process.env.GITHUB_CALLBACK_URL
     ) {
-        return res.status(503).json({ error: 'GitHub login is not configured' });
+        if (req.query.format === 'json') {
+            return res.status(503).json({ error: 'GitHub login is not configured' });
+        }
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:8081';
+        return res.redirect(`${frontendUrl}/login?error=github_not_configured`);
     }
 
     const state = crypto.randomBytes(32).toString('hex');

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Activity, BarChart3, CheckCircle2, CloudSun, LayoutDashboard, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -163,8 +163,14 @@ export default function AuthPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [cguAccepted, setCguAccepted] = useState(false);
     const [is16OrOlder, setIs16OrOlder] = useState(false);
-    const registrationRequired =
-        new URLSearchParams(location.search).get('error') === 'github_registration_requirements';
+    const searchParams = new URLSearchParams(location.search);
+    const registrationRequired = searchParams.get('error') === 'github_registration_requirements';
+
+    useEffect(() => {
+        if (searchParams.get('error') === 'github_not_configured') {
+            setError('GitHub login is not configured on the server.');
+        }
+    }, [location.search]);
 
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
@@ -272,11 +278,7 @@ export default function AuthPage() {
                                 );
                                 return;
                             }
-                            startGitHubLogin(
-                                isRegister ? { cguAccepted, is16OrOlder } : undefined,
-                            ).catch((err) =>
-                                setError(err.message || 'Service temporairement indisponible.'),
-                            );
+                            startGitHubLogin(isRegister ? { cguAccepted, is16OrOlder } : undefined);
                         }}
                     >
                         <Github className="mr-2 size-4" />
