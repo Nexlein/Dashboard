@@ -11,6 +11,9 @@ const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET;
 const crypto = require('node:crypto');
 const { getCache, setCache, deleteCache } = require('../utils/redisCache');
+const { encrypt, decrypt } = require('../utils/crypto');
+const { getGitHubProfile, getVerifiedGitHubEmail } = require('../services/githubIdentity');
+const { decryptParamsStrict } = require('../utils/encryption');
 const GITHUB_LINK_TTL = 10 * 60 * 1000;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -57,7 +60,7 @@ router.use(['/register', '/login'], credentialsLimiter);
 
 router.post('/register', async (req, res) => {
     try {
-        const { email, password, cguAccepted, displayName } = req.body;
+        const { email, password, cguAccepted, is16OrOlder, displayName } = req.body;
         const normalizedEmail = normalizeEmail(email);
         const normalizedDisplayName = typeof displayName === 'string' ? displayName.trim() : '';
 
@@ -79,8 +82,14 @@ router.post('/register', async (req, res) => {
             return res.status(400).json({ error: 'Display name must be 50 characters or fewer' });
         }
 
-        if (!cguAccepted) {
+        if (cguAccepted !== true) {
             return res.status(400).json({ error: 'You must accept the CGU to register.' });
+        }
+
+        if (is16OrOlder !== true) {
+            return res
+                .status(400)
+                .json({ error: 'You must confirm you are 16 or older to register.' });
         }
 
         const existingUser = await prisma.user.findUnique({ where: { email: normalizedEmail } });
@@ -155,6 +164,68 @@ router.get('/me', requireAuth, async (req, res) => {
 
         res.json(user);
     } catch {
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+router.put('/me', requireAuth, async (req, res) => {
+    try {
+        const { displayName, email } = req.body;
+        const normalizedEmail = email === undefined ? undefined : normalizeEmail(email);
+        if (
+            email !== undefined &&
+            (!normalizedEmail ||
+                normalizedEmail.length > 254 ||
+                !EMAIL_PATTERN.test(normalizedEmail))
+        ) {
+            return res.status(400).json({ error: 'Invalid email address' });
+        }
+        if (
+            displayName !== undefined &&
+            (typeof displayName !== 'string' || displayName.trim().length > 50)
+        ) {
+            return res.status(400).json({ error: 'Display name must be 50 characters or fewer' });
+        }
+        const currentUser = await prisma.user.findUnique({
+            where: { id: req.user.userId },
+            select: { email: true, password: true, githubId: true },
+        });
+        if (!currentUser) return res.status(404).json({ error: 'User not found' });
+        let githubId = currentUser.githubId;
+        if (normalizedEmail !== undefined && normalizedEmail !== currentUser.email && !githubId) {
+            const githubToken = await prisma.oAuthToken.findUnique({
+                where: { userId_provider: { userId: req.user.userId, provider: 'github' } },
+            });
+            // Existing accounts predate stable IDs. Verify and bind their identity
+            // before changing the email that previously identified them.
+            if (githubToken) {
+                try {
+                    const profile = await getGitHubProfile(decrypt(githubToken.accessToken));
+                    githubId = String(profile.id);
+                } catch {
+                    return res
+                        .status(409)
+                        .json({ error: 'Reconnect GitHub before changing your email.' });
+                }
+            } else if (!currentUser.password) {
+                return res
+                    .status(409)
+                    .json({ error: 'Sign in with GitHub again before changing your email.' });
+            }
+        }
+
+        const user = await prisma.user.update({
+            where: { id: req.user.userId },
+            data: {
+                ...(displayName === undefined ? {} : { displayName: displayName.trim() || null }),
+                ...(normalizedEmail === undefined ? {} : { email: normalizedEmail }),
+                ...(githubId && githubId !== currentUser.githubId ? { githubId } : {}),
+            },
+            select: { id: true, email: true, displayName: true },
+        });
+        res.json(user);
+    } catch (error) {
+        if (error.code === 'P2002') return res.status(409).json({ error: 'Email already in use' });
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -288,72 +359,71 @@ router.get('/github/callback', async (req, res) => {
 
         const accessToken = data.access_token;
         const tokenData = {
-            accessToken: data.access_token,
-            refreshToken: data.refresh_token ?? null,
+            accessToken: encrypt(data.access_token),
+            refreshToken: data.refresh_token ? encrypt(data.refresh_token) : null,
             expiresAt: data.expires_in ? new Date(Date.now() + data.expires_in * 1000) : null,
         };
 
         let userId = pendingLink.userId;
+        let newUserData;
 
+        const userData = await getGitHubProfile(accessToken);
+        const githubId = String(userData.id);
         if (isLogin) {
-            const userRes = await fetch('https://api.github.com/user', {
-                headers: {
-                    Authorization: `Bearer ${accessToken}`,
-                    Accept: 'application/json',
-                },
-            });
-            const userData = await userRes.json();
-
-            let email = userData.email;
-            if (!email) {
-                const emailsRes = await fetch('https://api.github.com/user/emails', {
-                    headers: {
-                        Authorization: `Bearer ${accessToken}`,
-                        Accept: 'application/json',
-                    },
-                });
-                const emailsData = await emailsRes.json();
-                const primaryEmail =
-                    emailsData.find((e) => e.primary && e.verified) || emailsData[0];
-                if (primaryEmail) email = primaryEmail.email;
-            }
-
-            if (!email) {
-                return res.status(400).json({ error: 'GitHub account must have an email address' });
-            }
-
-            const normalizedEmail = normalizeEmail(email);
-
-            let user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+            let user = await prisma.user.findUnique({ where: { githubId } });
             if (!user) {
-                user = await prisma.user.create({
-                    data: {
+                // Only verified provider email addresses may identify a legacy account.
+                const normalizedEmail = normalizeEmail(await getVerifiedGitHubEmail(accessToken));
+                if (
+                    !normalizedEmail ||
+                    normalizedEmail.length > 254 ||
+                    !EMAIL_PATTERN.test(normalizedEmail)
+                ) {
+                    return res
+                        .status(400)
+                        .json({ error: 'GitHub account must have a verified email address' });
+                }
+
+                user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+                if (user?.githubId && user.githubId !== githubId) {
+                    return res
+                        .status(409)
+                        .json({ error: 'This email belongs to a different GitHub identity.' });
+                }
+                if (!user) {
+                    if (!pendingLink.registrationAccepted) {
+                        return res.redirect(
+                            `${frontendUrl}/register?error=github_registration_requirements`,
+                        );
+                    }
+                    newUserData = {
                         email: normalizedEmail,
+                        githubId,
                         displayName: userData.name || userData.login || null,
                         password: null, // OAuth-only user
                         cguAcceptedAt: new Date(),
-                    },
-                });
+                    };
+                }
             }
-            userId = user.id;
+            userId = user?.id;
         }
 
-        await prisma.oAuthToken.upsert({
-            where: {
-                userId_provider: {
-                    userId,
-                    provider: 'github',
-                },
-            },
-            create: {
-                userId,
-                provider: 'github',
-                ...tokenData,
-            },
-            update: tokenData,
+        userId = await prisma.$transaction(async (tx) => {
+            let accountId = userId;
+            if (newUserData) {
+                const user = await tx.user.create({ data: newUserData });
+                accountId = user.id;
+            } else {
+                await tx.user.update({ where: { id: accountId }, data: { githubId } });
+            }
+            await tx.oAuthToken.upsert({
+                where: { userId_provider: { userId: accountId, provider: 'github' } },
+                create: { userId: accountId, provider: 'github', ...tokenData },
+                update: tokenData,
+            });
+            return accountId;
         });
 
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
         if (isLogin) {
             const user = await prisma.user.findUnique({ where: { id: userId } });
             const token = jwt.sign({ userId: user.id, isAdmin: user.isAdmin }, JWT_SECRET, {
@@ -392,6 +462,8 @@ router.get('/github/login', async (req, res) => {
     await setCache(
         `github_login:${state}`,
         {
+            registrationAccepted:
+                req.query.cguAccepted === 'true' && req.query.is16OrOlder === 'true',
             browserSecretHash: crypto.createHash('sha256').update(browserSecret).digest('hex'),
             expiresAt: Date.now() + GITHUB_LINK_TTL,
         },
@@ -415,6 +487,62 @@ router.get('/github/login', async (req, res) => {
         return res.json({ authorizationUrl });
     }
     res.redirect(authorizationUrl);
+});
+
+router.get('/download-data', requireAuth, async (req, res) => {
+    try {
+        const user = await prisma.user.findUnique({
+            where: { id: req.user.userId },
+            select: {
+                id: true,
+                email: true,
+                githubId: true,
+                displayName: true,
+                isAdmin: true,
+                cguAcceptedAt: true,
+                language: true,
+                theme: true,
+                createdAt: true,
+                updatedAt: true,
+                widgets: true,
+                serviceConnections: {
+                    select: {
+                        id: true,
+                        serviceName: true,
+                        createdAt: true,
+                        updatedAt: true,
+                        verifiedAt: true,
+                    },
+                },
+                tokens: { select: { id: true, provider: true, expiresAt: true } },
+            },
+        });
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        res.set('Cache-Control', 'no-store');
+        res.json({
+            ...user,
+            widgets: user.widgets.map((widget) => ({
+                ...widget,
+                params: decryptParamsStrict(widget.params),
+            })),
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+router.delete('/delete-account', requireAuth, async (req, res) => {
+    try {
+        await prisma.user.delete({
+            where: { id: req.user.userId },
+        });
+        res.json({ message: 'Account deleted successfully' });
+    } catch (error) {
+        if (error.code === 'P2025') return res.status(404).json({ error: 'User not found' });
+        res.status(500).json({ error: 'Internal server error' });
+    }
 });
 
 module.exports = router;

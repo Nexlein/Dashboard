@@ -134,6 +134,7 @@ describe('API Endpoints', () => {
                 email: 'not-an-email',
                 password: 'password123',
                 cguAccepted: true,
+                is16OrOlder: true,
             });
 
             expect(res.statusCode).toBe(400);
@@ -145,6 +146,7 @@ describe('API Endpoints', () => {
                 email: 'test@test.com',
                 password: 'short',
                 cguAccepted: true,
+                is16OrOlder: true,
             });
 
             expect(res.statusCode).toBe(400);
@@ -164,6 +166,7 @@ describe('API Endpoints', () => {
                 password: 'password123',
                 displayName: '  Test User  ',
                 cguAccepted: true,
+                is16OrOlder: true,
             });
 
             expect(res.statusCode).toBe(201);
@@ -185,6 +188,7 @@ describe('API Endpoints', () => {
                     password: 'password123',
                     displayName: 'a'.repeat(51),
                     cguAccepted: true,
+                    is16OrOlder: true,
                 });
 
             expect(res.statusCode).toBe(400);
@@ -200,6 +204,7 @@ describe('API Endpoints', () => {
                 email: 'anonymous@test.com',
                 password: 'password123',
                 cguAccepted: true,
+                is16OrOlder: true,
             });
 
             expect(res.statusCode).toBe(201);
@@ -211,9 +216,12 @@ describe('API Endpoints', () => {
         it('should return error if email already in use', async () => {
             prisma.user.findUnique.mockResolvedValue({ id: 1, email: 'test@test.com' });
 
-            const res = await request(app)
-                .post('/auth/register')
-                .send({ email: 'test@test.com', password: 'password123', cguAccepted: true });
+            const res = await request(app).post('/auth/register').send({
+                email: 'test@test.com',
+                password: 'password123',
+                cguAccepted: true,
+                is16OrOlder: true,
+            });
 
             expect(res.statusCode).toBe(409);
             expect(res.body.error).toBe('Email already in use');

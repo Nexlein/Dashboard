@@ -7,6 +7,8 @@ import { getCurrentUser, hasValidAuthToken, logout, type AuthUser } from '@/lib/
 import AuthPage from '@/pages/AuthPage';
 import TermsPage from '@/pages/TermsPage';
 import ServicesPage from '@/pages/ServicesPage';
+import PrivacyPage from '@/pages/PrivacyPage';
+import { CookieBanner } from '@/components/CookieBanner';
 
 import { useStore } from '@/store/useStore';
 import { fetchWidgets, toDashboardWidget, type ApiWidget } from '@/lib/widgets';
@@ -129,7 +131,9 @@ export default function App() {
                 <Route path="/login/oauth" element={<OAuthCallback />} />
                 <Route path="/register" element={<AuthPage />} />
                 <Route path="/cgu" element={<TermsPage />} />
+                <Route path="/privacy" element={<PrivacyPage />} />
             </Routes>
+            <CookieBanner />
         </Router>
     );
 }

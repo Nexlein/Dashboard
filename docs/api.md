@@ -56,12 +56,14 @@ Register a new user account.
     "email": "user@example.com",
     "password": "securepassword",
     "displayName": "John Doe",
-    "cguAccepted": true
+    "cguAccepted": true,
+    "is16OrOlder": true
 }
 ```
 
-`displayName` is optional and limited to 50 characters. `cguAccepted` must be
-`true` for the account to be created. Email addresses are trimmed and stored in
+`displayName` is optional and limited to 50 characters. Both `cguAccepted` and
+`is16OrOlder` must be the boolean `true` for the account to be created. Missing,
+false or string-valued declarations are rejected with `400`. Email addresses are trimmed and stored in
 lowercase. Passwords must contain between 8 and 72 characters.
 
 **Response (201 Created):**
@@ -101,7 +103,7 @@ minutes. Further requests return `429 Too Many Requests`.
 ### `GET /auth/me`
 
 Returns the authenticated user's public profile. Requires the
-`Authorization: Bearer <token>` header.
+`Authorization: Bearer <token>` header. Password hashes are never returned.
 
 ```json
 {
@@ -110,6 +112,39 @@ Returns the authenticated user's public profile. Requires the
     "displayName": "John Doe"
 }
 ```
+
+### `PUT /auth/me`
+
+Requires authentication. Accepts optional `displayName` (string, at most 50
+characters after trimming) and `email` (valid address, at most 254 characters).
+An empty name clears it. Emails are trimmed and lowercased. Returns the updated
+public profile. Both password and GitHub-only users can change their name and
+email. GitHub authentication uses a stable `githubId`, so editing the Dashboard
+email does not create a different account on the next login.
+
+For older linked accounts without a stored GitHub ID, an email change first
+verifies the existing GitHub token and binds that identity. If the token is expired
+or unavailable, the server returns `409` asking the user to sign in/reconnect GitHub
+before retrying; the old email stays intact. Returns `400` for invalid input, `404`
+for a missing user and `409` for an email/identity uniqueness conflict.
+
+### `GET /auth/download-data`
+
+Requires authentication. Returns the user's profile, preferences, timestamps,
+widgets (with **decrypted** parameters), API-service connection metadata and OAuth
+provider metadata as JSON, with `Cache-Control: no-store`. Password hashes,
+access/refresh tokens and provider API keys are deliberately excluded. Data is
+scoped to the authenticated user; there is no user ID parameter. Returns `404` for
+a missing user and `500` if any stored widget parameters cannot be decrypted,
+rather than returning a partial or unreadable export.
+
+### `DELETE /auth/delete-account`
+
+Requires authentication. Deletes the authenticated user and cascades deletion to
+widgets, OAuth tokens and service connections in PostgreSQL. Returns `200` after
+the deletion succeeds, `404` if the user no longer exists, and `500` on a database
+failure. The UI only logs out on a successful response and displays an error on
+HTTP/network failure. It does not delete data held by external providers or backups.
 
 ## Administration
 
@@ -312,15 +347,23 @@ a connection-required message until the service is connected again.
 
 ### `GET /auth/github/login`
 
-Starts the GitHub OAuth login flow. If the user does not exist, an account is created using their GitHub email.
-Redirects the user to GitHub to authorize the application.
+Starts the GitHub OAuth login flow and redirects to GitHub. Existing users are
+looked up by their stable GitHub ID first, with a verified GitHub email fallback only for legacy
+accounts that do not yet have that identity. Unverified addresses cannot bind an account. The GitHub ID is saved on successful
+login/linking and is unique per Dashboard account. Existing users can log in
+without repeating registration declarations. For a **new account**, the
+registration page must send `?cguAccepted=true&is16OrOlder=true`. These declarations
+are stored server-side with the temporary, browser-bound OAuth state; adding them
+to the callback cannot bypass the check. This is a self-declaration of the project's
+16+ threshold, not identity or birth-date verification.
 
-Can be called directly from the browser (e.g. `window.location.href = '/auth/github/login'`).
+### `GET /auth/github/callback`
 
-### `GET /auth/github/login/callback`
-
-Receives the GitHub OAuth callback for the login flow.
-On success, it creates or updates the user account, generates a Dashboard JWT, and redirects the user to the frontend with the token appended as a query parameter (e.g., `http://localhost:8081/?token=...`).
+The same callback handles login and service linking. For a new user without both
+registration declarations, it redirects to `/register?error=github_registration_requirements`
+on the configured frontend without creating a user or saving tokens. After the user
+accepts both checkboxes, they can restart GitHub registration. Successful login
+redirects to `/login/oauth?token=...`. Linking retains its authenticated flow.
 
 ### Manual browser flow
 

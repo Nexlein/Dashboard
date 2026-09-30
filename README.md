@@ -61,10 +61,14 @@ individually toggleable normalized curves, and 1W, 1M, 3M, and 1Y periods.
 
 2. **Run with Docker**
 
-   Start the entire stack (Frontend, Backend, Database) using Docker Compose:
+   Prepare the database schema once, then start the stack:
 
    ```bash
-   docker-compose up --build
+   docker compose up -d db
+   docker compose exec db pg_isready -U user -d dashboard
+   # Wait for "accepting connections" before applying the schema.
+   docker compose run --rm --build --no-deps server npx prisma db push
+   docker compose up --build
    ```
 
 3. **Database Seeding (Test Data)**
@@ -84,7 +88,7 @@ individually toggleable normalized curves, and 1W, 1M, 3M, and 1Y periods.
    - Backend API: [http://localhost:8080](http://localhost:8080)
    - `about.json`: [http://localhost:8080/about.json](http://localhost:8080/about.json)
 
-*Note: The backend will automatically apply the database schema on startup.*
+*The schema must exist before backend startup. OAuth token data is migrated automatically before the API accepts requests.*
 
 ### Run the backend outside Docker
 
@@ -109,3 +113,48 @@ See the [manual browser flow](docs/api.md#manual-browser-flow) to test GitHub
 linking without a frontend. Run backend tests with `npm test` from `backend/`
 and frontend tests with `npm test` from `frontend/`. Provider tests mock remote
 APIs and do not require real OpenWeather, GitHub, or CoinGecko credentials.
+
+### OAuth encryption and upgrades
+
+OAuth tokens, widget parameters and API credentials use the same secret derivation
+(AES-256-GCM with scrypt). `ENCRYPTION_KEY` may be a long random string such as the
+64-character output of `openssl rand -hex 32`; when empty, the configured
+`JWT_SECRET` is used. There is no public fallback key for new encrypted data.
+
+Keep the chosen secret stable across restarts and identical across replicas.
+Changing it without re-encrypting existing data makes that data unreadable. If
+upgrading an existing installation that uses the JWT secret for encryption, keep
+that configuration during the upgrade rather than introducing a new key.
+
+Back up the database and stop old backend versions before upgrading. Every backend
+startup migrates existing plaintext access and refresh tokens to the versioned
+format before listening. It also upgrades tokens from the initial PR's unversioned
+ciphertext, using the original key for decryption only. The migration is batched,
+idempotent, and does not overwrite a concurrent refresh by another new replica.
+A wrong key or damaged token stops startup without deleting or replacing that token.
+Earlier successfully migrated batches remain valid and are skipped on retry.
+
+To run the same migration explicitly after applying the schema:
+
+```bash
+cd backend
+npm run migrate:oauth-tokens
+```
+
+This release adds a nullable, unique `User.githubId` column. For an existing
+database, apply the additive, repeatable upgrade before starting the new backend:
+
+```bash
+cd backend
+npm run migrate:github-identity
+npx prisma generate
+```
+
+For Docker, use `docker compose run --rm --build --no-deps server npm run migrate:github-identity`
+after stopping old backend instances. This adds only the nullable column and its
+unique index; it does not delete data or require `--accept-data-loss`. Fresh databases
+can use `npx prisma db push` as in the installation steps above. Existing accounts
+acquire their GitHub ID on their next GitHub login/linking or before changing their
+email. The OAuth token encryption migration itself does not change the schema.
+Retained database backups may still contain old plaintext tokens; handle their
+access and retention separately.

@@ -51,3 +51,36 @@ The frontend uses **Vitest** and **React Testing Library**.
   selected assets from the widget configuration.
 - Global mocks (like `ResizeObserver` for the grid layout) are configured in `frontend/src/test/setup.js`.
 - Ensure the store (Zustand) is reset before each test if mocked state is required.
+
+## GDPR regression coverage
+
+- `gdpr.test.js`: profile validation, OAuth email editing and stable GitHub login identity, readable exports
+  without credentials, failed exports, account deletion errors, and age/terms
+  checks on password and GitHub registration (including callback tampering).
+- `tokenEncryption.test.js`: shared key derivation, arbitrary secret lengths,
+  missing/wrong keys, tamper rejection, multi-batch migration, initial PR format
+  compatibility, idempotence, and concurrent refresh protection.
+- `PrivacyActions.test.jsx` and `AuthPage.test.tsx`: successful/failed downloads and
+  deletions, cancellation, editable OAuth profiles and both registration checkboxes.
+
+Run frontend tests with Node 24 (the frontend dependency versions require it).
+CI runs the frontend tests, type-check/build and lint, the backend unit tests,
+and the GDPR integration check against a disposable PostgreSQL service.
+
+For real PostgreSQL validation, prepare an **isolated, disposable** database:
+
+```bash
+cd backend
+# Set TEST_DATABASE_URL to that disposable database only.
+DATABASE_URL="$TEST_DATABASE_URL" npx prisma db push
+npm run test:gdpr-integration
+```
+
+The integration check creates temporary users, starts a backend on a temporary
+port, verifies automatic token migration, exports, OAuth email editing and
+foreign-key cascades, then removes its fixtures and stops the server. It also tests
+GitHub account creation, the age gate, an email change and subsequent login using
+real PostgreSQL and simulated GitHub responses. Startup
+migration visits all OAuth rows in that database, so never target a real database.
+The test does not contact GitHub: a subprocess-only fixture supplies provider
+responses. Unit tests additionally cover provider and database failures.

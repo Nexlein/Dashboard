@@ -41,9 +41,11 @@ router.get('/', async (req, res) => {
                 let accountInfo = null;
                 if (token.provider === 'github') {
                     try {
+                        const { decrypt } = require('../utils/crypto');
+                        const accessToken = decrypt(token.accessToken);
                         const res = await fetch('https://api.github.com/user', {
                             headers: {
-                                Authorization: `Bearer ${token.accessToken}`,
+                                Authorization: `Bearer ${accessToken}`,
                                 'User-Agent': 'Dashboard-App',
                             },
                         });
