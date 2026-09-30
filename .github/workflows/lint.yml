@@ -41,6 +41,8 @@ jobs:
         steps:
             - uses: actions/checkout@v4
             - uses: reviewdog/action-actionlint@v1
+              with:
+                  actionlint_flags: -ignore 'runtime "node20" is deprecated'
 
     hadolint:
         runs-on: ubuntu-latest
