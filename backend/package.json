@@ -4,7 +4,7 @@
     "description": "",
     "main": "index.js",
     "scripts": {
-        "start": "node index.js",
+        "start": "npm run migrate:github-identity && node index.js",
         "dev": "nodemon index.js",
         "test": "jest",
         "test:gdpr-integration": "node tests/integration/gdpr.integration.js",
