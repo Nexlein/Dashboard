@@ -45,7 +45,9 @@
         "wrongpassword",
         "creds",
         "testpass",
-        "keepalive"
+        "keepalive",
+        "unstub",
+        "mytoken"
     ],
     "ignorePaths": [
         "node_modules",

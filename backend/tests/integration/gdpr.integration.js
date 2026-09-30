@@ -28,7 +28,7 @@ async function main() {
     const user = await prisma.user.create({
         data: {
             email: `${randomUUID()}@integration.test`,
-            password: 'password-hash',
+            password: null,
             displayName: 'Integration',
             widgets: {
                 create: {
