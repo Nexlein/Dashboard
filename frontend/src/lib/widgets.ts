@@ -22,19 +22,19 @@ const DEFAULT_WIDGET_LAYOUT: ApiWidget['layout'] = { x: 0, y: 0, w: 4, h: 2 };
 
 const WIDGET_PRESENTATION: Record<string, WidgetPresentation> = {
     'weather:current_weather': {
-        title: 'Weather',
+        title: 'Current Weather',
         defaultLayout: { x: 0, y: 0, w: 3, h: 2 },
     },
     'weather:weather-current': {
-        title: 'Weather',
+        title: 'Current Weather',
         defaultLayout: { x: 0, y: 0, w: 3, h: 2 },
     },
     'weather:forecast': {
-        title: 'Weather',
+        title: 'Weather Forecast',
         defaultLayout: { x: 0, y: 0, w: 4, h: 3 },
     },
     'weather:weather-forecast': {
-        title: 'Weather',
+        title: 'Weather Forecast',
         defaultLayout: { x: 0, y: 0, w: 4, h: 3 },
     },
     'github:repo_stats': {
@@ -120,7 +120,7 @@ export async function fetchWidgets() {
     return response.json();
 }
 
-async function createWidget(widgetData): Promise<ApiWidget> {
+async function createWidget(widgetData: Omit<ApiWidget, 'id'>): Promise<ApiWidget> {
     const token = localStorage.getItem('dashboard-auth-token');
     const response = await fetch(`${API_URL}/widgets`, {
         method: 'POST',
@@ -147,7 +147,7 @@ export async function fetchWidgetData(id: number) {
     return body;
 }
 
-async function updateWidgetLayouts(layouts) {
+async function updateWidgetLayouts(layouts: Pick<ApiWidget, 'id' | 'layout'>[]) {
     const token = localStorage.getItem('dashboard-auth-token');
     const response = await fetch(`${API_URL}/widgets/layout`, {
         method: 'PUT',
@@ -163,7 +163,10 @@ async function updateWidgetLayouts(layouts) {
     }
 }
 
-export async function updateWidget(id: number, widgetData): Promise<ApiWidget> {
+export async function updateWidget(
+    id: number,
+    widgetData: Partial<Omit<ApiWidget, 'id'>>,
+): Promise<ApiWidget> {
     const token = localStorage.getItem('dashboard-auth-token');
     const response = await fetch(`${API_URL}/widgets/${id}`, {
         method: 'PUT',
@@ -179,7 +182,7 @@ export async function updateWidget(id: number, widgetData): Promise<ApiWidget> {
     return body;
 }
 
-export async function deleteWidget(id) {
+export async function deleteWidget(id: number) {
     const token = localStorage.getItem('dashboard-auth-token');
     const response = await fetch(`${API_URL}/widgets/${id}`, {
         method: 'DELETE',

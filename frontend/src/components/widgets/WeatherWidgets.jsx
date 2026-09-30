@@ -20,7 +20,7 @@ export function CurrentWeather({ data }) {
             <div className="flex items-center justify-between">
                 <div>
                     <p className="text-sm text-muted-foreground">
-                        {data.location.name}, {data.location.country}
+                        {data.location?.name}, {data.location?.country}
                     </p>
                     <p className="text-4xl font-semibold tracking-tight">{data.temperature}°C</p>
                     <p className="text-sm capitalize">{data.condition}</p>
@@ -46,10 +46,10 @@ export function Forecast({ data }) {
     return (
         <div className="h-full w-full" data-testid="weather-forecast">
             <p className="mb-3 text-sm text-muted-foreground">
-                {data.location.name}, {data.location.country}
+                {data.location?.name}, {data.location?.country}
             </p>
             <div className="grid grid-cols-5 gap-2">
-                {data.days.map((day) => (
+                {data.days?.map((day) => (
                     <div
                         key={day.date}
                         className="flex flex-col items-center rounded-md bg-muted/60 p-2 text-center"

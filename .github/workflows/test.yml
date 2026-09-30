@@ -65,6 +65,14 @@ jobs:
             - uses: actions/checkout@v4
             - run: cp backend/.env.example backend/.env
             - run: docker compose up -d --build
+            - name: Wait for services to be ready
+              run: |
+                  for i in $(seq 1 30); do
+                    curl -sf http://localhost:8080/health && echo "Backend ready" && break
+                    echo "Attempt $i/30, retrying in 5s..."
+                    sleep 5
+                    if [ "$i" -eq 30 ]; then echo "Backend failed to start"; exit 1; fi
+                  done
             - uses: actions/setup-node@v4
               with:
                   node-version: 24

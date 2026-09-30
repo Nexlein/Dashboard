@@ -1,6 +1,6 @@
 {
     "*.{js,jsx,ts,tsx,json,yml,yaml}": ["prettier --write"],
-    "frontend/**/*.{js,jsx,ts,tsx}": ["cd frontend && npm run lint"],
-    "backend/**/*.js": ["cd backend && npm run lint"],
-    "backend/prisma/schema.prisma": ["cd backend && npx prisma format"]
+    "frontend/**/*.{js,jsx,ts,tsx}": ["npm run --prefix frontend lint"],
+    "backend/**/*.js": ["npm run --prefix backend lint"],
+    "backend/prisma/schema.prisma": ["npx --prefix backend prisma format"]
 }

@@ -17,7 +17,7 @@ jobs:
               with:
                   fetch-depth: 0
             - name: TruffleHog Secret Scan
-              uses: trufflesecurity/trufflehog@main
+              uses: trufflesecurity/trufflehog@v3.88.26
               with:
                   extra_args: --debug --only-verified
 
@@ -45,7 +45,7 @@ jobs:
             - name: Build Backend Image
               run: docker build -t backend:latest ./backend
             - name: Run Trivy vulnerability scanner on Backend
-              uses: aquasecurity/trivy-action@master
+              uses: aquasecurity/trivy-action@0.30.0
               with:
                   image-ref: 'backend:latest'
                   format: 'table'

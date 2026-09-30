@@ -31,8 +31,13 @@ jobs:
             - name: Wait for Health & Integration Check
               run: |
                   echo "Waiting for services to be ready..."
-                  sleep 15
-                  curl -f http://localhost:8080/health || exit 1
+                  for i in $(seq 1 30); do
+                    curl -sf http://localhost:8080/health && echo "Service ready" && exit 0
+                    echo "Attempt $i/30 failed, retrying in 5s..."
+                    sleep 5
+                  done
+                  echo "Service failed to start after 150s"
+                  exit 1
 
             - name: Run Load Test
               working-directory: backend

@@ -19,8 +19,8 @@ test.describe('Dashboard E2E & GDPR Flow', () => {
 
         await page.click('button[type="submit"]');
 
-        // Wait for redirect to login or dashboard
-        await page.waitForURL('**/login*');
+        // Wait for redirect to login after registration
+        await page.waitForURL('**/login', { timeout: 15000 });
 
         // 2. Login
         await page.goto('/login');
@@ -28,9 +28,8 @@ test.describe('Dashboard E2E & GDPR Flow', () => {
         await page.fill('input[type="password"]', testPassword);
         await page.click('button[type="submit"]');
 
-        // Wait for dashboard to load
-        await page.waitForURL('**/*');
-        await expect(page.locator('text=Welcome')).toBeVisible({ timeout: 10000 });
+        // Wait for dashboard route (not just any URL)
+        await page.waitForURL('**/dashboard**', { timeout: 15000 });
 
         // 3. Navigate to privacy / settings to delete account (GDPR)
         await page.goto('/privacy'); // Adjust to your actual privacy/settings route
@@ -42,8 +41,8 @@ test.describe('Dashboard E2E & GDPR Flow', () => {
             await confirmButton.click();
         }
 
-        // Wait for redirect back to landing/login
-        await page.waitForURL('**/login*');
+        // Wait for redirect back to login after deletion
+        await page.waitForURL('**/login', { timeout: 15000 });
 
         // Verify account is deleted by trying to login again
         await page.goto('/login');
@@ -51,6 +50,8 @@ test.describe('Dashboard E2E & GDPR Flow', () => {
         await page.fill('input[type="password"]', testPassword);
         await page.click('button[type="submit"]');
 
-        await expect(page.locator('text=Invalid')).toBeVisible();
+        await expect(page.locator('[data-testid="login-error"], text=Invalid')).toBeVisible({
+            timeout: 10000,
+        });
     });
 });

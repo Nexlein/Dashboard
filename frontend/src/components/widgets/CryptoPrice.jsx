@@ -25,7 +25,7 @@ export function CryptoPrice({ data }) {
             <div>
                 <div className="flex items-center justify-between gap-3">
                     <p className="text-sm font-medium capitalize">
-                        {data.coin.replaceAll('-', ' ')}
+                        {data.coin?.replaceAll('-', ' ') ?? '—'}
                     </p>
                     {change !== null && (
                         <span
