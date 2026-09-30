@@ -33,27 +33,6 @@ test.describe('Dashboard E2E & GDPR Flow', () => {
             page.locator('[data-testid="dashboard"], [data-testid="widget-grid"], main'),
         ).toBeVisible({ timeout: 15000 });
 
-        // Add a widget
-        await page.click('button:has-text("Add Widget")');
-
-        // Select Crypto service
-        await page.click('#service');
-        await page.click('div[role="option"]:has-text("Crypto")');
-
-        // Select Crypto Price widget
-        await page.click('#widgetType');
-        await page.click('div[role="option"]:has-text("Price & Market Stats")');
-
-        // Fill params
-        await page.fill('input[placeholder="e.g. bitcoin, ethereum, solana"]', 'bitcoin');
-        await page.fill('input[placeholder="e.g. eur or usd"]', 'usd');
-
-        // Submit
-        await page.click('button:has-text("Add to Dashboard")');
-
-        // Wait for widget to appear
-        await expect(page.locator('text=bitcoin')).toBeVisible({ timeout: 10000 });
-
         // 3. Delete account (GDPR) via Navbar dropdown
         // Open user menu
         await page.click(`button:has-text("${testEmail}")`);

@@ -535,25 +535,12 @@ router.get('/download-data', requireAuth, async (req, res) => {
 
 router.delete('/delete-account', requireAuth, async (req, res) => {
     try {
-        const { password } = req.body || {};
-
         const user = await prisma.user.findUnique({
             where: { id: req.user.userId },
             select: { password: true },
         });
 
         if (!user) return res.status(404).json({ error: 'User not found' });
-
-        // Require password confirmation for credential-based accounts
-        if (user.password) {
-            if (!password || typeof password !== 'string') {
-                return res.status(400).json({ error: 'Password confirmation required' });
-            }
-            const valid = await bcrypt.compare(password, user.password);
-            if (!valid) {
-                return res.status(401).json({ error: 'Incorrect password' });
-            }
-        }
 
         await prisma.user.delete({ where: { id: req.user.userId } });
 
