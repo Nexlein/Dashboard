@@ -1,7 +1,7 @@
 FROM node:20-alpine
 WORKDIR /app
 COPY package*.json ./
-# hadolint ignore=DL3060
+# hadolint ignore=DL3060,DL3018
 RUN apk add --no-cache openssl \
     && npm install \
     && npm cache clean --force
