@@ -1,7 +1,26 @@
 const express = require('express');
+const { z } = require('zod');
+
 const { PrismaClient } = require('@prisma/client');
 const { encryptParams, decryptParams, decryptJson, encryptJson } = require('../utils/encryption');
 const registry = require('../services/registry');
+
+const createWidgetSchema = z.object({
+    serviceName: z.string(),
+    widgetName: z.string(),
+    params: z.record(z.any()),
+    refreshRate: z.number().int().min(60, { message: 'Refresh rate must be at least 60 seconds' }),
+    layout: z.object({
+        x: z.number().int(),
+        y: z.number().int(),
+        w: z.number().int(),
+        h: z.number().int(),
+    }),
+});
+
+const updateLayoutSchema = z.object({
+    layouts: z.array(z.any()),
+});
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -72,16 +91,16 @@ router.get('/', async (req, res) => {
 // POST /widgets -> Add a new widget
 router.post('/', async (req, res) => {
     try {
-        const { serviceName, widgetName, params, refreshRate, layout } = req.body;
-
-        if (!serviceName || !widgetName || !params || !refreshRate || !layout) {
-            return res.status(400).json({ error: 'Missing required widget fields' });
-        }
-        if (!isValidRefreshRate(refreshRate)) {
-            return res.status(400).json({
-                error: `Refresh rate must be at least ${MIN_REFRESH_RATE_SECONDS} seconds`,
-            });
-        }
+        const validated = createWidgetSchema.safeParse(req.body);
+        if (!validated.success)
+            return res
+                .status(400)
+                .json({
+                    error: validated.error.issues[0].message.includes('Refresh')
+                        ? validated.error.issues[0].message
+                        : 'Missing required widget fields',
+                });
+        const { serviceName, widgetName, params, refreshRate, layout } = validated.data;
 
         const service = registry.getService(serviceName);
         if (!service) return res.status(400).json({ error: 'Unsupported widget service' });
@@ -134,10 +153,10 @@ router.post('/', async (req, res) => {
 // PUT /widgets/layout -> Batch update layouts for widgets
 router.put('/layout', async (req, res) => {
     try {
-        const { layouts } = req.body;
-        if (!Array.isArray(layouts)) {
-            return res.status(400).json({ error: 'Layouts must be an array' });
-        }
+        const validated = updateLayoutSchema.safeParse(req.body);
+        if (!validated.success)
+            return res.status(400).json({ error: validated.error.issues[0].message });
+        const { layouts } = validated.data;
 
         // We can execute multiple updates in a transaction
         await prisma.$transaction(

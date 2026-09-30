@@ -34,7 +34,8 @@
         "rate-limit-redis": "^6.0.1",
         "redis": "^6.2.1",
         "swagger-jsdoc": "^6.3.0",
-        "swagger-ui-express": "^5.0.1"
+        "swagger-ui-express": "^5.0.1",
+        "zod": "^4.6.5"
     },
     "prisma": {
         "seed": "node prisma/seed.js"

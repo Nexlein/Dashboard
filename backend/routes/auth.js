@@ -1,4 +1,6 @@
 const express = require('express');
+const { z } = require('zod');
+
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { PrismaClient } = require('@prisma/client');
@@ -8,6 +10,37 @@ const { rateLimit } = require('express-rate-limit');
 
 const router = express.Router();
 const prisma = new PrismaClient();
+
+const registerSchema = z.object({
+    email: z.string().trim().email('Invalid email address').max(254),
+    password: z.string().min(8, 'Password must be between 8 and 72 characters').max(72),
+    displayName: z
+        .string()
+        .max(50, 'Display name must be 50 characters or fewer')
+        .optional()
+        .transform((v) => (v || '').trim()),
+    cguAccepted: z.literal(true, {
+        errorMap: () => ({ message: 'You must accept the CGU to register.' }),
+    }),
+    is16OrOlder: z.literal(true, {
+        errorMap: () => ({ message: 'You must confirm you are 16 or older to register.' }),
+    }),
+});
+
+const loginSchema = z.object({
+    email: z.string().trim().email('Invalid email address').max(254),
+    password: z.string().min(1, 'Email and password required'),
+});
+
+const updateMeSchema = z.object({
+    email: z.string().trim().email('Invalid email address').max(254).optional(),
+    displayName: z
+        .string()
+        .max(50, 'Display name must be 50 characters or fewer')
+        .optional()
+        .transform((v) => (typeof v === 'string' ? v.trim() : v)),
+});
+
 const JWT_SECRET = process.env.JWT_SECRET;
 const crypto = require('node:crypto');
 const { getCache, setCache, deleteCache } = require('../utils/redisCache');
@@ -58,37 +91,12 @@ router.use(['/register', '/login'], credentialsLimiter);
 
 router.post('/register', async (req, res) => {
     try {
-        const { email, password, cguAccepted, is16OrOlder, displayName } = req.body;
+        const validated = registerSchema.safeParse(req.body);
+        if (!validated.success)
+            return res.status(400).json({ error: validated.error.issues[0].message });
+        const { email, password, cguAccepted, is16OrOlder, displayName } = validated.data;
         const normalizedEmail = normalizeEmail(email);
-        const normalizedDisplayName = typeof displayName === 'string' ? displayName.trim() : '';
-
-        if (!normalizedEmail || typeof password !== 'string') {
-            return res.status(400).json({ error: 'Email and password required' });
-        }
-
-        if (normalizedEmail.length > 254 || !EMAIL_PATTERN.test(normalizedEmail)) {
-            return res.status(400).json({ error: 'Invalid email address' });
-        }
-
-        if (password.length < 8 || password.length > 72) {
-            return res.status(400).json({
-                error: 'Password must be between 8 and 72 characters',
-            });
-        }
-
-        if (normalizedDisplayName.length > 50) {
-            return res.status(400).json({ error: 'Display name must be 50 characters or fewer' });
-        }
-
-        if (cguAccepted !== true) {
-            return res.status(400).json({ error: 'You must accept the CGU to register.' });
-        }
-
-        if (is16OrOlder !== true) {
-            return res
-                .status(400)
-                .json({ error: 'You must confirm you are 16 or older to register.' });
-        }
+        const normalizedDisplayName = displayName;
 
         const existingUser = await prisma.user.findUnique({ where: { email: normalizedEmail } });
         if (existingUser) {
@@ -114,16 +122,11 @@ router.post('/register', async (req, res) => {
 
 router.post('/login', async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const validated = loginSchema.safeParse(req.body);
+        if (!validated.success)
+            return res.status(400).json({ error: validated.error.issues[0].message });
+        const { email, password } = validated.data;
         const normalizedEmail = normalizeEmail(email);
-
-        if (!normalizedEmail || typeof password !== 'string' || !password) {
-            return res.status(400).json({ error: 'Email and password required' });
-        }
-
-        if (normalizedEmail.length > 254 || !EMAIL_PATTERN.test(normalizedEmail)) {
-            return res.status(400).json({ error: 'Invalid email address' });
-        }
 
         const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
         if (!user || !user.password) {
@@ -168,22 +171,11 @@ router.get('/me', requireAuth, async (req, res) => {
 
 router.put('/me', requireAuth, async (req, res) => {
     try {
-        const { displayName, email } = req.body;
+        const validated = updateMeSchema.safeParse(req.body);
+        if (!validated.success)
+            return res.status(400).json({ error: validated.error.issues[0].message });
+        const { displayName, email } = validated.data;
         const normalizedEmail = email === undefined ? undefined : normalizeEmail(email);
-        if (
-            email !== undefined &&
-            (!normalizedEmail ||
-                normalizedEmail.length > 254 ||
-                !EMAIL_PATTERN.test(normalizedEmail))
-        ) {
-            return res.status(400).json({ error: 'Invalid email address' });
-        }
-        if (
-            displayName !== undefined &&
-            (typeof displayName !== 'string' || displayName.trim().length > 50)
-        ) {
-            return res.status(400).json({ error: 'Display name must be 50 characters or fewer' });
-        }
         const currentUser = await prisma.user.findUnique({
             where: { id: req.user.userId },
             select: { email: true, password: true, githubId: true },
