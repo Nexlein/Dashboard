@@ -52,7 +52,7 @@ test.describe('Dashboard E2E & GDPR Flow', () => {
         await page.fill('input[type="password"]', testPassword);
         await page.click('button[type="submit"]');
 
-        await expect(page.locator('[data-testid="login-error"], text=Invalid')).toBeVisible({
+        await expect(page.getByRole('alert').filter({ hasText: 'Invalid' })).toBeVisible({
             timeout: 10000,
         });
     });
