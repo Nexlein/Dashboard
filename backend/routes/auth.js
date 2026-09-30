@@ -29,11 +29,9 @@ const credentialsLimiter = rateLimit({
     limit: 20,
     standardHeaders: 'draft-8',
     legacyHeaders: false,
-    store: redisClient
-        ? new RedisStore({
-              sendCommand: (...args) => redisClient.sendCommand(args),
-          })
-        : undefined,
+    ...(process.env.NODE_ENV !== 'test' && redisClient
+        ? { store: new RedisStore({ sendCommand: (...args) => redisClient.sendCommand(args) }) }
+        : {}),
     message: { error: 'Too many authentication attempts. Please try again later.' },
 });
 
