@@ -1,5 +1,7 @@
 import http from 'k6/http';
-import { check, sleep } from 'k6';
+import { check, group, sleep } from 'k6';
+
+const BASE_URL = __ENV.K6_BASE_URL || 'http://localhost:8080';
 
 export const options = {
     stages: [
@@ -16,7 +18,13 @@ export const options = {
 };
 
 export default function () {
-    const res = http.get('http://localhost:8080/health');
-    check(res, { 'status is 200': (r) => r.status === 200 });
+    group('Spike resilience', () => {
+        const health = http.get(`${BASE_URL}/health`);
+        check(health, { 'health 200': (r) => r.status === 200 });
+
+        const about = http.get(`${BASE_URL}/about.json`);
+        check(about, { 'about 200': (r) => r.status === 200 });
+    });
+
     sleep(1);
 }

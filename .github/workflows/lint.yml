@@ -40,8 +40,7 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
-            - run: bash <(curl -s https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
-            - run: ./actionlint
+            - uses: rhysd/actionlint@v1.7.7
 
     hadolint:
         runs-on: ubuntu-latest

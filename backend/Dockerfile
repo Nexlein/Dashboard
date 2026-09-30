@@ -1,4 +1,4 @@
-FROM node:20-alpine
+FROM node:22-alpine
 WORKDIR /app
 COPY package*.json ./
 # hadolint ignore=DL3018
@@ -9,5 +9,5 @@ RUN npm ci --omit=dev \
 COPY . .
 RUN npx prisma generate
 EXPOSE 8080
-# NOTE: prisma db push runs on every start - consider using migrate deploy for production
-CMD ["sh", "-c", "npx prisma db push && npm start"]
+# Migrations are handled by the dedicated 'migrate' service in docker-compose
+CMD ["node", "index.js"]

@@ -7,6 +7,10 @@ function WeatherIcon({ code, description }) {
             src={`https://openweathermap.org/img/wn/${code}@2x.png`}
             alt={description}
             className="h-16 w-16"
+            loading="lazy"
+            onError={(e) => {
+                e.currentTarget.style.display = 'none';
+            }}
         />
     );
 }

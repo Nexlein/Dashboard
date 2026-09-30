@@ -1,13 +1,12 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../utils/prisma');
 const requireAuth = require('../middleware/auth');
 const cookieParser = require('cookie-parser');
 const { rateLimit } = require('express-rate-limit');
 
 const router = express.Router();
-const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET;
 const crypto = require('node:crypto');
 const { getCache, setCache, deleteCache } = require('../utils/redisCache');
@@ -137,7 +136,8 @@ router.post('/login', async (req, res) => {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
-        const token = jwt.sign({ userId: user.id, isAdmin: user.isAdmin }, JWT_SECRET, {
+        const jti = crypto.randomUUID();
+        const token = jwt.sign({ userId: user.id, isAdmin: user.isAdmin, jti }, JWT_SECRET, {
             expiresIn: '24h',
         });
 
@@ -535,9 +535,33 @@ router.get('/download-data', requireAuth, async (req, res) => {
 
 router.delete('/delete-account', requireAuth, async (req, res) => {
     try {
-        await prisma.user.delete({
+        const { password } = req.body;
+
+        const user = await prisma.user.findUnique({
             where: { id: req.user.userId },
+            select: { password: true },
         });
+
+        if (!user) return res.status(404).json({ error: 'User not found' });
+
+        // Require password confirmation for credential-based accounts
+        if (user.password) {
+            if (!password || typeof password !== 'string') {
+                return res.status(400).json({ error: 'Password confirmation required' });
+            }
+            const valid = await bcrypt.compare(password, user.password);
+            if (!valid) {
+                return res.status(401).json({ error: 'Incorrect password' });
+            }
+        }
+
+        await prisma.user.delete({ where: { id: req.user.userId } });
+
+        // Invalidate the current JWT so it cannot be reused
+        if (req.user.jti) {
+            await setCache(`revoked_jti:${req.user.jti}`, true, 24 * 60 * 60 * 1000);
+        }
+
         res.json({ message: 'Account deleted successfully' });
     } catch (error) {
         if (error.code === 'P2025') return res.status(404).json({ error: 'User not found' });

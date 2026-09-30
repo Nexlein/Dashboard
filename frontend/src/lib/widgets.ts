@@ -142,7 +142,7 @@ export async function fetchWidgetData(id: number) {
         headers: { Authorization: `Bearer ${token}` },
     });
 
-    const body = await response.json();
+    const body = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(body.error || 'Failed to fetch widget data');
     return body;
 }

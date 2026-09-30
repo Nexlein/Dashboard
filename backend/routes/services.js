@@ -1,10 +1,9 @@
 const express = require('express');
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../utils/prisma');
 const registry = require('../services/registry');
 const { encryptJson } = require('../utils/encryption');
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 function publicConnection(service, connection) {
     return {

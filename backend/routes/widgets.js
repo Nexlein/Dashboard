@@ -1,10 +1,9 @@
 const express = require('express');
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../utils/prisma');
 const { encryptParams, decryptParams, decryptJson, encryptJson } = require('../utils/encryption');
 const registry = require('../services/registry');
 
 const router = express.Router();
-const prisma = new PrismaClient();
 const MIN_REFRESH_RATE_SECONDS = 60;
 
 function isValidRefreshRate(refreshRate) {

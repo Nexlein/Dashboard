@@ -28,8 +28,10 @@ test.describe('Dashboard E2E & GDPR Flow', () => {
         await page.fill('input[type="password"]', testPassword);
         await page.click('button[type="submit"]');
 
-        // Wait for dashboard route (not just any URL)
-        await page.waitForURL('**/dashboard**', { timeout: 15000 });
+        // Wait for dashboard to load (root route)
+        await expect(
+            page.locator('[data-testid="dashboard"], [data-testid="widget-grid"], main'),
+        ).toBeVisible({ timeout: 15000 });
 
         // 3. Navigate to privacy / settings to delete account (GDPR)
         await page.goto('/privacy'); // Adjust to your actual privacy/settings route

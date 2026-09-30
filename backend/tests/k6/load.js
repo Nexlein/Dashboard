@@ -1,5 +1,8 @@
 import http from 'k6/http';
-import { check, sleep } from 'k6';
+import { check, group, sleep } from 'k6';
+
+// K6_BASE_URL env var allows CI to override the target
+const BASE_URL = __ENV.K6_BASE_URL || 'http://localhost:8080';
 
 export const options = {
     stages: [
@@ -14,7 +17,26 @@ export const options = {
 };
 
 export default function () {
-    const res = http.get('http://localhost:8080/health');
-    check(res, { 'status is 200': (r) => r.status === 200 });
+    group('Public endpoints', () => {
+        const health = http.get(`${BASE_URL}/health`);
+        check(health, { 'health 200': (r) => r.status === 200 });
+
+        const about = http.get(`${BASE_URL}/about.json`);
+        check(about, {
+            'about 200': (r) => r.status === 200,
+            'about has client': (r) => JSON.parse(r.body).client !== undefined,
+        });
+    });
+
+    group('Auth endpoints', () => {
+        // Test login with bad credentials — should return 401 reliably under load
+        const login = http.post(
+            `${BASE_URL}/auth/login`,
+            JSON.stringify({ email: 'nonexistent@example.com', password: 'wrongpassword' }),
+            { headers: { 'Content-Type': 'application/json' } },
+        );
+        check(login, { 'login 401 on bad creds': (r) => r.status === 401 });
+    });
+
     sleep(1);
 }

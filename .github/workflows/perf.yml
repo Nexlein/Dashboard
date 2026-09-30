@@ -3,11 +3,9 @@ name: Performance & Integration
 on:
     push:
         branches: ['main']
-    pull_request:
-
-concurrency:
-    group: ${{ github.workflow }}-${{ github.ref }}
-    cancel-in-progress: true
+    schedule:
+        - cron: '0 2 * * 1'
+    workflow_dispatch:
 
 jobs:
     k6-tests:

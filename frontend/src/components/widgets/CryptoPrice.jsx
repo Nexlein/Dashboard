@@ -1,5 +1,6 @@
 function formatCurrency(value, currency, compact = false) {
     if (typeof value !== 'number') return '—';
+    if (typeof currency !== 'string' || !currency) return `${value.toLocaleString()}`;
 
     try {
         return new Intl.NumberFormat(undefined, {

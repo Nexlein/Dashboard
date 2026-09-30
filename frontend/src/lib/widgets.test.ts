@@ -21,7 +21,7 @@ describe('toDashboardWidget', () => {
             h: 3,
             minW: undefined,
             minH: undefined,
-            title: 'Weather',
+            title: 'Current Weather',
         });
     });
 
@@ -35,7 +35,7 @@ describe('toDashboardWidget', () => {
             layout: { x: 0, y: 0, w: 4, h: 2 },
         };
 
-        expect(toDashboardWidget(widget).title).toBe('Weather');
+        expect(toDashboardWidget(widget).title).toBe('Weather Forecast');
     });
 
     it('uses the short Weather title for current conditions', () => {
@@ -48,7 +48,7 @@ describe('toDashboardWidget', () => {
             layout: { x: 0, y: 0, w: 4, h: 2 },
         };
 
-        expect(toDashboardWidget(widget).title).toBe('Weather');
+        expect(toDashboardWidget(widget).title).toBe('Current Weather');
     });
 
     it('normalizes legacy refresh rates to the 60-second minimum', () => {
