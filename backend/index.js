@@ -1,6 +1,8 @@
-require('dotenv').config({
-    path: require('node:path').join(__dirname, '.env'),
-});
+if (process.env.NODE_ENV !== 'test') {
+    require('dotenv').config({
+        path: require('node:path').join(__dirname, '.env'),
+    });
+}
 const express = require('express');
 const cors = require('cors');
 const adminRoutes = require('./routes/admin');
@@ -31,7 +33,6 @@ app.use(
 );
 app.use(express.json());
 
-const healthRoutes = require('./routes/health');
 const swaggerUi = require('swagger-ui-express');
 const swaggerJsdoc = require('swagger-jsdoc');
 
@@ -63,10 +64,12 @@ const swaggerOptions = {
             },
         ],
     },
-    apis: ['./routes/*.js', './swagger-docs.js'],
+    apis: ['./routes/*.js'],
 };
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
+
+const healthRoutes = require('./routes/health');
 
 app.use('/admin', authMiddleware, adminMiddleware, adminRoutes);
 app.use('/auth', authRoutes);
@@ -76,7 +79,11 @@ app.use('/services', authMiddleware, serviceRoutes);
 const chatbotRoutes = require('./routes/chatbot');
 app.use('/chatbot', authMiddleware, chatbotRoutes);
 app.use('/health', healthRoutes);
+
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+const errorHandler = require('./middleware/errorHandler');
+app.use(errorHandler);
 
 if (require.main === module) {
     const { PrismaClient } = require('@prisma/client');

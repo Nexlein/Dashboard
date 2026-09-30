@@ -2,6 +2,7 @@ const express = require('express');
 const prisma = require('../utils/prisma');
 const registry = require('../services/registry');
 const { encryptJson } = require('../utils/encryption');
+const asyncHandler = require('../middleware/asyncHandler');
 
 const router = express.Router();
 
@@ -21,8 +22,9 @@ function publicConnection(service, connection) {
     };
 }
 
-router.get('/', async (req, res) => {
-    try {
+router.get(
+    '/',
+    asyncHandler(async (req, res) => {
         const [connections, oauthTokens] = await Promise.all([
             prisma.serviceConnection.findMany({
                 where: { userId: req.user.userId },
@@ -55,7 +57,7 @@ router.get('/', async (req, res) => {
                                 avatarUrl: data.avatar_url,
                             };
                         }
-                    } catch (e) {
+                    } catch {
                         // Ignore
                     }
                 }
@@ -73,65 +75,68 @@ router.get('/', async (req, res) => {
                 .getAllServices()
                 .map((service) => publicConnection(service, byService.get(service.name))),
         );
-    } catch {
-        return res.status(500).json({ error: 'Internal server error' });
-    }
-});
+    }),
+);
 
-router.put('/:serviceName/connection', async (req, res) => {
-    const service = registry.getService(req.params.serviceName);
-    if (!service?.connection || service.connection.type !== 'apiKey') {
-        return res.status(404).json({ error: 'Configurable service not found' });
-    }
+router.put(
+    '/:serviceName/connection',
+    asyncHandler(async (req, res) => {
+        const service = registry.getService(req.params.serviceName);
+        if (!service?.connection || service.connection.type !== 'apiKey') {
+            return res.status(404).json({ error: 'Configurable service not found' });
+        }
 
-    const apiKey = typeof req.body.apiKey === 'string' ? req.body.apiKey.trim() : '';
-    if (!apiKey || apiKey.length > 256) {
-        return res.status(400).json({ error: 'A valid API key is required' });
-    }
+        const apiKey = typeof req.body.apiKey === 'string' ? req.body.apiKey.trim() : '';
+        if (!apiKey || apiKey.length > 256) {
+            return res.status(400).json({ error: 'A valid API key is required' });
+        }
 
-    try {
-        await service.verifyCredentials({ apiKey });
-        const verifiedAt = new Date();
-        const connection = await prisma.serviceConnection.upsert({
-            where: {
-                userId_serviceName: {
+        try {
+            await service.verifyCredentials({ apiKey });
+            const verifiedAt = new Date();
+            const connection = await prisma.serviceConnection.upsert({
+                where: {
+                    userId_serviceName: {
+                        userId: req.user.userId,
+                        serviceName: service.name,
+                    },
+                },
+                create: {
                     userId: req.user.userId,
                     serviceName: service.name,
+                    encryptedCredentials: encryptJson({ apiKey }),
+                    keyHint: apiKey.slice(-4),
+                    verifiedAt,
                 },
-            },
-            create: {
-                userId: req.user.userId,
-                serviceName: service.name,
-                encryptedCredentials: encryptJson({ apiKey }),
-                keyHint: apiKey.slice(-4),
-                verifiedAt,
-            },
-            update: {
-                encryptedCredentials: encryptJson({ apiKey }),
-                keyHint: apiKey.slice(-4),
-                verifiedAt,
-            },
-        });
+                update: {
+                    encryptedCredentials: encryptJson({ apiKey }),
+                    keyHint: apiKey.slice(-4),
+                    verifiedAt,
+                },
+            });
 
-        service.clearCache?.();
-        return res.json(publicConnection(service, connection));
-    } catch (error) {
-        if (error.message === 'Weather API key is invalid or not active yet') {
-            return res.status(400).json({ error: error.message });
+            service.clearCache?.();
+            return res.json(publicConnection(service, connection));
+        } catch (error) {
+            if (error.message === 'Weather API key is invalid or not active yet') {
+                return res.status(400).json({ error: error.message });
+            }
+            if (error.statusCode) {
+                return res.status(error.statusCode).json({ error: error.message });
+            }
+            throw error;
         }
-        return res.status(error.statusCode || 500).json({
-            error: error.statusCode ? error.message : 'Internal server error',
-        });
-    }
-});
+    }),
+);
 
-router.delete('/:serviceName/connection', async (req, res) => {
-    const service = registry.getService(req.params.serviceName);
-    if (!service?.connection) {
-        return res.status(404).json({ error: 'Configurable service not found' });
-    }
+router.delete(
+    '/:serviceName/connection',
+    asyncHandler(async (req, res) => {
+        const service = registry.getService(req.params.serviceName);
+        if (!service?.connection) {
+            return res.status(404).json({ error: 'Configurable service not found' });
+        }
 
-    try {
         if (service.connection.type === 'oauth') {
             await prisma.oAuthToken.deleteMany({
                 where: {
@@ -149,9 +154,7 @@ router.delete('/:serviceName/connection', async (req, res) => {
         }
         service.clearCache?.();
         return res.status(204).send();
-    } catch {
-        return res.status(500).json({ error: 'Internal server error' });
-    }
-});
+    }),
+);
 
 module.exports = router;

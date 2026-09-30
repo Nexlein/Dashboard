@@ -108,7 +108,7 @@ router.post('/register', async (req, res) => {
         });
 
         res.status(201).json({ message: 'User registered successfully', userId: user.id });
-    } catch (error) {
+    } catch {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -142,7 +142,7 @@ router.post('/login', async (req, res) => {
         });
 
         res.json({ message: 'Login successful', token });
-    } catch (error) {
+    } catch {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -532,7 +532,7 @@ router.get('/download-data', requireAuth, async (req, res) => {
                 params: decryptParamsStrict(widget.params),
             })),
         });
-    } catch (error) {
+    } catch {
         res.status(500).json({ error: 'Internal server error' });
     }
 });

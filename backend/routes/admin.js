@@ -1,10 +1,12 @@
 const express = require('express');
 const prisma = require('../utils/prisma');
+const asyncHandler = require('../middleware/asyncHandler');
 
 const router = express.Router();
 
-router.get('/users', async (req, res) => {
-    try {
+router.get(
+    '/users',
+    asyncHandler(async (req, res) => {
         const users = await prisma.user.findMany({
             select: {
                 id: true,
@@ -23,37 +25,36 @@ router.get('/users', async (req, res) => {
         });
 
         res.status(200).json(users);
-    } catch {
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
+    }),
+);
 
-router.delete('/users/:id', async (req, res) => {
-    const userId = Number(req.params.id);
+router.delete(
+    '/users/:id',
+    asyncHandler(async (req, res) => {
+        const userId = Number(req.params.id);
 
-    if (!Number.isInteger(userId) || userId <= 0) {
-        return res.status(400).json({ error: 'Invalid user ID' });
-    }
-
-    if (userId === req.user.userId) {
-        return res.status(403).json({
-            error: 'You cannot delete your own account',
-        });
-    }
-
-    try {
-        await prisma.user.delete({
-            where: { id: userId },
-        });
-
-        res.status(204).send();
-    } catch (error) {
-        if (error.code === 'P2025') {
-            return res.status(404).json({ error: 'User not found' });
+        if (!Number.isInteger(userId) || userId <= 0) {
+            return res.status(400).json({ error: 'Invalid user ID' });
         }
 
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
+        if (userId === req.user.userId) {
+            return res.status(403).json({
+                error: 'You cannot delete your own account',
+            });
+        }
+
+        try {
+            await prisma.user.delete({
+                where: { id: userId },
+            });
+            res.status(204).send();
+        } catch (error) {
+            if (error.code === 'P2025') {
+                return res.status(404).json({ error: 'User not found' });
+            }
+            throw error;
+        }
+    }),
+);
 
 module.exports = router;

@@ -18,10 +18,6 @@ Returns the health status of the API, including database connection status and s
 **Response (503 Service Unavailable):**
 If database connection fails.
 
-### `GET /api-docs`
-
-Serves the Swagger UI documentation for all endpoints.
-
 ### `GET /about.json`
 
 Returns the application's supported services and widgets in the format required by Epitech grading.
