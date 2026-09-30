@@ -9,7 +9,7 @@ test.describe('Dashboard E2E & GDPR Flow', () => {
         await page.goto('/register');
         await page.fill('input[type="email"]', testEmail);
         await page.fill('input[type="password"]', testPassword);
-        
+
         // Handle terms and age checks if they exist in UI
         const termsCheckbox = page.locator('button[role="checkbox"]').first();
         if (await termsCheckbox.isVisible()) {
@@ -35,7 +35,7 @@ test.describe('Dashboard E2E & GDPR Flow', () => {
         // 3. Navigate to privacy / settings to delete account (GDPR)
         await page.goto('/privacy'); // Adjust to your actual privacy/settings route
         await page.click('text=Delete Account');
-        
+
         // Handle confirmation if needed
         const confirmButton = page.locator('button:has-text("Confirm"), button:has-text("Delete")');
         if (await confirmButton.isVisible()) {

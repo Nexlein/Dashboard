@@ -1,50 +1,50 @@
 name: Lint
 
 on:
-  push:
-    branches: ["main"]
-  pull_request:
+    push:
+        branches: ['main']
+    pull_request:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
 
 jobs:
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: 'npm'
-      - run: npm ci
-      - name: Lint Frontend
-        working-directory: frontend
-        run: npm run lint --if-present
-      - name: Lint Backend
-        working-directory: backend
-        run: npm run lint --if-present
-      - name: Prisma Validate
-        working-directory: backend
-        run: npx prisma validate
-      - name: Knip Check
-        run: npx knip
-      - name: CSpell Check
-        run: npx cspell "**"
+    lint:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 24
+                  cache: 'npm'
+            - run: npm ci
+            - name: Lint Frontend
+              working-directory: frontend
+              run: npm run lint --if-present
+            - name: Lint Backend
+              working-directory: backend
+              run: npm run lint --if-present
+            - name: Prisma Validate
+              working-directory: backend
+              run: npx prisma validate
+            - name: Knip Check
+              run: npx knip
+            - name: CSpell Check
+              run: npx cspell "**"
 
-  actionlint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: bash <(curl -s https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
-      - run: ./actionlint
+    actionlint:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - run: bash <(curl -s https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+            - run: ./actionlint
 
-  hadolint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Lint Dockerfiles
-        uses: hadolint/hadolint-action@v3.1.0
-        with:
-          dockerfile: "**/Dockerfile"
+    hadolint:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - name: Lint Dockerfiles
+              uses: hadolint/hadolint-action@v3.1.0
+              with:
+                  dockerfile: '**/Dockerfile'

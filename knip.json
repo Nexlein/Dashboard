@@ -1,12 +1,12 @@
 {
-  "workspaces": {
-    "frontend": {
-      "entry": ["src/main.tsx", "vite.config.ts"],
-      "project": ["src/**/*.ts", "src/**/*.tsx"]
-    },
-    "backend": {
-      "entry": ["index.js", "prisma/seed.js", "tests/**/*.js"],
-      "project": ["**/*.js"]
+    "workspaces": {
+        "frontend": {
+            "entry": ["src/main.tsx", "vite.config.ts"],
+            "project": ["src/**/*.ts", "src/**/*.tsx"]
+        },
+        "backend": {
+            "entry": ["index.js", "prisma/seed.js", "tests/**/*.js"],
+            "project": ["**/*.js"]
+        }
     }
-  }
 }
