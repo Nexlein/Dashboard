@@ -1,10 +1,10 @@
 FROM node:24-alpine AS build
 WORKDIR /app
 COPY package*.json ./
-# hadolint ignore=DL3016
-RUN npm install -g npm@latest
-# hadolint ignore=DL3060
-RUN npm install && npm cache clean --force
+# hadolint ignore=DL3016,DL3060
+RUN npm install -g npm@latest \
+    && npm install \
+    && npm cache clean --force
 COPY . .
 RUN npm run build
 

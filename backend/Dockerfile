@@ -1,12 +1,10 @@
 FROM node:22-alpine
 WORKDIR /app
 COPY package*.json ./
-# hadolint ignore=DL3018
-RUN apk add --no-cache openssl
-# hadolint ignore=DL3016
-RUN npm install -g npm@latest
-# hadolint ignore=DL3060
-RUN npm install --omit=dev \
+# hadolint ignore=DL3018,DL3016,DL3060
+RUN apk add --no-cache openssl \
+    && npm install -g npm@latest \
+    && npm install --omit=dev \
     && npm cache clean --force
 COPY . .
 RUN npx prisma generate
