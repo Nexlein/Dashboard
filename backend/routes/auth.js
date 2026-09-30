@@ -535,7 +535,7 @@ router.get('/download-data', requireAuth, async (req, res) => {
 
 router.delete('/delete-account', requireAuth, async (req, res) => {
     try {
-        const { password } = req.body;
+        const { password } = req.body || {};
 
         const user = await prisma.user.findUnique({
             where: { id: req.user.userId },

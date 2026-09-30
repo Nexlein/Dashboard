@@ -219,6 +219,7 @@ describe('Profile and data rights', () => {
     });
 
     test('deletes only the authenticated account and reports failures', async () => {
+        prisma.user.findUnique.mockResolvedValue({ password: null });
         prisma.user.delete.mockResolvedValue({ id: 42 });
         await request(app)
             .delete('/auth/delete-account')
