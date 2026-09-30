@@ -41,7 +41,11 @@
         "retourné",
         "jeton",
         "connexion",
-        "testuser"
+        "testuser",
+        "wrongpassword",
+        "creds",
+        "testpass",
+        "keepalive"
     ],
     "ignorePaths": [
         "node_modules",
