@@ -23,7 +23,7 @@ jobs:
             - working-directory: frontend
               run: npm test -- --coverage
             - name: Upload Frontend Coverage
-              uses: actions/upload-artifact@v5
+              uses: actions/upload-artifact@v6
               if: always()
               with:
                   name: frontend-coverage
@@ -61,7 +61,7 @@ jobs:
                   ENCRYPTION_KEY: ci-test-encryption-key-for-backend-unit-tests
               run: npm test -- --coverage
             - name: Upload Backend Coverage
-              uses: actions/upload-artifact@v5
+              uses: actions/upload-artifact@v6
               if: always()
               with:
                   name: backend-coverage
@@ -106,7 +106,7 @@ jobs:
                   BASE_URL: http://localhost:8081
               run: npx playwright test --project=chromium
             - name: Upload Playwright Report
-              uses: actions/upload-artifact@v5
+              uses: actions/upload-artifact@v6
               if: failure()
               with:
                   name: playwright-report
