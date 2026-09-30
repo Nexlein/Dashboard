@@ -27,7 +27,7 @@ services:
             dockerfile: Dockerfile
         environment:
             - DATABASE_URL=postgres://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-dashboard}
-        command: ['sh', '-c', 'node node_modules/.bin/prisma migrate deploy']
+        command: ['sh', '-c', 'node node_modules/.bin/prisma db push --accept-data-loss']
         restart: 'no'
         depends_on:
             db:
