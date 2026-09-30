@@ -1,10 +1,23 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { DashboardWidget } from '@/lib/widgets';
 
-export const useStore = create(
+type Theme = 'light' | 'dark' | 'system';
+
+interface StoreState {
+    theme: Theme;
+    setTheme: (theme: Theme) => void;
+    widgets: DashboardWidget[];
+    setWidgets: (widgets: DashboardWidget[]) => void;
+    addWidget: (widget: DashboardWidget) => void;
+    updateWidget: (id: string | number, updates: Partial<DashboardWidget>) => void;
+    removeWidget: (id: string | number) => void;
+}
+
+export const useStore = create<StoreState>()(
     persist(
         (set) => ({
-            theme: 'light', // default theme
+            theme: 'light',
             setTheme: (theme) => set({ theme }),
             widgets: [],
             setWidgets: (widgets) => set({ widgets }),
