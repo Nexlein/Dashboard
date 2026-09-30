@@ -1,12 +1,24 @@
 {
-    "workspaces": {
-        "frontend": {
-            "entry": ["src/main.tsx", "vite.config.ts"],
-            "project": ["src/**/*.ts", "src/**/*.tsx"]
-        },
-        "backend": {
-            "entry": ["index.js", "prisma/seed.js", "tests/**/*.js"],
-            "project": ["**/*.js"]
-        }
+    "ignoreDependencies": [
+        "@radix-ui/*",
+        "shadcn",
+        "react-grid-layout",
+        "zustand",
+        "tw-animate-css",
+        "@fontsource-variable/geist",
+        "@testing-library/user-event",
+        "k6"
+    ],
+    "ignoreBinaries": ["commitlint", "k6"],
+    "ignore": [
+        "frontend/src/components/ui/**",
+        "backend/swagger-docs.js",
+        "frontend/src/lib/widgets.ts"
+    ],
+    "rules": {
+        "exports": "warn",
+        "files": "warn",
+        "dependencies": "warn",
+        "unlisted": "warn"
     }
 }
