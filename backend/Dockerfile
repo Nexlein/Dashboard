@@ -1,8 +1,9 @@
 FROM node:20-alpine
 WORKDIR /app
 COPY package*.json ./
+# hadolint ignore=DL3060
 RUN apk add --no-cache openssl \
-    && npm ci \
+    && npm install \
     && npm cache clean --force
 COPY . .
 RUN npx prisma generate

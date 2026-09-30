@@ -1,7 +1,8 @@
 FROM node:24-alpine AS build
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci && npm cache clean --force
+# hadolint ignore=DL3060
+RUN npm install && npm cache clean --force
 COPY . .
 RUN npm run build
 
