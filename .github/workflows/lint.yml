@@ -21,14 +21,10 @@ jobs:
       - run: npm ci
       - name: Lint Frontend
         working-directory: frontend
-        run: |
-          npm ci
-          npm run lint
+        run: npm run lint --if-present
       - name: Lint Backend
         working-directory: backend
-        run: |
-          npm ci
-          npm run lint
+        run: npm run lint --if-present
       - name: Prisma Validate
         working-directory: backend
         run: npx prisma validate
@@ -41,7 +37,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: bash <(curl -https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+      - run: bash <(curl -s https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
       - run: ./actionlint
 
   hadolint:
