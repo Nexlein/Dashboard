@@ -91,11 +91,19 @@ export function logout() {
     localStorage.removeItem(AUTH_TOKEN_KEY);
 }
 
-export function startGitHubLogin(registration?: { cguAccepted: boolean; is16OrOlder: boolean }) {
-    const params = new URLSearchParams();
+export async function startGitHubLogin(registration?: {
+    cguAccepted: boolean;
+    is16OrOlder: boolean;
+}) {
+    const params = new URLSearchParams({ format: 'json' });
     if (registration) {
         params.set('cguAccepted', String(registration.cguAccepted));
         params.set('is16OrOlder', String(registration.is16OrOlder));
     }
-    window.location.assign(`${API_URL}/auth/github/login?${params}`);
+    const response = await fetch(`${API_URL}/auth/github/login?${params}`);
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(data.error || 'GitHub login is currently unavailable.');
+    }
+    window.location.assign(data.authorizationUrl);
 }

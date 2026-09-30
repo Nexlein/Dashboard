@@ -272,7 +272,11 @@ export default function AuthPage() {
                                 );
                                 return;
                             }
-                            startGitHubLogin(isRegister ? { cguAccepted, is16OrOlder } : undefined);
+                            startGitHubLogin(
+                                isRegister ? { cguAccepted, is16OrOlder } : undefined,
+                            ).catch((err) =>
+                                setError(err.message || 'Service temporairement indisponible.'),
+                            );
                         }}
                     >
                         <Github className="mr-2 size-4" />
