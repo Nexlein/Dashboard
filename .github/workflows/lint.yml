@@ -33,7 +33,7 @@ jobs:
             - name: Knip Check
               run: npx knip
             - name: CSpell Check
-              run: npx cspell "**"
+              run: npx cspell .
 
     actionlint:
         runs-on: ubuntu-latest
