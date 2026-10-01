@@ -1,7 +1,6 @@
 import { Responsive, WidthProvider } from 'react-grid-layout/legacy';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
-import { useStore } from '@/store/useStore';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -10,57 +9,45 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { deleteWidget, updateWidgetLayouts } from '@/lib/widgets';
+import { useWidgets, useRemoveWidget, useUpdateLayout } from '@/hooks/useWidgets';
 import { useRef, useState } from 'react';
 import WidgetRenderer from './WidgetRenderer';
-import { Bitcoin, CloudSun, Edit2, EllipsisVertical, Trash2 } from 'lucide-react';
+import { Bitcoin, CloudSun, Edit2, EllipsisVertical, Trash2, Loader2 } from 'lucide-react';
 import { WidgetEditDialog } from './WidgetEditDialog';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
 export default function DashboardGrid() {
-    const { widgets, setWidgets, removeWidget } = useStore();
-    const timeoutRef = useRef(null);
-    const [editingWidget, setEditingWidget] = useState(null);
+    const { data: widgets = [], isLoading } = useWidgets();
+    const removeMutation = useRemoveWidget();
+    const updateLayoutMutation = useUpdateLayout();
 
-    const handleDelete = async (widget) => {
-        if (!window.confirm(`Delete ${widget.title}?`)) return;
+    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const [editingWidget, setEditingWidget] = useState<any>(null);
 
-        try {
-            await deleteWidget(Number.parseInt(widget.i, 10));
-            removeWidget(widget.i);
-        } catch (error) {
-            console.error('Failed to delete widget:', error);
-        }
+    const handleDelete = async (widget: any) => {
+        if (!window.confirm(`Delete widget?`)) return;
+        removeMutation.mutate(widget.i);
     };
 
-    const onLayoutChange = (layout) => {
-        // Map new layout to our widgets state
-        const updatedWidgets = widgets.map((widget) => {
-            const newLayout = layout.find((l) => l.i === widget.i);
-            if (newLayout) {
-                return {
-                    ...widget,
-                    x: newLayout.x,
-                    y: newLayout.y,
-                    w: newLayout.w,
-                    h: newLayout.h,
-                };
-            }
-            return widget;
-        });
-        setWidgets(updatedWidgets);
-
-        // Batch update to backend via debounce
+    const onLayoutChange = (layout: any) => {
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
         timeoutRef.current = setTimeout(() => {
-            const apiLayouts = updatedWidgets.map((w) => ({
-                id: parseInt(w.i, 10),
-                layout: { x: w.x, y: w.y, w: w.w, h: w.h },
+            const apiLayouts = layout.map((l: any) => ({
+                id: parseInt(l.i, 10),
+                layout: { x: l.x, y: l.y, w: l.w, h: l.h },
             }));
-            updateWidgetLayouts(apiLayouts).catch(console.error);
+            updateLayoutMutation.mutate(apiLayouts);
         }, 1000);
     };
+
+    if (isLoading) {
+        return (
+            <div className="flex min-h-[400px] items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+        );
+    }
 
     return (
         <div className="p-4">
@@ -74,24 +61,24 @@ export default function DashboardGrid() {
                 isDraggable={true}
                 isResizable={true}
             >
-                {widgets.map((widget) => (
+                {widgets.map((widget: any) => (
                     <div key={widget.i} data-grid={widget}>
                         <Card className="flex h-full w-full cursor-move flex-col overflow-hidden">
                             <CardHeader className="flex shrink-0 flex-row items-center justify-between border-b border-border bg-muted/50 p-4">
                                 <CardTitle className="flex items-center gap-2 text-sm">
-                                    {widget.serviceName === 'weather' && (
+                                    {widget.service === 'weather' && (
                                         <CloudSun
                                             aria-hidden="true"
                                             className="h-5 w-5 text-sky-500"
                                         />
                                     )}
-                                    {widget.serviceName === 'crypto' && (
+                                    {widget.service === 'crypto' && (
                                         <Bitcoin
                                             aria-hidden="true"
                                             className="h-5 w-5 text-amber-500"
                                         />
                                     )}
-                                    <span>{widget.title}</span>
+                                    <span className="capitalize">{widget.type}</span>
                                 </CardTitle>
                                 <DropdownMenu>
                                     <DropdownMenuTrigger
@@ -101,7 +88,6 @@ export default function DashboardGrid() {
                                                 variant="ghost"
                                                 size="icon-sm"
                                                 className="cursor-pointer text-muted-foreground"
-                                                aria-label={`Configure ${widget.title}`}
                                                 onPointerDown={(event) => event.stopPropagation()}
                                             />
                                         }
@@ -117,16 +103,14 @@ export default function DashboardGrid() {
                                             className="min-h-9 px-2"
                                             onClick={() => setEditingWidget(widget)}
                                         >
-                                            <Edit2 className="mr-2 h-4 w-4" />
-                                            Edit
+                                            <Edit2 className="mr-2 h-4 w-4" /> Edit
                                         </DropdownMenuItem>
                                         <DropdownMenuItem
                                             variant="destructive"
                                             className="min-h-9 px-2 text-destructive"
                                             onClick={() => handleDelete(widget)}
                                         >
-                                            <Trash2 className="mr-2 h-4 w-4" />
-                                            Delete
+                                            <Trash2 className="mr-2 h-4 w-4" /> Delete
                                         </DropdownMenuItem>
                                     </DropdownMenuContent>
                                 </DropdownMenu>
@@ -139,11 +123,13 @@ export default function DashboardGrid() {
                 ))}
             </ResponsiveGridLayout>
 
-            <WidgetEditDialog
-                widget={editingWidget}
-                open={!!editingWidget}
-                onOpenChange={(open) => !open && setEditingWidget(null)}
-            />
+            {editingWidget && (
+                <WidgetEditDialog
+                    widget={editingWidget}
+                    open={!!editingWidget}
+                    onOpenChange={(open: boolean) => !open && setEditingWidget(null)}
+                />
+            )}
         </div>
     );
 }
