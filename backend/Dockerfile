@@ -28,7 +28,7 @@ COPY backend/package*.json ./
 COPY --from=builder /app/shared /app/shared
 # Install only production dependencies
 # npm ci --omit=dev in workspaces requires special handling, so we run npm install --omit=dev
-RUN npm install --omit=dev
+RUN npm pkg delete scripts.prepare --prefix /app && npm install --omit=dev
 # Copy backend built files
 COPY --from=builder /app/backend/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma /app/node_modules/.prisma
