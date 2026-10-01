@@ -5,6 +5,8 @@ const envSchema = z.object({
     PORT: z.string().default('8080'),
     DATABASE_URL: z.string().url('DATABASE_URL must be a valid URL'),
     JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters long'),
+    JWT_EXPIRES_IN: z.string().default('24h'),
+    SALT_ROUNDS: z.coerce.number().int().min(1).default(10),
     ENCRYPTION_KEY: z.string().min(32, 'ENCRYPTION_KEY must be at least 32 characters long'),
     REDIS_URL: z.string().url('REDIS_URL must be a valid URL').optional(),
     FRONTEND_URL: z.string().url('FRONTEND_URL must be a valid URL').optional(),
