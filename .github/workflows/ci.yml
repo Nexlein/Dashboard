@@ -116,6 +116,7 @@ jobs:
             - run: cd backend && npx prisma db push
               env:
                   DATABASE_URL: postgresql://postgres:postgres@localhost:5432/dashboard_e2e_test
+            - run: cd e2e && npm install
             - run: cd e2e && npx playwright install --with-deps
             - run: cd e2e && npx playwright test
               env:
