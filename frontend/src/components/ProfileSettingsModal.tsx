@@ -23,7 +23,7 @@ export function ProfileSettingsModal({ open, onOpenChange, user, onUserUpdated }
     const queryClient = useQueryClient();
 
     const updateProfileMutation = useMutation({
-        mutationFn: async ({ displayName, email }) => {
+        mutationFn: async ({ displayName, email }: { displayName: string; email: string }) => {
             const token = localStorage.getItem('dashboard-auth-token');
             const { API_URL } = await import('@/lib/auth');
             const res = await fetch(`${API_URL}/auth/me`, {
@@ -40,19 +40,19 @@ export function ProfileSettingsModal({ open, onOpenChange, user, onUserUpdated }
                 throw new Error(data.error || 'Failed to update profile');
             }
 
-            return res.json();
+            return res.json() as Promise<{ displayName: string; email: string }>;
         },
         onMutate: () => {
             setError('');
             setSuccess('');
         },
-        onSuccess: (updatedUser) => {
+        onSuccess: (updatedUser: { displayName: string; email: string }) => {
             onUserUpdated(updatedUser);
             queryClient.setQueryData(['currentUser'], updatedUser);
             setSuccess('Profile updated successfully');
             setTimeout(() => onOpenChange(false), 1500);
         },
-        onError: (err) => setError(err.message),
+        onError: (err: Error) => setError(err.message),
     });
 
     const loading = updateProfileMutation.isPending;

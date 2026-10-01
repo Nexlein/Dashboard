@@ -1,5 +1,5 @@
 import { fetchClient, API_URL } from './apiClient';
-import type { RegisterFormData, LoginFormData, AuthUser } from 'shared';
+import type { RegisterFormData, LoginFormData, User } from 'shared';
 
 export { API_URL };
 const AUTH_TOKEN_KEY = 'dashboard-auth-token';
@@ -22,9 +22,9 @@ export async function login(payload: LoginFormData) {
     localStorage.setItem(AUTH_TOKEN_KEY, response.token);
 }
 
-export async function getCurrentUser(): Promise<AuthUser> {
+export async function getCurrentUser(): Promise<User> {
     if (!hasValidAuthToken()) throw new Error('Missing authentication token');
-    return fetchClient('/auth/me') as Promise<AuthUser>;
+    return fetchClient('/auth/me') as Promise<User>;
 }
 
 export function hasValidAuthToken() {

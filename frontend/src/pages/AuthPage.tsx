@@ -38,8 +38,8 @@ export default function AuthPage() {
                     displayName: String(formData.get('displayName') ?? '').trim() || undefined,
                     email,
                     password,
-                    cguAccepted,
-                    is16OrOlder,
+                    cguAccepted: cguAccepted as true,
+                    is16OrOlder: is16OrOlder as true,
                 });
                 navigate('/login', {
                     replace: true,

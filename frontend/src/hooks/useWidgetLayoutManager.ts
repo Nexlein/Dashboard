@@ -10,7 +10,7 @@ export function useWidgetLayoutManager() {
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
 
         timeoutRef.current = setTimeout(() => {
-            const formatted = layout.map((l) => ({
+            const formatted = (layout as any[]).map((l) => ({
                 id: parseInt(l.i, 10),
                 layout: { x: l.x, y: l.y, w: l.w, h: l.h },
             }));

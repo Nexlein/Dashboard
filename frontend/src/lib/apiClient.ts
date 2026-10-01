@@ -18,7 +18,10 @@ export async function fetchClient(endpoint: string, options: RequestInit = {}) {
         ...options.headers,
     };
 
-    const response = await fetch(`${API_URL}${endpoint}`, { ...options, headers });
+    const response = await fetch(`${API_URL}${endpoint}`, {
+        ...options,
+        headers: headers as HeadersInit,
+    });
 
     // Automatically intercept 401 Unauthorized globally if needed
     if (response.status === 401) {

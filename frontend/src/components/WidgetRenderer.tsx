@@ -51,7 +51,9 @@ export default function WidgetRenderer({ widget }: any) {
     }
 
     if (!isDataFetchingWidget) {
-        return <Component widget={widget} />;
+        if (!Component) return null;
+        const C = Component as any;
+        return <C widget={widget} />;
     }
 
     if (error) {

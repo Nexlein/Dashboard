@@ -11,8 +11,8 @@ export default function ServicesPage() {
     const connectMutation = useConnectService();
     const disconnectMutation = useDisconnectService();
 
-    async function handleConnect(serviceName: string, apiKey: string) {
-        return connectMutation.mutateAsync(
+    async function handleConnect(serviceName: string, apiKey: string): Promise<void> {
+        await connectMutation.mutateAsync(
             { serviceName, apiKey },
             {
                 onSuccess: () => setError(null),

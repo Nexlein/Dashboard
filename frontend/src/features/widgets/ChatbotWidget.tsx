@@ -59,7 +59,7 @@ export function ChatbotWidget({ widget }: { widget: any }) {
         // Sliding window
         const MAX_CHARS = 12000;
         let charCount = 0;
-        const payloadMessages = [];
+        const payloadMessages: any[] = [];
         for (let i = newMessages.length - 1; i >= 0; i--) {
             charCount += newMessages[i].content.length;
             if (charCount > MAX_CHARS && payloadMessages.length > 0) break;

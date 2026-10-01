@@ -10,9 +10,15 @@ const RECOMMENDED_MODELS = [
     { id: 'llama3', name: 'Llama 3 (8B) - Powerful' },
 ];
 
-export function OllamaModelManager({ selectedModel, onSelectModel }) {
-    const [pulling, setPulling] = useState(false);
-    const [error, setError] = useState(null);
+export function OllamaModelManager({
+    selectedModel,
+    onSelectModel,
+}: {
+    selectedModel: string;
+    onSelectModel: (model: string) => void;
+}) {
+    const [pulling, setPulling] = useState<string | false>(false);
+    const [error, setError] = useState<string | null>(null);
 
     const queryClient = useQueryClient();
 
@@ -30,7 +36,7 @@ export function OllamaModelManager({ selectedModel, onSelectModel }) {
             });
             if (!res.ok) throw new Error('Failed to fetch models');
             const data = await res.json();
-            return data.models?.map((m) => m.name) || [];
+            return (data.models?.map((m: { name: string }) => m.name) || []) as string[];
         },
     });
 
@@ -38,7 +44,7 @@ export function OllamaModelManager({ selectedModel, onSelectModel }) {
     if (queryError && !error) setError(queryError.message);
 
     const pullMutation = useMutation({
-        mutationFn: async (modelId) => {
+        mutationFn: async (modelId: string) => {
             const token = localStorage.getItem('dashboard-auth-token');
             const res = await fetch(`${API_URL}/chatbot/pull`, {
                 method: 'POST',
@@ -51,17 +57,17 @@ export function OllamaModelManager({ selectedModel, onSelectModel }) {
             if (!res.ok) throw new Error('Failed to pull model');
             return modelId;
         },
-        onMutate: (modelId) => {
+        onMutate: (modelId: string) => {
             setPulling(modelId);
             setError(null);
         },
-        onSuccess: (modelId) => {
+        onSuccess: (modelId: string) => {
             queryClient.invalidateQueries({ queryKey: ['ollamaModels'] });
             onSelectModel(modelId);
-            const input = document.getElementById('customModelInput');
+            const input = document.getElementById('customModelInput') as HTMLInputElement | null;
             if (input) input.value = '';
         },
-        onError: (err) => setError(err.message),
+        onError: (err: Error) => setError(err.message),
         onSettled: () => setPulling(false),
     });
 
@@ -74,8 +80,10 @@ export function OllamaModelManager({ selectedModel, onSelectModel }) {
                 <Button
                     variant="ghost"
                     size="icon"
-                    onClick={fetchModels}
-                    disabled={loading || pulling}
+                    onClick={() => {
+                        void fetchModels();
+                    }}
+                    disabled={loading || !!pulling}
                     className="h-6 w-6"
                 >
                     <RefreshCw className={`size-3 ${loading ? 'animate-spin' : ''}`} />
@@ -196,9 +204,12 @@ export function OllamaModelManager({ selectedModel, onSelectModel }) {
                     size="sm"
                     variant="secondary"
                     className="h-8 text-xs shrink-0"
-                    disabled={pulling}
+                    disabled={!!pulling}
                     onClick={() => {
-                        const val = document.getElementById('customModelInput').value.trim();
+                        const input = document.getElementById(
+                            'customModelInput',
+                        ) as HTMLInputElement | null;
+                        const val = input?.value.trim();
                         if (val) pullModel(val);
                     }}
                 >

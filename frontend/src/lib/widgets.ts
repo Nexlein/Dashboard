@@ -1,5 +1,14 @@
 import { fetchClient } from './apiClient';
 
+export const MIN_REFRESH_RATE_SECONDS = 60;
+
+export function getDefaultWidgetLayout(
+    _service?: string,
+    _widgetType?: string,
+): { x: number; y: number; w: number; h: number } {
+    return { x: 0, y: 0, w: 4, h: 3 };
+}
+
 export type DashboardWidget = {
     i: string;
     x: number;
