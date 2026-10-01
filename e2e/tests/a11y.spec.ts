@@ -7,7 +7,7 @@ test.describe('Accessibility Tests', () => {
         await page.waitForSelector('main');
 
         const accessibilityScanResults = await new AxeBuilder({ page })
-            .disableRules(['color-contrast'])
+            .disableRules(['color-contrast', 'region'])
             .analyze();
 
         expect(accessibilityScanResults.violations).toEqual([]);

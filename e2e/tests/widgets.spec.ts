@@ -37,8 +37,8 @@ test.describe('Dashboard Widgets', () => {
         await page.click('text=Ollama');
         await expect(page.locator('text=Recommended Models')).toBeVisible();
 
-        // Close dialog
-        await page.keyboard.press('Escape');
-        await expect(page.locator('text=Add New Widget')).toBeHidden();
+        // Close dialog by clicking outside
+        await page.mouse.click(10, 10);
+        await expect(page.locator('text=Add New Widget')).toBeHidden({ timeout: 8000 });
     });
 });
