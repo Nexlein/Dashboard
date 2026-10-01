@@ -63,4 +63,6 @@ model WidgetConfig {
   layout      Json // Grid coords (e.g. { "x": 0, "y": 0, "w": 2, "h": 2 })
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
