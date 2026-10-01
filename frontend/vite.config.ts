@@ -4,9 +4,6 @@ import { defineConfig } from 'vitest/config';
 
 // https://vite.dev/config/
 export default defineConfig({
-    build: {
-        cssMinify: 'esbuild',
-    },
     plugins: [react()],
     resolve: {
         alias: {
