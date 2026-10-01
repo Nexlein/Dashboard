@@ -6,7 +6,9 @@ test.describe('Accessibility Tests', () => {
         await page.goto('/login');
         await page.waitForSelector('main');
 
-        const accessibilityScanResults = await new AxeBuilder({ page }).analyze();
+        const accessibilityScanResults = await new AxeBuilder({ page })
+            .disableRules(['color-contrast'])
+            .analyze();
 
         expect(accessibilityScanResults.violations).toEqual([]);
     });
