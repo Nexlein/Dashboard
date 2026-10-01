@@ -6,6 +6,11 @@
     "directories": {
         "doc": "docs"
     },
+    "workspaces": [
+        "frontend",
+        "backend",
+        "shared"
+    ],
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
         "prepare": "husky"

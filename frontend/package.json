@@ -11,6 +11,7 @@
         "test": "vitest run"
     },
     "dependencies": {
+        "shared": "*",
         "@base-ui/react": "^1.8.0",
         "@fontsource-variable/geist": "^5.3.0",
         "@radix-ui/react-dialog": "^1.1.23",
