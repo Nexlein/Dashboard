@@ -1,4 +1,6 @@
-export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8080';
+import { fetchClient, API_URL } from './apiClient';
+
+export { API_URL };
 const AUTH_TOKEN_KEY = 'dashboard-auth-token';
 
 type RegisterPayload = {
@@ -8,76 +10,34 @@ type RegisterPayload = {
     cguAccepted: boolean;
     is16OrOlder: boolean;
 };
+type LoginPayload = { email: string; password: string };
+type AuthResponse = { message: string; token?: string; userId?: number };
+export type AuthUser = { id: number; email: string; displayName: string | null };
 
-type LoginPayload = {
-    email: string;
-    password: string;
-};
-
-type AuthResponse = {
-    message: string;
-    token?: string;
-    userId?: number;
-};
-
-export type AuthUser = {
-    id: number;
-    email: string;
-    displayName: string | null;
-};
-
-async function authRequest(path: string, payload: RegisterPayload | LoginPayload) {
-    const response = await fetch(`${API_URL}${path}`, {
+export async function register(payload: RegisterPayload) {
+    return fetchClient('/auth/register', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
-    });
-
-    const body = (await response.json().catch(() => ({}))) as Partial<AuthResponse> & {
-        error?: string;
-    };
-
-    if (!response.ok) {
-        throw new Error(body.error ?? 'Une erreur est survenue. Réessayez plus tard.');
-    }
-
-    return body as AuthResponse;
-}
-
-export function register(payload: RegisterPayload) {
-    return authRequest('/auth/register', payload);
+    }) as Promise<AuthResponse>;
 }
 
 export async function login(payload: LoginPayload) {
-    const response = await authRequest('/auth/login', payload);
-
-    if (!response.token) {
-        throw new Error('Le serveur n’a pas retourné de jeton de connexion.');
-    }
-
+    const response = (await fetchClient('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+    })) as AuthResponse;
+    if (!response.token) throw new Error('Le serveur n’a pas retourné de jeton de connexion.');
     localStorage.setItem(AUTH_TOKEN_KEY, response.token);
 }
 
-export async function getCurrentUser() {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
-    if (!token) throw new Error('Missing authentication token');
-
-    const response = await fetch(`${API_URL}/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` },
-    });
-
-    if (!response.ok) {
-        if (response.status === 401) localStorage.removeItem(AUTH_TOKEN_KEY);
-        throw new Error('Unable to load the authenticated user');
-    }
-
-    return (await response.json()) as AuthUser;
+export async function getCurrentUser(): Promise<AuthUser> {
+    if (!hasValidAuthToken()) throw new Error('Missing authentication token');
+    return fetchClient('/auth/me') as Promise<AuthUser>;
 }
 
 export function hasValidAuthToken() {
     const token = localStorage.getItem(AUTH_TOKEN_KEY);
     if (!token) return false;
-
     try {
         const payload = JSON.parse(atob(token.split('.')[1]));
         return typeof payload.exp !== 'number' || payload.exp * 1000 > Date.now();

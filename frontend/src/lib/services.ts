@@ -1,4 +1,4 @@
-import { API_URL } from './auth';
+import { fetchClient } from './apiClient';
 
 export type ServiceConnection = {
     name: string;
@@ -11,56 +11,29 @@ export type ServiceConnection = {
     connected: boolean;
     keyHint: string | null;
     verifiedAt: string | null;
-    accountInfo?: {
-        username: string;
-        avatarUrl: string;
-    } | null;
+    accountInfo?: { username: string; avatarUrl: string } | null;
 };
 
-function authHeaders() {
-    const token = localStorage.getItem('dashboard-auth-token');
-    return { Authorization: `Bearer ${token}` };
-}
-
-async function responseBody(response: Response) {
-    return response.json().catch(() => ({}));
-}
-
 export async function fetchServices(): Promise<ServiceConnection[]> {
-    const response = await fetch(`${API_URL}/services`, { headers: authHeaders() });
-    const body = await responseBody(response);
-    if (!response.ok) throw new Error(body.error || 'Unable to load services');
-    return body;
+    return fetchClient('/services');
 }
 
 export async function connectService(serviceName: string, apiKey: string) {
-    const response = await fetch(`${API_URL}/services/${serviceName}/connection`, {
+    return fetchClient(`/services/${serviceName}/connection`, {
         method: 'PUT',
-        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ apiKey }),
-    });
-    const body = await responseBody(response);
-    if (!response.ok) throw new Error(body.error || 'Unable to connect service');
-    return body as ServiceConnection;
+    }) as Promise<ServiceConnection>;
 }
 
 export async function disconnectService(serviceName: string) {
-    const response = await fetch(`${API_URL}/services/${serviceName}/connection`, {
+    return fetchClient(`/services/${serviceName}/connection`, {
         method: 'DELETE',
-        headers: authHeaders(),
     });
-    if (!response.ok) {
-        const body = await responseBody(response);
-        throw new Error(body.error || 'Unable to disconnect service');
-    }
 }
 
 export async function getOAuthUrl(serviceName: string) {
-    const response = await fetch(`${API_URL}/auth/${serviceName}?format=json`, {
-        headers: authHeaders(),
+    const response = await fetchClient(`/auth/${serviceName}?format=json`, {
         credentials: 'include',
     });
-    const body = await responseBody(response);
-    if (!response.ok) throw new Error(body.error || 'Unable to start linking flow');
-    return body.authorizationUrl;
+    return response.authorizationUrl;
 }

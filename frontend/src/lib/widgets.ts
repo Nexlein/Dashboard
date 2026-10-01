@@ -1,194 +1,77 @@
-import { API_URL } from './auth';
+import { fetchClient } from './apiClient';
 
-export const MIN_REFRESH_RATE_SECONDS = 60;
-
-export type ApiWidget = {
-    id: number;
-    serviceName: string;
-    widgetName: string;
-    params: Record<string, unknown>;
-    refreshRate: number;
-    layout: { x: number; y: number; w: number; h: number };
+export type DashboardWidget = {
+    i: string;
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+    service: string;
+    type: string;
+    params?: Record<string, string | number | boolean>;
 };
 
-type WidgetPresentation = {
-    title: string;
-    defaultLayout?: ApiWidget['layout'];
-    minW?: number;
-    minH?: number;
-};
-
-const DEFAULT_WIDGET_LAYOUT: ApiWidget['layout'] = { x: 0, y: 0, w: 4, h: 2 };
-
-const WIDGET_PRESENTATION: Record<string, WidgetPresentation> = {
-    'weather:current_weather': {
-        title: 'Weather',
-        defaultLayout: { x: 0, y: 0, w: 3, h: 2 },
-    },
-    'weather:weather-current': {
-        title: 'Weather',
-        defaultLayout: { x: 0, y: 0, w: 3, h: 2 },
-    },
-    'weather:forecast': {
-        title: 'Weather',
-        defaultLayout: { x: 0, y: 0, w: 4, h: 3 },
-    },
-    'weather:weather-forecast': {
-        title: 'Weather',
-        defaultLayout: { x: 0, y: 0, w: 4, h: 3 },
-    },
-    'github:repo_stats': {
-        title: 'GitHub - Repository Stats',
-        defaultLayout: { x: 0, y: 0, w: 3, h: 3 },
-        minW: 3,
-        minH: 3,
-    },
-    'github:latest_commits': {
-        title: 'GitHub - Latest Commits',
-        defaultLayout: { x: 0, y: 0, w: 4, h: 3 },
-        minW: 3,
-        minH: 3,
-    },
-    'github:user_profile': {
-        title: 'GitHub - User Profile',
-        defaultLayout: { x: 0, y: 0, w: 3, h: 3 },
-        minW: 3,
-        minH: 3,
-    },
-    'crypto:crypto_price': {
-        title: 'Crypto Price',
-        defaultLayout: { x: 0, y: 0, w: 3, h: 2 },
-    },
-    'crypto:crypto_chart': {
-        title: 'Crypto Market',
-        defaultLayout: { x: 0, y: 0, w: 6, h: 5 },
-        minW: 3,
-        minH: 4,
-    },
-    'chatbot:ai_chat': {
-        title: 'Ollama',
-        defaultLayout: { x: 0, y: 0, w: 2, h: 3 },
-        minW: 2,
-        minH: 3,
-    },
-};
-
-function widgetKey(serviceName: string, widgetName: string) {
-    return `${serviceName}:${widgetName}`;
+export async function fetchUserWidgets(): Promise<DashboardWidget[]> {
+    const rawWidgets = await fetchClient('/widgets');
+    return rawWidgets.map((w: any) => ({
+        i: String(w.id),
+        x: w.layout.x,
+        y: w.layout.y,
+        w: w.layout.w,
+        h: w.layout.h,
+        service: w.serviceName,
+        type: w.widgetName,
+        params: w.params,
+    }));
 }
 
-export function getDefaultWidgetLayout(serviceName: string, widgetName: string) {
-    const configuredLayout = WIDGET_PRESENTATION[widgetKey(serviceName, widgetName)]?.defaultLayout;
-    return { ...(configuredLayout || DEFAULT_WIDGET_LAYOUT) };
+export async function fetchWidgetData(widgetId: string | number) {
+    return fetchClient(`/widgets/${widgetId}/data`);
 }
 
-export function toDashboardWidget(widget: ApiWidget) {
-    let title =
-        WIDGET_PRESENTATION[widgetKey(widget.serviceName, widget.widgetName)]?.title ||
-        widget.widgetName;
-
-    if (widget.serviceName === 'chatbot' && widget.params?.model) {
-        title = `Ollama - ${widget.params.model}`;
-    }
-
-    return {
-        ...widget,
-        refreshRate: Math.max(widget.refreshRate, MIN_REFRESH_RATE_SECONDS),
-        i: String(widget.id),
-        x: widget.layout.x,
-        y: widget.layout.y,
-        w: widget.layout.w,
-        h: widget.layout.h,
-        minW: WIDGET_PRESENTATION[widgetKey(widget.serviceName, widget.widgetName)]?.minW,
-        minH: WIDGET_PRESENTATION[widgetKey(widget.serviceName, widget.widgetName)]?.minH,
-        title,
-    };
-}
-
-export async function fetchWidgets() {
-    const token = localStorage.getItem('dashboard-auth-token');
-    const response = await fetch(`${API_URL}/widgets`, {
-        headers: {
-            Authorization: `Bearer ${token}`,
-        },
-    });
-
-    if (!response.ok) {
-        throw new Error('Failed to fetch widgets');
-    }
-
-    return response.json();
-}
-
-export async function createWidget(widgetData): Promise<ApiWidget> {
-    const token = localStorage.getItem('dashboard-auth-token');
-    const response = await fetch(`${API_URL}/widgets`, {
+export async function addWidgetConfig(payload: any) {
+    const w = await fetchClient('/widgets', {
         method: 'POST',
-        headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(widgetData),
+        body: JSON.stringify(payload),
     });
-
-    const body = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(body.error || 'Failed to create widget');
-    return body;
+    return {
+        i: String(w.id),
+        x: w.layout.x,
+        y: w.layout.y,
+        w: w.layout.w,
+        h: w.layout.h,
+        service: w.serviceName,
+        type: w.widgetName,
+        params: w.params,
+    } as DashboardWidget;
 }
 
-export async function fetchWidgetData(id: number) {
-    const token = localStorage.getItem('dashboard-auth-token');
-    const response = await fetch(`${API_URL}/widgets/${id}/data`, {
-        headers: { Authorization: `Bearer ${token}` },
-    });
-
-    const body = await response.json();
-    if (!response.ok) throw new Error(body.error || 'Failed to fetch widget data');
-    return body;
-}
-
-export async function updateWidgetLayouts(layouts) {
-    const token = localStorage.getItem('dashboard-auth-token');
-    const response = await fetch(`${API_URL}/widgets/layout`, {
+export async function updateWidgetConfig(widgetId: string | number, updates: any) {
+    return fetchClient(`/widgets/${widgetId}`, {
         method: 'PUT',
-        headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-        },
+        body: JSON.stringify(updates),
+    });
+}
+
+export async function updateWidgetsLayout(layouts: { id: number; layout: any }[]) {
+    return fetchClient('/widgets/layout', {
+        method: 'PUT',
         body: JSON.stringify({ layouts }),
     });
-
-    if (!response.ok) {
-        throw new Error('Failed to update widget layouts');
-    }
 }
 
-export async function updateWidget(id: number, widgetData): Promise<ApiWidget> {
-    const token = localStorage.getItem('dashboard-auth-token');
-    const response = await fetch(`${API_URL}/widgets/${id}`, {
-        method: 'PUT',
-        headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(widgetData),
-    });
-
-    const body = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(body.error || 'Failed to update widget');
-    return body;
-}
-
-export async function deleteWidget(id) {
-    const token = localStorage.getItem('dashboard-auth-token');
-    const response = await fetch(`${API_URL}/widgets/${id}`, {
+export async function removeWidgetConfig(widgetId: string | number) {
+    return fetchClient(`/widgets/${widgetId}`, {
         method: 'DELETE',
-        headers: {
-            Authorization: `Bearer ${token}`,
-        },
     });
+}
 
-    if (!response.ok) {
-        throw new Error('Failed to delete widget');
-    }
+export async function sendWidgetChatMessage(
+    widgetId: string | number,
+    messages: { role: string; content: string }[],
+) {
+    return fetchClient(`/widgets/${widgetId}/chat`, {
+        method: 'POST',
+        body: JSON.stringify({ messages }),
+    });
 }

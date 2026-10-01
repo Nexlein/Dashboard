@@ -1,67 +1,31 @@
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-    connectService,
-    disconnectService,
-    fetchServices,
-    type ServiceConnection,
-} from '@/lib/services';
+import { useServices, useConnectService, useDisconnectService } from '@/hooks/useServices';
+import type { ServiceConnection } from '@/lib/services';
 import { ServiceCard } from '@/features/services/ServiceCard';
 
 export default function ServicesPage() {
-    const queryClient = useQueryClient();
     const [error, setError] = useState<string | null>(null);
 
-    const {
-        data: services = [],
-        isLoading: loading,
-        isError,
-        error: queryError,
-    } = useQuery({
-        queryKey: ['services'],
-        queryFn: fetchServices,
-    });
-
-    const connectMutation = useMutation({
-        mutationFn: ({ serviceName, apiKey }: { serviceName: string; apiKey: string }) =>
-            connectService(serviceName, apiKey),
-        onSuccess: (updatedService) => {
-            setError(null);
-            queryClient.setQueryData(
-                ['services'],
-                (old: ServiceConnection[] | undefined) =>
-                    old?.map((item) =>
-                        item.name === updatedService.name ? updatedService : item,
-                    ) || [],
-            );
-        },
-        onError: (err: Error) => setError(err.message),
-    });
-
-    const disconnectMutation = useMutation({
-        mutationFn: (serviceName: string) => disconnectService(serviceName).then(() => serviceName),
-        onSuccess: (serviceName) => {
-            setError(null);
-            queryClient.setQueryData(
-                ['services'],
-                (old: ServiceConnection[] | undefined) =>
-                    old?.map((item) =>
-                        item.name === serviceName
-                            ? { ...item, connected: false, keyHint: null, verifiedAt: null }
-                            : item,
-                    ) || [],
-            );
-        },
-        onError: (err: Error) => setError(err.message),
-    });
+    const { data: services = [], isLoading: loading, isError, error: queryError } = useServices();
+    const connectMutation = useConnectService();
+    const disconnectMutation = useDisconnectService();
 
     async function handleConnect(serviceName: string, apiKey: string) {
-        return connectMutation.mutateAsync({ serviceName, apiKey });
+        return connectMutation.mutateAsync(
+            { serviceName, apiKey },
+            {
+                onSuccess: () => setError(null),
+                onError: (err: Error) => setError(err.message),
+            },
+        );
     }
 
     async function handleDisconnect(serviceName: string) {
-        return disconnectMutation.mutateAsync(serviceName);
+        return disconnectMutation.mutateAsync(serviceName, {
+            onSuccess: () => setError(null),
+            onError: (err: Error) => setError(err.message),
+        });
     }
 
     const configurableServices = services.filter(
