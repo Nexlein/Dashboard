@@ -1,6 +1,6 @@
 import { Droplets, Wind } from 'lucide-react';
 
-export function WeatherIcon({ code, description }) {
+function WeatherIcon({ code, description }) {
     if (!code) return null;
     return (
         <img

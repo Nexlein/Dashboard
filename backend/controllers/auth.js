@@ -1,3 +1,4 @@
+const { z } = require('zod');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { PrismaClient } = require('@prisma/client');
@@ -11,6 +12,10 @@ const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET;
 const GITHUB_LINK_TTL = 10 * 60 * 1000;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+if (!JWT_SECRET) {
+    throw new Error('JWT_SECRET environment variable is required');
+}
 
 function normalizeEmail(value) {
     return typeof value === 'string' ? value.trim().toLowerCase() : '';
@@ -34,134 +39,105 @@ function githubLoginCookieOptions(req) {
     };
 }
 
-exports.register = async (req, res, next) => {
+const registerSchema = z.object({
+    email: z.string().trim().email('Invalid email address').max(254),
+    password: z.string().min(8, 'Password must be between 8 and 72 characters').max(72),
+    displayName: z
+        .string()
+        .max(50, 'Display name must be 50 characters or fewer')
+        .optional()
+        .transform((v) => (v || '').trim()),
+    cguAccepted: z.literal(true, {
+        errorMap: () => ({ message: 'You must accept the CGU to register.' }),
+    }),
+    is16OrOlder: z.literal(true, {
+        errorMap: () => ({ message: 'You must confirm you are 16 or older to register.' }),
+    }),
+});
+
+exports.register = async (req, res) => {
     try {
-        const { email, password, cguAccepted, is16OrOlder, displayName } = req.body;
+        const validated = registerSchema.safeParse(req.body);
+        if (!validated.success)
+            return res.status(400).json({ error: validated.error.issues[0].message });
+        const { email, password, displayName } = validated.data;
         const normalizedEmail = normalizeEmail(email);
-        const normalizedDisplayName = typeof displayName === 'string' ? displayName.trim() : '';
-
-        if (!normalizedEmail || typeof password !== 'string') {
-            return res.status(400).json({ error: 'Email and password required' });
-        }
-
-        if (normalizedEmail.length > 254 || !EMAIL_PATTERN.test(normalizedEmail)) {
-            return res.status(400).json({ error: 'Invalid email address' });
-        }
-
-        if (password.length < 8 || password.length > 72) {
-            return res.status(400).json({
-                error: 'Password must be between 8 and 72 characters',
-            });
-        }
-
-        if (normalizedDisplayName.length > 50) {
-            return res.status(400).json({ error: 'Display name must be 50 characters or fewer' });
-        }
-
-        if (cguAccepted !== true) {
-            return res.status(400).json({ error: 'You must accept the CGU to register.' });
-        }
-
-        if (is16OrOlder !== true) {
-            return res
-                .status(400)
-                .json({ error: 'You must confirm you are 16 or older to register.' });
-        }
 
         const existingUser = await prisma.user.findUnique({ where: { email: normalizedEmail } });
-        if (existingUser) {
-            return res.status(409).json({ error: 'Email already in use' });
-        }
+        if (existingUser) return res.status(409).json({ error: 'Email already in use' });
 
         const hashedPassword = await bcrypt.hash(password, 10);
-
         const user = await prisma.user.create({
             data: {
                 email: normalizedEmail,
-                displayName: normalizedDisplayName || null,
+                displayName: displayName || null,
                 password: hashedPassword,
                 cguAcceptedAt: new Date(),
             },
         });
-
         res.status(201).json({ message: 'User registered successfully', userId: user.id });
     } catch (error) {
-        next(error);
+        res.status(500).json({ error: 'Internal server error' });
     }
 };
 
-exports.login = async (req, res, next) => {
+const loginSchema = z.object({
+    email: z.string().trim().email('Invalid email address').max(254),
+    password: z.string().min(1, 'Email and password required'),
+});
+
+exports.login = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const validated = loginSchema.safeParse(req.body);
+        if (!validated.success)
+            return res.status(400).json({ error: validated.error.issues[0].message });
+        const { email, password } = validated.data;
         const normalizedEmail = normalizeEmail(email);
 
-        if (!normalizedEmail || typeof password !== 'string' || !password) {
-            return res.status(400).json({ error: 'Email and password required' });
-        }
-
-        if (normalizedEmail.length > 254 || !EMAIL_PATTERN.test(normalizedEmail)) {
-            return res.status(400).json({ error: 'Invalid email address' });
-        }
-
         const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
-        if (!user || !user.password) {
-            return res.status(401).json({ error: 'Invalid credentials' });
-        }
+        if (!user || !user.password) return res.status(401).json({ error: 'Invalid credentials' });
 
         const valid = await bcrypt.compare(password, user.password);
-        if (!valid) {
-            return res.status(401).json({ error: 'Invalid credentials' });
-        }
+        if (!valid) return res.status(401).json({ error: 'Invalid credentials' });
 
         const token = jwt.sign({ userId: user.id, isAdmin: user.isAdmin }, JWT_SECRET, {
             expiresIn: '24h',
         });
-
         res.json({ message: 'Login successful', token });
     } catch (error) {
-        next(error);
+        res.status(500).json({ error: 'Internal server error' });
     }
 };
 
-exports.getMe = async (req, res, next) => {
+exports.getMe = async (req, res) => {
     try {
         const user = await prisma.user.findUnique({
             where: { id: req.user.userId },
-            select: {
-                id: true,
-                email: true,
-                displayName: true,
-            },
+            select: { id: true, email: true, displayName: true },
         });
-
-        if (!user) {
-            return res.status(404).json({ error: 'User not found' });
-        }
-
+        if (!user) return res.status(404).json({ error: 'User not found' });
         res.json(user);
-    } catch (error) {
-        next(error);
+    } catch {
+        res.status(500).json({ error: 'Internal server error' });
     }
 };
 
-exports.updateMe = async (req, res, next) => {
+const updateMeSchema = z.object({
+    email: z.string().trim().email('Invalid email address').max(254).optional(),
+    displayName: z
+        .string()
+        .max(50, 'Display name must be 50 characters or fewer')
+        .optional()
+        .transform((v) => (typeof v === 'string' ? v.trim() : v)),
+});
+
+exports.updateMe = async (req, res) => {
     try {
-        const { displayName, email } = req.body;
+        const validated = updateMeSchema.safeParse(req.body);
+        if (!validated.success)
+            return res.status(400).json({ error: validated.error.issues[0].message });
+        const { displayName, email } = validated.data;
         const normalizedEmail = email === undefined ? undefined : normalizeEmail(email);
-        if (
-            email !== undefined &&
-            (!normalizedEmail ||
-                normalizedEmail.length > 254 ||
-                !EMAIL_PATTERN.test(normalizedEmail))
-        ) {
-            return res.status(400).json({ error: 'Invalid email address' });
-        }
-        if (
-            displayName !== undefined &&
-            (typeof displayName !== 'string' || displayName.trim().length > 50)
-        ) {
-            return res.status(400).json({ error: 'Display name must be 50 characters or fewer' });
-        }
         const currentUser = await prisma.user.findUnique({
             where: { id: req.user.userId },
             select: { email: true, password: true, githubId: true },
@@ -199,11 +175,219 @@ exports.updateMe = async (req, res, next) => {
         });
         res.json(user);
     } catch (error) {
-        next(error);
+        if (error.code === 'P2002') return res.status(409).json({ error: 'Email already in use' });
+        res.status(500).json({ error: 'Internal server error' });
     }
 };
 
-exports.downloadData = async (req, res, next) => {
+exports.githubLink = async (req, res) => {
+    if (
+        !process.env.GITHUB_CLIENT_ID ||
+        !process.env.GITHUB_CLIENT_SECRET ||
+        !process.env.GITHUB_CALLBACK_URL
+    ) {
+        return res.status(503).json({ error: 'GitHub linking is not configured' });
+    }
+    const userId = req.user.userId;
+    const state = crypto.randomBytes(32).toString('hex');
+    const browserSecret = crypto.randomBytes(32).toString('hex');
+    await setCache(
+        `github_link:${state}`,
+        {
+            userId,
+            browserSecretHash: crypto.createHash('sha256').update(browserSecret).digest('hex'),
+            expiresAt: Date.now() + GITHUB_LINK_TTL,
+        },
+        GITHUB_LINK_TTL,
+    );
+    res.cookie(`github_link_${state}`, browserSecret, {
+        ...githubCookieOptions(req),
+        maxAge: GITHUB_LINK_TTL,
+    });
+    const params = new URLSearchParams({
+        client_id: process.env.GITHUB_CLIENT_ID,
+        redirect_uri: process.env.GITHUB_CALLBACK_URL,
+        scope: 'user:email read:user repo',
+        state,
+    });
+    const authorizationUrl = `https://github.com/login/oauth/authorize?${params.toString()}`;
+    if (req.query.format === 'json') return res.json({ authorizationUrl });
+    res.redirect(authorizationUrl);
+};
+
+exports.githubLogin = async (req, res) => {
+    if (
+        !process.env.GITHUB_CLIENT_ID ||
+        !process.env.GITHUB_CLIENT_SECRET ||
+        !process.env.GITHUB_CALLBACK_URL
+    ) {
+        return res.status(503).json({ error: 'GitHub login is not configured' });
+    }
+    const state = crypto.randomBytes(32).toString('hex');
+    const browserSecret = crypto.randomBytes(32).toString('hex');
+    await setCache(
+        `github_login:${state}`,
+        {
+            registrationAccepted:
+                req.query.cguAccepted === 'true' && req.query.is16OrOlder === 'true',
+            browserSecretHash: crypto.createHash('sha256').update(browserSecret).digest('hex'),
+            expiresAt: Date.now() + GITHUB_LINK_TTL,
+        },
+        GITHUB_LINK_TTL,
+    );
+    res.cookie(`github_login_${state}`, browserSecret, {
+        ...githubLoginCookieOptions(req),
+        maxAge: GITHUB_LINK_TTL,
+    });
+    const params = new URLSearchParams({
+        client_id: process.env.GITHUB_CLIENT_ID,
+        redirect_uri: process.env.GITHUB_CALLBACK_URL,
+        scope: 'user:email read:user repo',
+        state,
+    });
+    const authorizationUrl = `https://github.com/login/oauth/authorize?${params.toString()}`;
+    if (req.query.format === 'json') return res.json({ authorizationUrl });
+    res.redirect(authorizationUrl);
+};
+
+exports.githubCallback = async (req, res) => {
+    const { code, state } = req.query;
+    if (typeof state !== 'string' || !/^[a-f0-9]{64}$/.test(state))
+        return res.status(400).json({ error: 'Missing or invalid state' });
+    let isLogin = true;
+    let pendingLink = await getCache(`github_login:${state}`);
+    if (!pendingLink) {
+        isLogin = false;
+        pendingLink = await getCache(`github_link:${state}`);
+    }
+    if (!pendingLink) return res.status(400).json({ error: 'Unknown or already used state' });
+    const cookieName = isLogin ? `github_login_${state}` : `github_link_${state}`;
+    const cookieOptions = isLogin ? githubLoginCookieOptions(req) : githubCookieOptions(req);
+    if (pendingLink.expiresAt <= Date.now()) {
+        await deleteCache(isLogin ? `github_login:${state}` : `github_link:${state}`);
+        res.clearCookie(cookieName, cookieOptions);
+        return res.status(400).json({ error: 'Expired state' });
+    }
+    const browserSecret = req.cookies[cookieName];
+    if (
+        typeof browserSecret !== 'string' ||
+        !/^[a-f0-9]{64}$/.test(browserSecret) ||
+        !crypto.timingSafeEqual(
+            crypto.createHash('sha256').update(browserSecret).digest(),
+            Buffer.from(pendingLink.browserSecretHash, 'hex'),
+        )
+    ) {
+        return res
+            .status(403)
+            .json({ error: 'GitHub flow must finish in the browser that started it' });
+    }
+    await deleteCache(isLogin ? `github_login:${state}` : `github_link:${state}`);
+    res.clearCookie(cookieName, cookieOptions);
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    if (req.query.error) return res.redirect(`${frontendUrl}/services?error=github_auth_failed`);
+    if (typeof code !== 'string' || !code)
+        return res.redirect(`${frontendUrl}/services?error=github_missing_code`);
+
+    try {
+        const response = await fetch('https://github.com/login/oauth/access_token', {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                client_id: process.env.GITHUB_CLIENT_ID,
+                client_secret: process.env.GITHUB_CLIENT_SECRET,
+                code,
+                redirect_uri: process.env.GITHUB_CALLBACK_URL,
+            }),
+            signal: AbortSignal.timeout(10000),
+        });
+        const data = await response.json();
+        if (
+            !response.ok ||
+            data.error ||
+            typeof data.access_token !== 'string' ||
+            !data.access_token
+        )
+            throw new Error('Could not obtain GitHub token');
+        const accessToken = data.access_token;
+        const tokenData = {
+            accessToken: encrypt(data.access_token),
+            refreshToken: data.refresh_token ? encrypt(data.refresh_token) : null,
+            expiresAt: data.expires_in ? new Date(Date.now() + data.expires_in * 1000) : null,
+        };
+        let userId = pendingLink.userId;
+        let newUserData;
+        const userData = await getGitHubProfile(accessToken);
+        const githubId = String(userData.id);
+        if (isLogin) {
+            let user = await prisma.user.findUnique({ where: { githubId } });
+            if (!user) {
+                const normalizedEmail = normalizeEmail(await getVerifiedGitHubEmail(accessToken));
+                if (
+                    !normalizedEmail ||
+                    normalizedEmail.length > 254 ||
+                    !EMAIL_PATTERN.test(normalizedEmail)
+                ) {
+                    return res
+                        .status(400)
+                        .json({ error: 'GitHub account must have a verified email address' });
+                }
+                user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+                if (user?.githubId && user.githubId !== githubId)
+                    return res
+                        .status(409)
+                        .json({ error: 'This email belongs to a different GitHub identity.' });
+                if (!user) {
+                    if (!pendingLink.registrationAccepted)
+                        return res.redirect(
+                            `${frontendUrl}/register?error=github_registration_requirements`,
+                        );
+                    newUserData = {
+                        email: normalizedEmail,
+                        githubId,
+                        displayName: userData.name || userData.login || null,
+                        password: null,
+                        cguAcceptedAt: new Date(),
+                    };
+                }
+            }
+            userId = user?.id;
+        }
+
+        userId = await prisma.$transaction(async (tx) => {
+            let accountId = userId;
+            if (newUserData) {
+                const user = await tx.user.create({ data: newUserData });
+                accountId = user.id;
+            } else {
+                await tx.user.update({ where: { id: accountId }, data: { githubId } });
+            }
+            await tx.oAuthToken.upsert({
+                where: { userId_provider: { userId: accountId, provider: 'github' } },
+                create: { userId: accountId, provider: 'github', ...tokenData },
+                update: tokenData,
+            });
+            return accountId;
+        });
+
+        if (isLogin) {
+            const user = await prisma.user.findUnique({ where: { id: userId } });
+            const token = jwt.sign({ userId: user.id, isAdmin: user.isAdmin }, JWT_SECRET, {
+                expiresIn: '24h',
+            });
+            res.redirect(`${frontendUrl}/login/oauth?token=${token}`);
+        } else {
+            res.redirect(`${frontendUrl}/services?linked=github`);
+        }
+    } catch {
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        res.redirect(`${frontendUrl}/services?error=github_flow_failed`);
+    }
+};
+
+exports.downloadData = async (req, res) => {
     try {
         const user = await prisma.user.findUnique({
             where: { id: req.user.userId },
@@ -231,9 +415,7 @@ exports.downloadData = async (req, res, next) => {
                 tokens: { select: { id: true, provider: true, expiresAt: true } },
             },
         });
-        if (!user) {
-            return res.status(404).json({ error: 'User not found' });
-        }
+        if (!user) return res.status(404).json({ error: 'User not found' });
         res.set('Cache-Control', 'no-store');
         res.json({
             ...user,
@@ -243,17 +425,16 @@ exports.downloadData = async (req, res, next) => {
             })),
         });
     } catch (error) {
-        next(error);
+        res.status(500).json({ error: 'Internal server error' });
     }
 };
 
-exports.deleteAccount = async (req, res, next) => {
+exports.deleteAccount = async (req, res) => {
     try {
-        await prisma.user.delete({
-            where: { id: req.user.userId },
-        });
+        await prisma.user.delete({ where: { id: req.user.userId } });
         res.json({ message: 'Account deleted successfully' });
     } catch (error) {
-        next(error);
+        if (error.code === 'P2025') return res.status(404).json({ error: 'User not found' });
+        res.status(500).json({ error: 'Internal server error' });
     }
 };
