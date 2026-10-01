@@ -38,11 +38,11 @@ test.describe('Dashboard Widgets', () => {
 
         // Select Service (e.g. Chatbot, doesn't require connection)
         await page.click('button[role="combobox"]');
-        await page.click('text=Ollama AI');
+        await page.click('text=Ollama');
 
         // Select Widget Type
         await page.click('button[id="widgetType"]');
-        await page.click('text=AI Chatbot');
+        await page.click('text=Ollama Chat');
 
         // Add
         await page.click('button:has-text("Add to Dashboard")');
