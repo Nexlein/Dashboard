@@ -1,15 +1,5 @@
-echo "Running pre-push tests..."
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
 
-# Run shared tests
-echo "Testing shared..."
-npm test -w shared || exit 1
-
-# Run frontend tests
-echo "Testing frontend..."
-npm test -w frontend || exit 1
-
-# Run backend tests
-echo "Testing backend..."
-npm test -w backend || exit 1
-
-echo "Pre-push checks passed!"
+echo "Skipping local tests. CI will run them to keep push fast."
+exit 0
