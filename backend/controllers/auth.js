@@ -7,15 +7,12 @@ const { getCache, setCache, deleteCache } = require('../utils/redisCache');
 const { encrypt, decrypt } = require('../utils/crypto');
 const { getGitHubProfile, getVerifiedGitHubEmail } = require('../services/githubIdentity');
 const { decryptParamsStrict } = require('../utils/encryption');
+const { registerSchema, loginSchema, updateMeSchema } = require('shared');
 
 const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET;
 const GITHUB_LINK_TTL = 10 * 60 * 1000;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-if (!JWT_SECRET) {
-    throw new Error('JWT_SECRET environment variable is required');
-}
 
 function normalizeEmail(value) {
     return typeof value === 'string' ? value.trim().toLowerCase() : '';
@@ -38,22 +35,6 @@ function githubLoginCookieOptions(req) {
         path: '/auth/github/callback',
     };
 }
-
-const registerSchema = z.object({
-    email: z.string().trim().email('Invalid email address').max(254),
-    password: z.string().min(8, 'Password must be between 8 and 72 characters').max(72),
-    displayName: z
-        .string()
-        .max(50, 'Display name must be 50 characters or fewer')
-        .optional()
-        .transform((v) => (v || '').trim()),
-    cguAccepted: z.literal(true, {
-        errorMap: () => ({ message: 'You must accept the CGU to register.' }),
-    }),
-    is16OrOlder: z.literal(true, {
-        errorMap: () => ({ message: 'You must confirm you are 16 or older to register.' }),
-    }),
-});
 
 exports.register = async (req, res) => {
     try {
@@ -80,11 +61,6 @@ exports.register = async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 };
-
-const loginSchema = z.object({
-    email: z.string().trim().email('Invalid email address').max(254),
-    password: z.string().min(1, 'Email and password required'),
-});
 
 exports.login = async (req, res) => {
     try {
@@ -121,15 +97,6 @@ exports.getMe = async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 };
-
-const updateMeSchema = z.object({
-    email: z.string().trim().email('Invalid email address').max(254).optional(),
-    displayName: z
-        .string()
-        .max(50, 'Display name must be 50 characters or fewer')
-        .optional()
-        .transform((v) => (typeof v === 'string' ? v.trim() : v)),
-});
 
 exports.updateMe = async (req, res) => {
     try {

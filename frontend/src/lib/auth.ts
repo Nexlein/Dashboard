@@ -1,27 +1,19 @@
 import { fetchClient, API_URL } from './apiClient';
+import type { RegisterFormData, LoginFormData, AuthUser } from 'shared';
 
 export { API_URL };
 const AUTH_TOKEN_KEY = 'dashboard-auth-token';
 
-type RegisterPayload = {
-    displayName?: string;
-    email: string;
-    password: string;
-    cguAccepted: boolean;
-    is16OrOlder: boolean;
-};
-type LoginPayload = { email: string; password: string };
 type AuthResponse = { message: string; token?: string; userId?: number };
-export type AuthUser = { id: number; email: string; displayName: string | null };
 
-export async function register(payload: RegisterPayload) {
+export async function register(payload: RegisterFormData) {
     return fetchClient('/auth/register', {
         method: 'POST',
         body: JSON.stringify(payload),
     }) as Promise<AuthResponse>;
 }
 
-export async function login(payload: LoginPayload) {
+export async function login(payload: LoginFormData) {
     const response = (await fetchClient('/auth/login', {
         method: 'POST',
         body: JSON.stringify(payload),
