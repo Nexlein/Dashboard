@@ -113,7 +113,7 @@ jobs:
             - run: npm ci
             - run: npm run build -w shared
             - run: cp backend/.env.example backend/.env
-            - run: npx prisma db push -w backend
+            - run: cd backend && npx prisma db push
               env:
                   DATABASE_URL: postgresql://postgres:postgres@localhost:5432/dashboard_e2e_test
             - run: cd e2e && npx playwright install --with-deps
