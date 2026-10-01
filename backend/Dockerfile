@@ -31,7 +31,7 @@ COPY --from=builder /app/shared /app/shared
 RUN npm install --omit=dev
 # Copy backend built files
 COPY --from=builder /app/backend/prisma ./prisma
-COPY --from=builder /app/backend/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/.prisma /app/node_modules/.prisma
 COPY backend .
 EXPOSE 8080
 CMD ["npm", "start"]
