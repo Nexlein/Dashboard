@@ -90,6 +90,20 @@ jobs:
 
     test-e2e:
         runs-on: ubuntu-latest
+        services:
+            postgres:
+                image: postgres:15
+                env:
+                    POSTGRES_USER: postgres
+                    POSTGRES_PASSWORD: postgres
+                    POSTGRES_DB: dashboard_e2e_test
+                ports:
+                    - 5432:5432
+                options: >-
+                    --health-cmd "pg_isready -U postgres -d dashboard_e2e_test"
+                    --health-interval 5s
+                    --health-timeout 5s
+                    --health-retries 10
         steps:
             - uses: actions/checkout@v4
             - uses: actions/setup-node@v4
@@ -98,8 +112,14 @@ jobs:
                   cache: 'npm'
             - run: npm ci
             - run: npm run build -w shared
+            - run: cp backend/.env.example backend/.env
+            - run: npx prisma db push -w backend
+              env:
+                  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/dashboard_e2e_test
             - run: cd e2e && npx playwright install --with-deps
             - run: cd e2e && npx playwright test
+              env:
+                  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/dashboard_e2e_test
             - uses: actions/upload-artifact@v4
               if: failure()
               with:

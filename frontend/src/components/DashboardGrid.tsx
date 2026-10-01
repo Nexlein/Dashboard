@@ -75,6 +75,7 @@ export default function DashboardGrid() {
                                         render={
                                             <Button
                                                 type="button"
+                                                aria-label="Configure widget"
                                                 variant="ghost"
                                                 size="icon-sm"
                                                 className="cursor-pointer text-muted-foreground"

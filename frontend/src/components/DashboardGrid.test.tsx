@@ -22,6 +22,11 @@ vi.mock('./WidgetRenderer', () => ({
     ),
 }));
 
+vi.mock('react-grid-layout/legacy', () => ({
+    Responsive: ({ children }: any) => <div>{children}</div>,
+    WidthProvider: (Component: any) => Component,
+}));
+
 describe('DashboardGrid Component', () => {
     beforeEach(() => {
         vi.clearAllMocks();
@@ -53,7 +58,7 @@ describe('DashboardGrid Component', () => {
     });
 
     it('calls remove mutation after confirmation', async () => {
-        vi.spyOn(window, 'confirm').mockReturnValue(true);
+        window.confirm = vi.fn().mockReturnValue(true);
         render(<DashboardGrid />);
 
         const settingsButtons = screen.getAllByRole('button', { name: /Configure/i });
