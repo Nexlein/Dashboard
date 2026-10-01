@@ -23,9 +23,9 @@ test.describe('Dashboard Widgets', () => {
         const { token } = await loginRes.json();
 
         // Inject token
-        await page.goto('http://localhost:8081/');
+        await page.goto('/');
         await page.evaluate((t) => localStorage.setItem('dashboard-auth-token', t), token);
-        await page.goto('http://localhost:8081/');
+        await page.goto('/');
     });
 
     test('can open widget configurator and add a widget', async ({ page }) => {
