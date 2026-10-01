@@ -142,11 +142,9 @@ exports.getWidgetData = asyncHandler(async (req, res) => {
             },
         });
         if (!connection)
-            return res
-                .status(403)
-                .json({
-                    error: `${service.displayName || widget.serviceName} connection required`,
-                });
+            return res.status(403).json({
+                error: `${service.displayName || widget.serviceName} connection required`,
+            });
     }
 
     const params = decryptParams(widget.params);
