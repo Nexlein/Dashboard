@@ -2,9 +2,13 @@ name: CI Pipeline
 
 on:
     push:
-        branches: [main, master, 'ref/*']
+        branches: [main, master]
     pull_request:
         branches: [main, master]
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
 
 jobs:
     lint:
@@ -55,6 +59,8 @@ jobs:
                   cache: 'npm'
             - run: cp backend/.env.example backend/.env
             - run: npm ci
+            - run: npm run build -w shared
+            - run: cd backend && npx prisma generate
             - name: Run backend tests
               env:
                   DATABASE_URL: postgresql://postgres:postgres@localhost:5432/dashboard_gdpr_test
@@ -79,6 +85,7 @@ jobs:
                   node-version: 20
                   cache: 'npm'
             - run: npm ci
+            - run: npm run build -w shared
             - run: cd frontend && npm run test -- --coverage
 
     test-e2e:
@@ -90,6 +97,7 @@ jobs:
                   node-version: 20
                   cache: 'npm'
             - run: npm ci
+            - run: npm run build -w shared
             - run: cd e2e && npx playwright install --with-deps
             - run: cd e2e && npx playwright test
             - uses: actions/upload-artifact@v4

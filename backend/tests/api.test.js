@@ -309,6 +309,7 @@ describe('API Endpoints', () => {
                     layout: { x: 0, y: 0, w: 2, h: 2 },
                 });
 
+            console.log(res.body);
             expect(res.statusCode).toBe(201);
             expect(res.body).toEqual(mockWidget);
             expect(prisma.widgetConfig.create).toHaveBeenCalledWith({

@@ -54,11 +54,11 @@ exports.addWidget = asyncHandler(async (req, res) => {
         return res.status(400).json({ error: validated.error.issues[0].message });
     const { serviceName, widgetName, params, refreshRate, layout } = validated.data;
 
-    const service = registry[serviceName];
+    const service = registry.getService(serviceName);
     if (!service) return res.status(400).json({ error: `Unknown service: ${serviceName}` });
 
     const widgetDef = service.widgets.find(
-        (w) => w.id === widgetName || w.aliases?.includes(widgetName),
+        (w) => w.id === widgetName || w.name === widgetName || w.aliases?.includes(widgetName),
     );
     if (!widgetDef)
         return res
@@ -72,8 +72,8 @@ exports.addWidget = asyncHandler(async (req, res) => {
         });
         if (!connection)
             return res
-                .status(403)
-                .json({ error: `${service.displayName || serviceName} connection required` });
+                .status(409)
+                .json({ error: `${service.displayName || serviceName} is not connected` });
     }
 
     if (typeof service.execute === 'function') {
@@ -82,6 +82,7 @@ exports.addWidget = asyncHandler(async (req, res) => {
                 userId: req.user.userId,
                 refreshRate: Math.max(refreshRate, MIN_REFRESH_RATE_SECONDS),
                 credentials: connection ? decryptJson(connection.encryptedCredentials) : null,
+                ...(connection && { cacheScope: `${req.user.userId}:${connection.id}` }),
             });
         } catch (execError) {
             return res.status(400).json({ error: execError.message || 'Widget validation failed' });
@@ -131,7 +132,7 @@ exports.getWidgetData = asyncHandler(async (req, res) => {
     if (widget.userId !== req.user.userId)
         return res.status(403).json({ error: 'Unauthorized to view this widget' });
 
-    const service = registry[widget.serviceName];
+    const service = registry.getService(widget.serviceName);
     if (!service) return res.status(404).json({ error: 'Service not found' });
 
     let connection = null;
@@ -142,9 +143,9 @@ exports.getWidgetData = asyncHandler(async (req, res) => {
             },
         });
         if (!connection)
-            return res.status(403).json({
-                error: `${service.displayName || widget.serviceName} connection required`,
-            });
+            return res
+                .status(409)
+                .json({ error: `${service.displayName || widget.serviceName} is not connected` });
     }
 
     const params = decryptParams(widget.params);
@@ -154,6 +155,7 @@ exports.getWidgetData = asyncHandler(async (req, res) => {
             userId: req.user.userId,
             refreshRate: Math.max(widget.refreshRate, MIN_REFRESH_RATE_SECONDS),
             credentials: connection ? decryptJson(connection.encryptedCredentials) : null,
+            ...(connection && { cacheScope: `${req.user.userId}:${connection.id}` }),
         });
     } catch (execError) {
         return res.status(502).json({ error: execError.message || 'Failed to fetch widget data' });
@@ -208,7 +210,7 @@ exports.chatWidget = asyncHandler(async (req, res) => {
     if (widget.serviceName !== 'chatbot')
         return res.status(400).json({ error: 'Widget does not support chat' });
 
-    const service = registry['chatbot'];
+    const service = registry.getService('chatbot');
     const params = decryptParams(widget.params);
 
     let data;

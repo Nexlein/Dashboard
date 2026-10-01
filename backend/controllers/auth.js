@@ -122,15 +122,21 @@ exports.updateMe = asyncHandler(async (req, res) => {
         }
     }
 
-    const user = await prisma.user.update({
-        where: { id: req.user.userId },
-        data: {
-            ...(displayName === undefined ? {} : { displayName: displayName.trim() || null }),
-            ...(normalizedEmail === undefined ? {} : { email: normalizedEmail }),
-            ...(githubId && githubId !== currentUser.githubId ? { githubId } : {}),
-        },
-        select: { id: true, email: true, displayName: true },
-    });
+    let user;
+    try {
+        user = await prisma.user.update({
+            where: { id: req.user.userId },
+            data: {
+                ...(displayName === undefined ? {} : { displayName: displayName.trim() || null }),
+                ...(normalizedEmail === undefined ? {} : { email: normalizedEmail }),
+                ...(githubId && githubId !== currentUser.githubId ? { githubId } : {}),
+            },
+            select: { id: true, email: true, displayName: true },
+        });
+    } catch (err) {
+        if (err.code === 'P2002') return res.status(409).json({ error: 'Email already taken' });
+        throw err;
+    }
     res.json(user);
 });
 
@@ -242,23 +248,35 @@ exports.githubCallback = asyncHandler(async (req, res) => {
     if (typeof code !== 'string' || !code)
         return res.redirect(`${frontendUrl}/services?error=github_missing_code`);
 
-    const response = await fetch('https://github.com/login/oauth/access_token', {
-        method: 'POST',
-        headers: {
-            Accept: 'application/json',
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-            client_id: process.env.GITHUB_CLIENT_ID,
-            client_secret: process.env.GITHUB_CLIENT_SECRET,
-            code,
-            redirect_uri: process.env.GITHUB_CALLBACK_URL,
-        }),
-        signal: AbortSignal.timeout(10000),
-    });
-    const data = await response.json();
-    if (!response.ok || data.error || typeof data.access_token !== 'string' || !data.access_token)
-        throw new Error('Could not obtain GitHub token');
+    let data;
+    try {
+        const response = await fetch('https://github.com/login/oauth/access_token', {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                client_id: process.env.GITHUB_CLIENT_ID,
+                client_secret: process.env.GITHUB_CLIENT_SECRET,
+                code,
+                redirect_uri: process.env.GITHUB_CALLBACK_URL,
+            }),
+            signal: AbortSignal.timeout(10000),
+        });
+        data = await response.json();
+        if (
+            !response.ok ||
+            data.error ||
+            typeof data.access_token !== 'string' ||
+            !data.access_token
+        )
+            throw new Error('Could not obtain GitHub token');
+    } catch (err) {
+        return res.redirect(
+            `${frontendUrl}/${isLogin ? 'login' : 'services'}?error=github_flow_failed`,
+        );
+    }
     const accessToken = data.access_token;
     const tokenData = {
         accessToken: encrypt(data.access_token),
@@ -304,21 +322,27 @@ exports.githubCallback = asyncHandler(async (req, res) => {
         userId = user?.id;
     }
 
-    userId = await prisma.$transaction(async (tx) => {
-        let accountId = userId;
-        if (newUserData) {
-            const user = await tx.user.create({ data: newUserData });
-            accountId = user.id;
-        } else {
-            await tx.user.update({ where: { id: accountId }, data: { githubId } });
-        }
-        await tx.oAuthToken.upsert({
-            where: { userId_provider: { userId: accountId, provider: 'github' } },
-            create: { userId: accountId, provider: 'github', ...tokenData },
-            update: tokenData,
+    try {
+        userId = await prisma.$transaction(async (tx) => {
+            let accountId = userId;
+            if (newUserData) {
+                const user = await tx.user.create({ data: newUserData });
+                accountId = user.id;
+            } else {
+                await tx.user.update({ where: { id: accountId }, data: { githubId } });
+            }
+            await tx.oAuthToken.upsert({
+                where: { userId_provider: { userId: accountId, provider: 'github' } },
+                create: { userId: accountId, provider: 'github', ...tokenData },
+                update: tokenData,
+            });
+            return accountId;
         });
-        return accountId;
-    });
+    } catch (err) {
+        return res.redirect(
+            `${frontendUrl}/${isLogin ? 'login' : 'services'}?error=github_flow_failed`,
+        );
+    }
 
     if (isLogin) {
         const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -360,16 +384,26 @@ exports.downloadData = asyncHandler(async (req, res) => {
     });
     if (!user) return res.status(404).json({ error: 'User not found' });
     res.set('Cache-Control', 'no-store');
-    res.json({
-        ...user,
-        widgets: user.widgets.map((widget) => ({
-            ...widget,
-            params: decryptParamsStrict(widget.params),
-        })),
-    });
+    try {
+        const responsePayload = {
+            ...user,
+            widgets: user.widgets.map((widget) => ({
+                ...widget,
+                params: decryptParamsStrict(widget.params),
+            })),
+        };
+        res.json(responsePayload);
+    } catch (err) {
+        return res.status(500).json({ error: 'Internal server error' });
+    }
 });
 
 exports.deleteAccount = asyncHandler(async (req, res) => {
-    await prisma.user.delete({ where: { id: req.user.userId } });
-    res.json({ message: 'Account deleted successfully' });
+    try {
+        await prisma.user.delete({ where: { id: req.user.userId } });
+        res.json({ message: 'Account deleted successfully' });
+    } catch (err) {
+        if (err.code === 'P2025') return res.status(404).json({ error: 'Resource not found' });
+        throw err;
+    }
 });

@@ -230,7 +230,10 @@ describe('Profile and data rights', () => {
             .delete('/auth/delete-account')
             .set('Authorization', authorization)
             .expect(500);
-        prisma.user.delete.mockRejectedValue({ code: 'P2025' });
+        prisma.user.delete.mockRejectedValue({
+            name: 'PrismaClientKnownRequestError',
+            code: 'P2025',
+        });
         await request(app)
             .delete('/auth/delete-account')
             .set('Authorization', authorization)

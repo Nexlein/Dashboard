@@ -35,7 +35,7 @@ export default function AuthPage() {
         try {
             if (isRegister) {
                 await register({
-                    displayName: String(formData.get('displayName') ?? '').trim() || undefined,
+                    displayName: String(formData.get('displayName') ?? '').trim(),
                     email,
                     password,
                     cguAccepted: cguAccepted as true,

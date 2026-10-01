@@ -30,7 +30,7 @@ function openAccount(onLogout = vi.fn()) {
 it.each([401, 500])(
     'preserves the session and reports a deletion failure for HTTP %s',
     async (status) => {
-        vi.spyOn(window, 'confirm').mockReturnValue(true);
+        window.confirm = vi.fn().mockReturnValue(true) as any;
         vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status }));
         const onLogout = openAccount();
         fireEvent.click(screen.getByRole('menuitem', { name: /delete my account/i }));
@@ -43,7 +43,7 @@ it.each([401, 500])(
 );
 
 it('reports a network failure without logging out', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    window.confirm = vi.fn().mockReturnValue(true) as any;
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
     const onLogout = openAccount();
     fireEvent.click(screen.getByRole('menuitem', { name: /delete my account/i }));
@@ -52,7 +52,7 @@ it('reports a network failure without logging out', async () => {
 });
 
 it('logs out only after a successful deletion', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    window.confirm = vi.fn().mockReturnValue(true) as any;
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
     vi.stubGlobal('fetch', fetchMock);
     const onLogout = openAccount();
@@ -66,7 +66,7 @@ it('logs out only after a successful deletion', async () => {
 });
 
 it('does not delete when the user cancels', () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    window.confirm = vi.fn().mockReturnValue(false) as any;
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
     const onLogout = openAccount();

@@ -17,7 +17,8 @@ exports.getServices = asyncHandler(async (req, res) => {
     ]);
 
     const servicesList = await Promise.all(
-        Object.entries(registry).map(async ([name, service]) => {
+        registry.getAllServices().map(async (service) => {
+            const name = service.name;
             const isConnected = connectedServiceNames.has(name) || !service.configurable;
             let displayName = service.displayName || name;
             let description = '';
@@ -70,14 +71,14 @@ exports.getServices = asyncHandler(async (req, res) => {
 });
 
 exports.connectService = asyncHandler(async (req, res) => {
-    const serviceName = req.params.name;
+    const serviceName = req.params.serviceName;
     const { apiKey } = req.body;
 
     if (!apiKey) return res.status(400).json({ error: 'API key is required' });
 
-    const service = registry[serviceName];
+    const service = registry.getService(serviceName);
     if (!service) return res.status(404).json({ error: 'Service not found' });
-    if (!service.configurable)
+    if (service.configurable === false)
         return res.status(400).json({ error: 'Service is not configurable' });
     if (service.connection.type === 'oauth')
         return res.status(400).json({ error: 'Use OAuth flow for this service' });
@@ -105,11 +106,11 @@ exports.connectService = asyncHandler(async (req, res) => {
 });
 
 exports.disconnectService = asyncHandler(async (req, res) => {
-    const serviceName = req.params.name;
-    const service = registry[serviceName];
+    const serviceName = req.params.serviceName;
+    const service = registry.getService(serviceName);
 
     if (!service) return res.status(404).json({ error: 'Service not found' });
-    if (!service.configurable)
+    if (service.configurable === false)
         return res.status(400).json({ error: 'Service is not configurable' });
 
     if (service.connection.type === 'oauth') {
@@ -122,5 +123,5 @@ exports.disconnectService = asyncHandler(async (req, res) => {
         });
     }
 
-    res.json({ success: true });
+    res.status(204).send();
 });
