@@ -13,7 +13,8 @@ import { Github } from '@/components/ui/Github';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { getOAuthUrl, type ServiceConnection } from '@/lib/services';
+import { type ServiceConnection } from '@/lib/services';
+import { useOAuthUrl } from '@/hooks/useServices';
 
 interface ServiceCardProps {
     service: ServiceConnection;
@@ -26,6 +27,8 @@ export function ServiceCard({ service, onConnect, onDisconnect, setError }: Serv
     const [apiKey, setApiKey] = useState('');
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+
+    const oauthMutation = useOAuthUrl();
 
     const showForm = !service.connected || isEditing;
 
@@ -111,22 +114,29 @@ export function ServiceCard({ service, onConnect, onDisconnect, setError }: Serv
                 {showForm && service.connectionType === 'oauth' && (
                     <div className="space-y-2">
                         <Button
-                            onClick={async () => {
-                                try {
-                                    const url = await getOAuthUrl(service.name);
-                                    window.location.href = url;
-                                } catch (err) {
-                                    setError(
-                                        err instanceof Error
-                                            ? err.message
-                                            : 'Unable to start linking flow',
-                                    );
-                                }
+                            disabled={oauthMutation.isPending}
+                            onClick={() => {
+                                oauthMutation.mutate(service.name, {
+                                    onSuccess: (url) => {
+                                        window.location.href = url;
+                                    },
+                                    onError: (err) => {
+                                        setError(
+                                            err instanceof Error
+                                                ? err.message
+                                                : 'Unable to start linking flow',
+                                        );
+                                    },
+                                });
                             }}
                             className="w-full"
                             variant="outline"
                         >
-                            <ExternalLink className="mr-2 size-4" />
+                            {oauthMutation.isPending ? (
+                                <Loader2 className="mr-2 size-4 animate-spin" />
+                            ) : (
+                                <ExternalLink className="mr-2 size-4" />
+                            )}
                             Lier mon compte {service.displayName}
                         </Button>
                         <p className="text-xs text-muted-foreground">

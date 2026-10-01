@@ -3,14 +3,14 @@ import { useMutation } from '@tanstack/react-query';
 import { Send, User, Loader2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { API_URL } from '@/lib/auth';
+import { sendWidgetChatMessage } from '@/lib/widgets';
 import { OllamaLogo } from '@/components/OllamaLogo';
 
-export function ChatbotWidget({ widget }) {
+export function ChatbotWidget({ widget }: { widget: any }) {
     const { id } = widget;
     const storageKey = `dashboard-chat-${id}`;
 
-    const [messages, setMessages] = useState(() => {
+    const [messages, setMessages] = useState<any[]>(() => {
         try {
             const saved = localStorage.getItem(storageKey);
             return saved
@@ -22,9 +22,8 @@ export function ChatbotWidget({ widget }) {
     });
 
     const [input, setInput] = useState('');
-
-    const [error, setError] = useState(null);
-    const messagesEndRef = useRef(null);
+    const [error, setError] = useState<string | null>(null);
+    const messagesEndRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         localStorage.setItem(storageKey, JSON.stringify(messages));
@@ -32,24 +31,11 @@ export function ChatbotWidget({ widget }) {
     }, [messages, storageKey]);
 
     const chatMutation = useMutation({
-        mutationFn: async (payloadMessages) => {
-            const token = localStorage.getItem('dashboard-auth-token');
-            const res = await fetch(`${API_URL}/widgets/${id}/chat`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({ messages: payloadMessages }),
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Failed to get response');
-            return data;
-        },
-        onSuccess: (data) => {
+        mutationFn: (payloadMessages: any[]) => sendWidgetChatMessage(id, payloadMessages),
+        onSuccess: (data: any) => {
             setMessages((prev) => [...prev, { role: 'assistant', content: data.reply }]);
         },
-        onError: (err) => {
+        onError: (err: Error) => {
             setError(err.message);
             setMessages((prev) => [
                 ...prev,
@@ -60,7 +46,7 @@ export function ChatbotWidget({ widget }) {
 
     const loading = chatMutation.isPending;
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!input.trim() || loading) return;
 
@@ -70,7 +56,7 @@ export function ChatbotWidget({ widget }) {
         setInput('');
         setError(null);
 
-        // Sliding window: keep only the most recent messages that fit under ~12,000 chars (~3k tokens)
+        // Sliding window
         const MAX_CHARS = 12000;
         let charCount = 0;
         const payloadMessages = [];

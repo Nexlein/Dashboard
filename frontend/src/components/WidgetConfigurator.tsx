@@ -1,13 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { KeyRound, Loader2 } from 'lucide-react';
-import { useStore } from '@/store/useStore';
-import {
-    MIN_REFRESH_RATE_SECONDS,
-    getDefaultWidgetLayout,
-    createWidget,
-    toDashboardWidget,
-} from '@/lib/widgets';
+import { useAddWidget } from '@/hooks/useWidgets';
+import { MIN_REFRESH_RATE_SECONDS, getDefaultWidgetLayout } from '@/lib/widgets';
 import { fetchServices } from '@/lib/services';
 import { REGISTRY } from '@/lib/registry';
 import { WidgetForm } from './WidgetForm';
@@ -31,13 +26,13 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 
-function areParamsComplete(service, widgetType, params) {
+function areParamsComplete(service: string, widgetType: string, params: any) {
     if (!service || !widgetType) return false;
     const widgetInfo = REGISTRY[service]?.widgets?.find(
-        (w) => w.id === widgetType || w.aliases?.includes(widgetType),
+        (w: any) => w.id === widgetType || w.aliases?.includes(widgetType),
     );
     if (!widgetInfo || !widgetInfo.params) return true;
-    return widgetInfo.params.every((param) => {
+    return widgetInfo.params.every((param: any) => {
         if (param.label.includes('optional') || param.label.includes('leave empty')) return true;
         const val = params[param.id];
         if (Array.isArray(val)) return val.length > 0;
@@ -46,7 +41,7 @@ function areParamsComplete(service, widgetType, params) {
     });
 }
 
-function isRefreshRateValid(refreshTimer, serviceDef) {
+function isRefreshRateValid(refreshTimer: string, serviceDef: any) {
     if (serviceDef?.hasRefresh === false) return true;
     const refreshRate = Number(refreshTimer);
     return Number.isInteger(refreshRate) && refreshRate >= MIN_REFRESH_RATE_SECONDS;
@@ -54,17 +49,18 @@ function isRefreshRateValid(refreshTimer, serviceDef) {
 
 export function WidgetConfigurator() {
     const navigate = useNavigate();
-    const addWidget = useStore((state) => state.addWidget);
+    const addWidgetMutation = useAddWidget();
+
     const [open, setOpen] = useState(false);
     const [service, setService] = useState('');
     const [widgetType, setWidgetType] = useState('');
-    const [params, setParams] = useState({});
+    const [params, setParams] = useState<any>({});
     const [refreshTimer, setRefreshTimer] = useState('60'); // seconds
-    const [serviceConnections, setServiceConnections] = useState([]);
+    const [serviceConnections, setServiceConnections] = useState<any[]>([]);
     const [connectionsLoading, setConnectionsLoading] = useState(false);
     const [error, setError] = useState('');
 
-    const handleOpenChange = (nextOpen) => {
+    const handleOpenChange = (nextOpen: boolean) => {
         setOpen(nextOpen);
         if (!nextOpen) return;
 
@@ -80,7 +76,7 @@ export function WidgetConfigurator() {
     const serviceConnectionRequired = service === 'weather' || selectedConnection?.configurable;
     const serviceConnected = !serviceConnectionRequired || selectedConnection?.connected === true;
 
-    const handleServiceChange = (val) => {
+    const handleServiceChange = (val: string) => {
         setService(val);
         const widgets = REGISTRY[val]?.widgets || [];
         if (widgets.length === 1) {
@@ -94,10 +90,10 @@ export function WidgetConfigurator() {
 
     const serviceDef = REGISTRY[service];
     const widgetDef = serviceDef?.widgets?.find(
-        (w) => w.id === widgetType || w.aliases?.includes(widgetType),
+        (w: any) => w.id === widgetType || w.aliases?.includes(widgetType),
     );
 
-    const handleSave = async () => {
+    const handleSave = () => {
         if (
             !service ||
             !widgetType ||
@@ -109,26 +105,27 @@ export function WidgetConfigurator() {
 
         setError('');
 
-        try {
-            const apiWidget = await createWidget({
+        addWidgetMutation.mutate(
+            {
                 serviceName: service,
                 widgetName: widgetType,
                 params: params,
                 refreshRate: Number(refreshTimer),
                 layout: getDefaultWidgetLayout(service, widgetType),
-            });
-
-            addWidget(toDashboardWidget(apiWidget));
-
-            // reset form
-            setService('');
-            setWidgetType('');
-            setParams({});
-            setRefreshTimer('60');
-            setOpen(false);
-        } catch (err) {
-            setError(err.message || 'Failed to create widget');
-        }
+            },
+            {
+                onSuccess: () => {
+                    setService('');
+                    setWidgetType('');
+                    setParams({});
+                    setRefreshTimer('60');
+                    setOpen(false);
+                },
+                onError: (err: any) => {
+                    setError(err.message || 'Failed to create widget');
+                },
+            },
+        );
     };
 
     return (
@@ -198,7 +195,7 @@ export function WidgetConfigurator() {
                                             <SelectValue placeholder="Select a widget type..." />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {REGISTRY[service].widgets.map((w) => (
+                                            {REGISTRY[service].widgets.map((w: any) => (
                                                 <SelectItem key={w.id} value={w.id}>
                                                     {w.name}
                                                 </SelectItem>
@@ -235,11 +232,12 @@ export function WidgetConfigurator() {
                             !service ||
                             !widgetType ||
                             !areParamsComplete(service, widgetType, params) ||
-                            !isRefreshRateValid(refreshTimer, serviceDef)
+                            !isRefreshRateValid(refreshTimer, serviceDef) ||
+                            addWidgetMutation.isPending
                         }
                         onClick={handleSave}
                     >
-                        Add to Dashboard
+                        {addWidgetMutation.isPending ? 'Adding...' : 'Add to Dashboard'}
                     </Button>
                 </DialogFooter>
             </DialogContent>
