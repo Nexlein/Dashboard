@@ -1,0 +1,42 @@
+{
+    "plugins": ["boundaries"],
+    "extends": ["plugin:boundaries/recommended"],
+    "settings": {
+        "boundaries/elements": [
+            {
+                "type": "frontend",
+                "pattern": "frontend/src/**/*"
+            },
+            {
+                "type": "backend",
+                "pattern": "backend/**/*"
+            },
+            {
+                "type": "shared",
+                "pattern": "shared/**/*"
+            }
+        ]
+    },
+    "rules": {
+        "boundaries/element-types": [
+            2,
+            {
+                "default": "disallow",
+                "rules": [
+                    {
+                        "from": "frontend",
+                        "allow": ["frontend", "shared"]
+                    },
+                    {
+                        "from": "backend",
+                        "allow": ["backend", "shared"]
+                    },
+                    {
+                        "from": "shared",
+                        "allow": ["shared"]
+                    }
+                ]
+            }
+        ]
+    }
+}
