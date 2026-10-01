@@ -9,8 +9,9 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useWidgets, useRemoveWidget, useUpdateLayout } from '@/hooks/useWidgets';
-import { useRef, useState } from 'react';
+import { useWidgets, useRemoveWidget } from '@/hooks/useWidgets';
+import { useWidgetLayoutManager } from '@/hooks/useWidgetLayoutManager';
+import { useState } from 'react';
 import WidgetRenderer from './WidgetRenderer';
 import { ErrorBoundary } from './ErrorBoundary';
 import { Bitcoin, CloudSun, Edit2, EllipsisVertical, Trash2, Loader2 } from 'lucide-react';
@@ -21,25 +22,13 @@ const ResponsiveGridLayout = WidthProvider(Responsive);
 export default function DashboardGrid() {
     const { data: widgets = [], isLoading } = useWidgets();
     const removeMutation = useRemoveWidget();
-    const updateLayoutMutation = useUpdateLayout();
+    const { onLayoutChange } = useWidgetLayoutManager();
 
-    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
     const [editingWidget, setEditingWidget] = useState<any>(null);
 
     const handleDelete = async (widget: any) => {
         if (!window.confirm(`Delete widget?`)) return;
         removeMutation.mutate(widget.i);
-    };
-
-    const onLayoutChange = (layout: any) => {
-        if (timeoutRef.current) clearTimeout(timeoutRef.current);
-        timeoutRef.current = setTimeout(() => {
-            const apiLayouts = layout.map((l: any) => ({
-                id: parseInt(l.i, 10),
-                layout: { x: l.x, y: l.y, w: l.w, h: l.h },
-            }));
-            updateLayoutMutation.mutate(apiLayouts);
-        }, 1000);
     };
 
     if (isLoading) {
