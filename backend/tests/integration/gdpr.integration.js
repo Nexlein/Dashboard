@@ -70,7 +70,7 @@ async function main() {
     });
     child = spawn(
         process.execPath,
-        ['--require', require.resolve('./github.fixture'), 'index.js'],
+        ['--require', require.resolve('./github.fixture'), 'server.js'],
         {
             cwd: require('node:path').join(__dirname, '../..'),
             env: { ...process.env, PORT: String(port) },
