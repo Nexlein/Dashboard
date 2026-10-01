@@ -55,7 +55,12 @@ jobs:
                   cache: 'npm'
             - run: cp backend/.env.example backend/.env
             - run: npm ci
-            - run: npm test -w backend -- --coverage
+            - name: Run backend tests
+              env:
+                  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/dashboard_gdpr_test
+                  JWT_SECRET: dummy_jwt_secret_with_at_least_32_characters
+                  ENCRYPTION_KEY: dummy_encryption_key_with_at_least_32_chars
+              run: npm test -w backend -- --coverage
             - name: Verify GDPR flows
               working-directory: backend
               env:

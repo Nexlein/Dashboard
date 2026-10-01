@@ -1,4 +1,4 @@
-process.env.JWT_SECRET = 'test-secret';
+process.env.JWT_SECRET = 'test-secret-with-at-least-32-characters!';
 
 const request = require('supertest');
 const jwt = require('jsonwebtoken');

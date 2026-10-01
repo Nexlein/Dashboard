@@ -16,7 +16,7 @@ jest.mock('@prisma/client', () => {
 });
 
 const originalEnv = { ...process.env };
-process.env.JWT_SECRET = 'oauth-test-secret';
+process.env.JWT_SECRET = 'oauth-test-secret-with-at-least-32-chars!';
 process.env.GITHUB_CLIENT_ID = 'test-client-id';
 process.env.GITHUB_CLIENT_SECRET = 'test-client-secret';
 process.env.GITHUB_CALLBACK_URL = 'http://localhost:8080/auth/github/callback';
