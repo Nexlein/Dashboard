@@ -12,6 +12,7 @@ import {
 import { useWidgets, useRemoveWidget, useUpdateLayout } from '@/hooks/useWidgets';
 import { useRef, useState } from 'react';
 import WidgetRenderer from './WidgetRenderer';
+import { ErrorBoundary } from './ErrorBoundary';
 import { Bitcoin, CloudSun, Edit2, EllipsisVertical, Trash2, Loader2 } from 'lucide-react';
 import { WidgetEditDialog } from './WidgetEditDialog';
 
@@ -116,7 +117,9 @@ export default function DashboardGrid() {
                                 </DropdownMenu>
                             </CardHeader>
                             <CardContent className="flex min-h-0 flex-1 items-center justify-center overflow-auto p-4">
-                                <WidgetRenderer widget={widget} />
+                                <ErrorBoundary>
+                                    <WidgetRenderer widget={widget} />
+                                </ErrorBoundary>
                             </CardContent>
                         </Card>
                     </div>
