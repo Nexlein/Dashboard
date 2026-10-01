@@ -27,6 +27,8 @@
     },
     "homepage": "https://github.com/Nexlein/Dashboard#readme",
     "devDependencies": {
+        "eslint": "^8.57.1",
+        "eslint-plugin-boundaries": "^7.2.0",
         "husky": "^9.1.7",
         "lint-staged": "^17.5.1",
         "prettier": "^3.9.6"
