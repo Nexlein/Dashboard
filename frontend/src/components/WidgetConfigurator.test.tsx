@@ -1,12 +1,13 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
+import { render } from '../test-utils';
 import { WidgetConfigurator } from './WidgetConfigurator';
-import { useStore } from '@/store/useStore';
-import { MemoryRouter } from 'react-router-dom';
 import { fetchServices } from '@/lib/services';
 
-vi.mock('@/store/useStore', () => ({
-    useStore: vi.fn(),
+const mockUseAddWidgetMutate = vi.fn();
+
+vi.mock('@/hooks/useWidgets', () => ({
+    useAddWidget: () => ({ mutate: mockUseAddWidgetMutate, isPending: false }),
 }));
 
 vi.mock('@/lib/services', () => ({
@@ -14,24 +15,21 @@ vi.mock('@/lib/services', () => ({
 }));
 
 describe('WidgetConfigurator', () => {
-    it('renders the add widget button and opens modal', () => {
-        useStore.mockReturnValue(vi.fn());
+    beforeEach(() => {
+        vi.clearAllMocks();
         fetchServices.mockResolvedValue([]);
+    });
 
-        render(
-            <MemoryRouter>
-                <WidgetConfigurator />
-            </MemoryRouter>,
-        );
+    it('renders the add widget button and opens modal', async () => {
+        render(<WidgetConfigurator />);
 
-        // The button should be in the document
         const button = screen.getByRole('button', { name: /add widget/i });
         expect(button).toBeInTheDocument();
 
-        // Click it to open the dialog
         fireEvent.click(button);
 
-        // Dialog title should appear
-        expect(screen.getByText('Add New Widget')).toBeInTheDocument();
+        await waitFor(() => {
+            expect(screen.getByText('Add New Widget')).toBeInTheDocument();
+        });
     });
 });

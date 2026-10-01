@@ -1,58 +1,65 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
+import { render } from '../test-utils';
 import DashboardGrid from './DashboardGrid';
-import { useStore } from '@/store/useStore';
-import { vi } from 'vitest';
-import { deleteWidget } from '@/lib/widgets';
 
-vi.mock('@/lib/widgets', () => ({
-    deleteWidget: vi.fn(),
-    updateWidgetLayouts: vi.fn(),
+const mockUseWidgets = vi.fn();
+const mockRemoveWidgetMutate = vi.fn();
+const mockUpdateLayoutChange = vi.fn();
+
+vi.mock('@/hooks/useWidgets', () => ({
+    useWidgets: () => mockUseWidgets(),
+    useRemoveWidget: () => ({ mutate: mockRemoveWidgetMutate }),
+}));
+
+vi.mock('@/hooks/useWidgetLayoutManager', () => ({
+    useWidgetLayoutManager: () => ({ onLayoutChange: mockUpdateLayoutChange }),
 }));
 
 vi.mock('./WidgetRenderer', () => ({
-    default: ({ widget }) => (
-        <div data-testid={`widget-${widget.i}`}>Mocked {widget.title} Content</div>
+    default: ({ widget }: any) => (
+        <div data-testid={`widget-${widget.id}`}>Mocked {widget.widgetName} Content</div>
     ),
 }));
 
 describe('DashboardGrid Component', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        // Reset store with dummy widgets
-        useStore.setState({
-            widgets: [
+        mockUseWidgets.mockReturnValue({
+            data: [
                 {
-                    i: 'a',
-                    x: 0,
-                    y: 0,
-                    w: 4,
-                    h: 2,
-                    title: 'Weather Widget',
+                    id: 1,
+                    i: '1',
+                    widgetName: 'weather_current',
                     serviceName: 'weather',
+                    layout: { x: 0, y: 0, w: 2, h: 2 },
                 },
-                { i: 'b', x: 4, y: 0, w: 4, h: 2, title: 'GitHub Repo' },
+                {
+                    id: 2,
+                    i: '2',
+                    widgetName: 'github_stats',
+                    serviceName: 'github',
+                    layout: { x: 2, y: 0, w: 2, h: 2 },
+                },
             ],
+            isLoading: false,
         });
     });
 
-    it('renders all widgets from the store', () => {
+    it('renders all widgets from the hook', () => {
         render(<DashboardGrid />);
-
-        expect(screen.getByText('Weather Widget')).toBeInTheDocument();
-        expect(screen.getByText('GitHub Repo')).toBeInTheDocument();
+        expect(screen.getByTestId('widget-1')).toBeInTheDocument();
+        expect(screen.getByTestId('widget-2')).toBeInTheDocument();
     });
 
-    it('deletes a widget after confirmation', async () => {
+    it('calls remove mutation after confirmation', async () => {
         vi.spyOn(window, 'confirm').mockReturnValue(true);
-        deleteWidget.mockResolvedValue();
         render(<DashboardGrid />);
 
-        fireEvent.click(screen.getByRole('button', { name: 'Configure Weather Widget' }));
+        const settingsButtons = screen.getAllByRole('button', { name: /Configure/i });
+        fireEvent.click(settingsButtons[0]);
         fireEvent.click(await screen.findByText('Delete'));
 
-        await waitFor(() => expect(deleteWidget).toHaveBeenCalled());
-        expect(screen.queryByText('Weather Widget')).not.toBeInTheDocument();
-        expect(screen.getByText('GitHub Repo')).toBeInTheDocument();
+        expect(mockRemoveWidgetMutate).toHaveBeenCalledWith('1');
     });
 });

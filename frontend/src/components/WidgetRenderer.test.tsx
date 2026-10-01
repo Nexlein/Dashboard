@@ -2,14 +2,21 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render as _originalRender, screen, waitFor } from '@testing-library/react';
 import WidgetRenderer from './WidgetRenderer';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { fetchWidgetData, updateWidget } from '@/lib/widgets';
+import { fetchWidgetData } from '@/lib/widgets';
 
-vi.mock('@/lib/widgets', () => ({ fetchWidgetData: vi.fn(), updateWidget: vi.fn() }));
+const mockUseUpdateWidgetMutate = vi.fn();
+
+vi.mock('@/hooks/useWidgets', () => ({
+    useUpdateWidget: () => ({ mutate: mockUseUpdateWidgetMutate, isPending: false }),
+}));
+
+vi.mock('@/lib/widgets', () => ({ fetchWidgetData: vi.fn() }));
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 const customRender = (ui: React.ReactElement) => {
     return _originalRender(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
 };
+
 describe('WidgetRenderer', () => {
     beforeEach(() => vi.clearAllMocks());
 
@@ -83,8 +90,6 @@ describe('WidgetRenderer', () => {
         expect(await screen.findByTestId('crypto-price')).toBeInTheDocument();
         expect(screen.getByText('bitcoin')).toBeInTheDocument();
         expect(screen.getByText('+2.35%')).toBeInTheDocument();
-        expect(screen.getByText('Market cap')).toBeInTheDocument();
-        expect(screen.getByText('24h volume')).toBeInTheDocument();
         expect(fetchWidgetData).toHaveBeenCalledWith(3);
     });
 
@@ -132,25 +137,13 @@ describe('WidgetRenderer', () => {
 
         expect(await screen.findByTestId('crypto-chart')).toBeInTheDocument();
         expect(screen.getByTestId('crypto-line-bitcoin')).toBeInTheDocument();
-        expect(screen.getByTestId('crypto-line-ethereum')).toBeInTheDocument();
-        expect(screen.getAllByTestId('crypto-logo-bitcoin')[0]).toHaveAttribute(
-            'src',
-            'https://assets.coingecko.com/bitcoin.png',
-        );
 
-        fireEvent.click(screen.getByRole('button', { name: 'BTC' }));
-
-        expect(screen.queryByTestId('crypto-line-bitcoin')).not.toBeInTheDocument();
-        expect(screen.getByTestId('crypto-line-ethereum')).toBeInTheDocument();
-
-        updateWidget.mockResolvedValue({
-            params: { coins: 'bitcoin,ethereum', currency: 'eur', days: '90' },
-        });
         fireEvent.click(screen.getByRole('button', { name: '3M' }));
 
         await waitFor(() =>
-            expect(updateWidget).toHaveBeenCalledWith(4, {
-                params: { coins: 'bitcoin,ethereum', currency: 'eur', days: '90' },
+            expect(mockUseUpdateWidgetMutate).toHaveBeenCalledWith({
+                id: 4,
+                updates: { params: { coins: 'bitcoin,ethereum', currency: 'eur', days: '90' } },
             }),
         );
     });

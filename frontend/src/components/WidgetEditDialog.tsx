@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useStore } from '@/store/useStore';
-import { updateWidget, toDashboardWidget, MIN_REFRESH_RATE_SECONDS } from '@/lib/widgets';
+import { useUpdateWidget } from '@/hooks/useWidgets';
+import { MIN_REFRESH_RATE_SECONDS } from '@/lib/widgets';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -13,18 +13,17 @@ import {
 import { REGISTRY } from '@/lib/registry';
 import { WidgetForm } from './WidgetForm';
 
-function isRefreshRateValid(refreshTimer, serviceDef) {
+function isRefreshRateValid(refreshTimer: string, serviceDef: any) {
     if (serviceDef?.hasRefresh === false) return true;
     const refreshRate = Number(refreshTimer);
     return Number.isInteger(refreshRate) && refreshRate >= MIN_REFRESH_RATE_SECONDS;
 }
 
-export function WidgetEditDialog({ widget, open, onOpenChange }) {
-    const updateWidgetInStore = useStore((state) => state.updateWidget);
+export function WidgetEditDialog({ widget, open, onOpenChange }: any) {
+    const updateWidgetMutation = useUpdateWidget();
     const [params, setParams] = useState({});
     const [refreshTimer, setRefreshTimer] = useState('60');
     const [error, setError] = useState('');
-    const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
         if (open && widget) {
@@ -41,35 +40,28 @@ export function WidgetEditDialog({ widget, open, onOpenChange }) {
 
     const serviceDef = REGISTRY[service];
     const widgetDef = serviceDef?.widgets?.find(
-        (w) => w.id === widgetType || w.aliases?.includes(widgetType),
+        (w: any) => w.id === widgetType || w.aliases?.includes(widgetType),
     );
 
     const handleSave = async () => {
         if (!isRefreshRateValid(refreshTimer, serviceDef)) return;
-        setIsSaving(true);
         setError('');
 
         try {
-            const updatedApiWidget = await updateWidget(parseInt(widget.i, 10), {
-                params,
-                refreshRate: parseInt(refreshTimer, 10),
-            });
-
-            const dashboardWidget = toDashboardWidget(updatedApiWidget);
-
-            // update local store
-            updateWidgetInStore(widget.i, {
-                params: dashboardWidget.params,
-                refreshRate: dashboardWidget.refreshRate,
-                title: dashboardWidget.title,
+            await updateWidgetMutation.mutateAsync({
+                id: widget.id,
+                updates: {
+                    params,
+                    refreshRate: parseInt(refreshTimer, 10),
+                },
             });
             onOpenChange(false);
-        } catch (err) {
+        } catch (err: any) {
             setError(err.message || 'Failed to update widget');
-        } finally {
-            setIsSaving(false);
         }
     };
+
+    const isSaving = updateWidgetMutation.isPending;
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>

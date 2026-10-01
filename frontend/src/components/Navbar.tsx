@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { useStore } from '@/store/useStore';
+import { useTheme } from '@/components/ThemeProvider';
 import { API_URL } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import {
@@ -28,8 +28,8 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-export default function Navbar({ user, onLogout, showWidgetConfigurator = true }) {
-    const { theme, setTheme } = useStore();
+export default function Navbar({ user, onLogout, showWidgetConfigurator = true }: any) {
+    const { theme, setTheme } = useTheme();
     const [profileOpen, setProfileOpen] = useState(false);
     const [privacyError, setPrivacyError] = useState('');
     const [privacyBusy, setPrivacyBusy] = useState(false);

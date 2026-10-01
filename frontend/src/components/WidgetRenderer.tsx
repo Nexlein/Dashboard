@@ -1,17 +1,17 @@
-import { useState, useCallback } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
-import { fetchWidgetData, updateWidget as updateWidgetRequest } from '@/lib/widgets';
-import { useStore } from '@/store/useStore';
+import { fetchWidgetData } from '@/lib/widgets';
+import { useUpdateWidget } from '@/hooks/useWidgets';
 import { REGISTRY } from '@/lib/registry';
 
-export default function WidgetRenderer({ widget }) {
+export default function WidgetRenderer({ widget }: any) {
     const { id, serviceName, widgetName, refreshRate } = widget;
-    const updateWidgetInStore = useStore((state) => state.updateWidget);
+    const updateWidgetMutation = useUpdateWidget();
 
-    const serviceDef = REGISTRY[serviceName];
+    const serviceDef = REGISTRY[serviceName as keyof typeof REGISTRY];
     const widgetDef = serviceDef?.widgets?.find(
-        (w) => w.id === widgetName || w.aliases?.includes(widgetName),
+        (w: any) => w.id === widgetName || w.aliases?.includes(widgetName),
     );
     const Component = widgetDef?.component;
 
@@ -32,21 +32,14 @@ export default function WidgetRenderer({ widget }) {
 
     const error = queryError?.message || null;
 
-    const periodMutation = useMutation({
-        mutationFn: (days) => updateWidgetRequest(id, { params: { ...widget.params, days } }),
-        onSuccess: (updated) => {
-            updateWidgetInStore(String(id), { params: updated.params });
-        },
-    });
-
-    const periodUpdating = periodMutation.isPending;
+    const periodUpdating = updateWidgetMutation.isPending;
 
     const handlePeriodChange = useCallback(
-        (days) => {
+        (days: any) => {
             if (String(widget.params?.days) === String(days)) return;
-            periodMutation.mutate(days);
+            updateWidgetMutation.mutate({ id, updates: { params: { ...widget.params, days } } });
         },
-        [widget.params, periodMutation],
+        [widget.params, updateWidgetMutation, id],
     );
 
     if (!serviceDef || !widgetDef) {
@@ -57,7 +50,6 @@ export default function WidgetRenderer({ widget }) {
         );
     }
 
-    // Static widgets (e.g. Chatbot) don't fetch data through WidgetRenderer
     if (!isDataFetchingWidget) {
         return <Component widget={widget} />;
     }

@@ -45,10 +45,10 @@ export const registerSchema = z.object({
         .optional()
         .transform((v) => (v || '').trim()),
     cguAccepted: z.literal(true, {
-        errorMap: () => ({ message: 'You must accept the CGU to register.' }),
+        message: 'You must accept the CGU to register.',
     }),
     is16OrOlder: z.literal(true, {
-        errorMap: () => ({ message: 'You must confirm you are 16 or older to register.' }),
+        message: 'You must confirm you are 16 or older to register.',
     }),
 });
 
