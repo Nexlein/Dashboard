@@ -4,9 +4,21 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import type { User } from 'shared';
 import { updateProfile } from '@/lib/auth';
 
-export function ProfileSettingsModal({ open, onOpenChange, user, onUserUpdated }) {
+type ProfileProps = {
+    user: User | null;
+    onUserUpdated: (user: User) => void;
+    onOpenChange: (open: boolean) => void;
+};
+
+export function ProfileSettingsModal({
+    open,
+    onOpenChange,
+    user,
+    onUserUpdated,
+}: ProfileProps & { open: boolean }) {
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-md">
@@ -24,7 +36,7 @@ export function ProfileSettingsModal({ open, onOpenChange, user, onUserUpdated }
     );
 }
 
-function ProfileForm({ user, onUserUpdated, onOpenChange }) {
+function ProfileForm({ user, onUserUpdated, onOpenChange }: ProfileProps) {
     const [displayName, setDisplayName] = useState(user?.displayName || '');
     const [email, setEmail] = useState(user?.email || '');
     const [error, setError] = useState('');
@@ -49,7 +61,7 @@ function ProfileForm({ user, onUserUpdated, onOpenChange }) {
 
     const loading = updateProfileMutation.isPending;
 
-    async function handleSubmit(e) {
+    function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
         updateProfileMutation.mutate({ displayName, email });
     }

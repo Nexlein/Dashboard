@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useTheme } from '@/lib/theme';
+import type { User } from 'shared';
 import { deleteMyAccount, exportMyData } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import {
@@ -28,7 +29,15 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-export default function Navbar({ user, onLogout, showWidgetConfigurator = true }: any) {
+export default function Navbar({
+    user,
+    onLogout,
+    showWidgetConfigurator = true,
+}: {
+    user: User | null;
+    onLogout: () => void;
+    showWidgetConfigurator?: boolean;
+}) {
     const { theme, setTheme } = useTheme();
     const [profileOpen, setProfileOpen] = useState(false);
     const [privacyError, setPrivacyError] = useState('');
