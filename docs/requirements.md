@@ -8,22 +8,22 @@
 ## Core Features
 
 - [ ] **User Management**: Unauthenticated users can register. Administration section useful. (Registration frontend/backend connected; administration frontend missing)
-- [ ] **Identity & Permissions**:
+- [x] **Identity & Permissions**:
     - [x] Authentication (credentials or OIDC) to bind data to account. (GitHub OIDC & credentials implemented)
     - [x] Authorization (OAuth 2.0) to access external APIs. Link third-party to platform user (GitHub).
-- [ ] **Service Subscriptions**:
+- [x] **Service Subscriptions**:
     - [x] Authenticated users select services to subscribe to.
     - [x] OpenWeather subscription requires a verified, user-owned API key.
     - [x] CoinGecko subscription requires a verified, user-owned API key.
     - [x] Add OAuth linking for every remaining account-based service (GitHub done).
 - [ ] **Dashboard & Widgets**:
-    - [ ] Connect `about.json` dynamically to the frontend Configurator.
-    - [ ] Sync Dashboard Grid layout with Postgres Database via PUT/POST routes.
+    - [ ] Connect `about.json` dynamically to the frontend Configurator. (The configurator uses a frontend copy of the registry, `features/widgets/lib/registry.tsx`.)
+    - [x] Sync Dashboard Grid layout with Postgres Database via PUT/POST routes. (`PUT /widgets/layout`, debounced from the grid)
     - [x] Add widget (select type, configure, set refresh rate).
     - [x] Reconfigure, move, delete widgets.
     - [x] **Crucial**: Widget _must_ have configurable parameters.
     - [x] **Crucial**: Two instances of same widget with different configs display distinct info.
-- [ ] **Accessibility (a11y)**:
+- [ ] **Accessibility (a11y)**: (axe reports no violation on login, register and dashboard in the e2e suite; not audited manually)
     - [ ] Full keyboard navigation support.
     - [ ] Screen reader compatibility (ARIA labels).
 - [x] **Timer**: Periodic refresh of widget data based on widget config.
@@ -31,18 +31,18 @@
 ## Legal & Compliance
 
 - [x] **CGU (Terms of Service)**: Users must read and accept CGU during registration.
-- [ ] **RGPD (GDPR)**:
-    - [ ] Clear privacy policy.
-    - [ ] Account deletion (Right to be forgotten).
-    - [ ] Data export (Right of access).
+- [x] **RGPD (GDPR)**:
+    - [x] Clear privacy policy. (`/privacy`, `docs/RGPD.md`)
+    - [x] Account deletion (Right to be forgotten). (`DELETE /auth/delete-account`, cascades checked against PostgreSQL)
+    - [x] Data export (Right of access). (`GET /auth/download-data`, without secrets)
 
 ## Security & Robustness
 
 - [x] **API Security**: Encrypt widget parameters and user-owned service credentials in the database.
-- [x] **Rate Limiting**: Protect authentication endpoints against brute-force attacks.
-- [ ] **CORS**: Restrict API access to the frontend origin.
+- [x] **Rate Limiting**: Protect authentication endpoints against brute-force attacks. (Auth and global limits shared by replicas through Redis)
+- [x] **CORS**: Restrict API access to the frontend origin. (`CORS_ORIGINS`)
 - [x] **Backend Cache**: In-memory cache for external API calls to prevent rate-limiting/bans.
-- [ ] **UI Error Boundaries**: Individual widget failures must not crash the entire dashboard.
+- [x] **UI Error Boundaries**: Individual widget failures must not crash the entire dashboard. (one `ErrorBoundary` per widget)
 
 ## UX / UI Polish
 
@@ -54,27 +54,27 @@
 ## Bonus Features
 
 - [ ] **PWA (Progressive Web App)**: Dashboard installable as a standalone app.
-- [ ] **Database Seeding**: Automated mock data (users + widgets) generation on startup for instant grading access.
-- [ ] **AI Chatbot with RAG**: Optional LLM integration widget.
+- [ ] **Database Seeding**: Automated mock data (users + widgets) generation on startup for instant grading access. (`prisma db seed` exists but must be run manually)
+- [ ] **AI Chatbot with RAG**: Optional LLM integration widget. (Ollama chat widget implemented, without RAG)
 
 ## Technical Constraints
 
 - [x] **Docker**: `docker-compose.yml` at root. Must support `docker-compose build` and `docker-compose up`.
 - [x] **Server**: MUST run on port `8080`.
 - [x] **Endpoint**: MUST respond to `GET http://localhost:8080/about.json`.
-- [ ] **Health Check**: MUST respond to `GET http://localhost:8080/health`.
-- [ ] **API Docs**: Swagger UI available at `http://localhost:8080/api-docs`.
-- [x] **Bonus**: All bonus files must be in `bonus/` directory.
+- [x] **Health Check**: MUST respond to `GET http://localhost:8080/health`.
+- [x] **API Docs**: Swagger UI available at `http://localhost:8080/api-docs`.
+- [ ] **Bonus**: All bonus files must be in `bonus/` directory. (No `bonus/` directory yet; bonus features live in the main code.)
 
 ## Deliverables & Documentation
 
 - [x] **Source Code**: No binaries or temp files.
 - [ ] **README.md**:
     - [x] List of key features, services, and widgets.
-    - [ ] Precise steps to install and build.
-    - [ ] Overview of app purpose and use cases.
-    - [ ] Clear instructions to run and use.
-    - [ ] Description of technologies used and overall structure.
+    - [x] Precise steps to install and build.
+    - [x] Overview of app purpose and use cases.
+    - [x] Clear instructions to run and use.
+    - [x] Description of technologies used and overall structure.
     - [ ] Adapt communication to audience (users vs developers).
 - [ ] **Video Presentation**: Short video showcasing main features (to avoid disruptions during live demo).
 
