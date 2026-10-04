@@ -1,26 +1,19 @@
 const express = require('express');
 const requireAuth = require('../middleware/auth');
 const cookieParser = require('cookie-parser');
-const { rateLimit } = require('express-rate-limit');
 const authController = require('../controllers/auth');
 const githubAuthController = require('../controllers/githubAuth');
 const accountController = require('../controllers/account');
 const env = require('../utils/env');
+const { createRateLimiter } = require('../utils/rateLimit');
 
 const router = express.Router();
 
-const RedisStore = require('rate-limit-redis').default || require('rate-limit-redis');
-const { redisClient } = require('../utils/redisCache');
-
-const credentialsLimiter = rateLimit({
+const credentialsLimiter = createRateLimiter({
+    name: 'auth',
     windowMs: 15 * 60 * 1000,
     limit: env.AUTH_RATE_LIMIT_MAX,
-    standardHeaders: 'draft-8',
-    legacyHeaders: false,
-    ...(process.env.NODE_ENV !== 'test' && redisClient
-        ? { store: new RedisStore({ sendCommand: (...args) => redisClient.sendCommand(args) }) }
-        : {}),
-    message: { error: 'Too many authentication attempts. Please try again later.' },
+    message: 'Too many authentication attempts. Please try again later.',
 });
 
 router.use('/github', cookieParser(), (req, res, next) => {

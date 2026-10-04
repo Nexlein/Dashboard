@@ -4,7 +4,9 @@ const localCache = new Map();
 let redisClient = null;
 
 if (process.env.REDIS_URL) {
-    redisClient = createClient({ url: process.env.REDIS_URL });
+    // Fail commands at once while disconnected instead of queueing them, so callers
+    // (cache fallback, rate limiting) never wait on a Redis outage.
+    redisClient = createClient({ url: process.env.REDIS_URL, disableOfflineQueue: true });
     redisClient.on('error', (err) => console.error('Redis Client Error', err));
     redisClient.connect().catch(console.error);
 }
