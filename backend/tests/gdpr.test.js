@@ -20,7 +20,7 @@ app.use(express.json());
 app.use('/auth', require('../routes/auth'));
 const prisma = PrismaClient.mock.results[0].value;
 const { encryptParams } = require('../utils/encryption');
-const { encrypt, decrypt } = require('../utils/crypto');
+const { encrypt, decrypt } = require('../utils/tokenEncryption');
 const authorization = `Bearer ${jwt.sign({ userId: 42 }, process.env.JWT_SECRET)}`;
 
 beforeEach(() => {

@@ -1,5 +1,5 @@
 process.env.JWT_SECRET = 'github-service-test-secret';
-const { decrypt } = require('../utils/crypto');
+const { decrypt } = require('../utils/tokenEncryption');
 const githubService = require('../services/github');
 
 jest.mock('@prisma/client', () => {

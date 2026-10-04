@@ -1,5 +1,5 @@
 const bcrypt = require('bcrypt');
-const { decrypt } = require('../utils/crypto');
+const { decrypt } = require('../utils/tokenEncryption');
 const { getGitHubProfile } = require('../services/githubIdentity');
 const { registerSchema, loginSchema, updateMeSchema } = require('shared');
 const asyncHandler = require('../utils/asyncHandler');

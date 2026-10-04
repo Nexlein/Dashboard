@@ -18,7 +18,7 @@ process.env.TEST_GITHUB_EMAIL = `${randomUUID()}@integration.test`;
 const { PrismaClient } = require('@prisma/client');
 const jwt = require('jsonwebtoken');
 const { encryptParams, encryptJson } = require('../../utils/encryption');
-const { decrypt } = require('../../utils/crypto');
+const { decrypt } = require('../../utils/tokenEncryption');
 const { migrateOAuthTokens } = require('../../utils/migrateOAuthTokens');
 const prisma = new PrismaClient();
 let child;

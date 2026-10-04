@@ -14,7 +14,7 @@ test.each(['a'.repeat(64), 'short-secret', 'é'.repeat(32)])(
     'uses the existing key derivation for arbitrary secret lengths',
     (secret) => {
         process.env.ENCRYPTION_KEY = secret;
-        const { encrypt, decrypt } = require('../utils/crypto');
+        const { encrypt, decrypt } = require('../utils/tokenEncryption');
         const { getEncryptionKey } = require('../utils/encryption');
         expect(getEncryptionKey()).toEqual(
             crypto.scryptSync(secret, 'dashboard-widget-encryption', 32),
@@ -27,7 +27,7 @@ test.each(['a'.repeat(64), 'short-secret', 'é'.repeat(32)])(
 
 test('production uses JWT_SECRET when no dedicated encryption secret is configured', () => {
     process.env.NODE_ENV = 'production';
-    const { encrypt, decryptWithKey } = require('../utils/crypto');
+    const { encrypt, decryptWithKey } = require('../utils/tokenEncryption');
     const encrypted = encrypt('private-token').slice(3);
     expect(() =>
         decryptWithKey(encrypted, crypto.scryptSync('dev-fallback-password', 'salt', 32)),
@@ -42,11 +42,11 @@ test('production uses JWT_SECRET when no dedicated encryption secret is configur
 
 test('refuses to encrypt without a deployment secret', () => {
     delete process.env.JWT_SECRET;
-    expect(() => require('../utils/crypto').encrypt('token')).toThrow(/must be set/);
+    expect(() => require('../utils/tokenEncryption').encrypt('token')).toThrow(/must be set/);
 });
 
 test('rejects unencrypted, damaged and wrong-key tokens instead of sending them to GitHub', () => {
-    const { encrypt, decrypt } = require('../utils/crypto');
+    const { encrypt, decrypt } = require('../utils/tokenEncryption');
     expect(() => decrypt('plaintext')).toThrow(/migration/);
     expect(() => decrypt('v1:broken')).toThrow();
     const encrypted = encrypt('token');
@@ -55,7 +55,7 @@ test('rejects unencrypted, damaged and wrong-key tokens instead of sending them 
     ).toThrow();
     jest.resetModules();
     process.env.JWT_SECRET = 'another-secret';
-    expect(() => require('../utils/crypto').decrypt(encrypted)).toThrow();
+    expect(() => require('../utils/tokenEncryption').decrypt(encrypted)).toThrow();
 });
 
 function fakeDatabase(rows) {
@@ -84,7 +84,7 @@ function fakeDatabase(rows) {
 
 test('migrates every batch, preserves refresh tokens and is idempotent', async () => {
     const { migrateOAuthTokens } = require('../utils/migrateOAuthTokens');
-    const { decrypt } = require('../utils/crypto');
+    const { decrypt } = require('../utils/tokenEncryption');
     const rows = Array.from({ length: 105 }, (_, id) => ({
         id,
         accessToken: `access-${id}`,
@@ -121,7 +121,9 @@ test.each([undefined, 'a'.repeat(32)])(
         expect(
             await require('../utils/migrateOAuthTokens').migrateOAuthTokens(fakeDatabase(rows)),
         ).toBe(1);
-        expect(require('../utils/crypto').decrypt(rows[0].accessToken)).toBe('legacy-token');
+        expect(require('../utils/tokenEncryption').decrypt(rows[0].accessToken)).toBe(
+            'legacy-token',
+        );
     },
 );
 
@@ -133,7 +135,7 @@ test('stops on damaged ciphertext without overwriting it', async () => {
 });
 
 test('does not overwrite a concurrent token refresh', async () => {
-    const { encrypt, decrypt } = require('../utils/crypto');
+    const { encrypt, decrypt } = require('../utils/tokenEncryption');
     const rows = [{ id: 1, accessToken: 'old-access', refreshToken: null }];
     const db = fakeDatabase(rows);
     const update = db.oAuthToken.updateMany.getMockImplementation();

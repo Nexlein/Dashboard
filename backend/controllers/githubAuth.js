@@ -1,6 +1,6 @@
 const crypto = require('node:crypto');
 const { getCache, setCache, deleteCache } = require('../utils/redisCache');
-const { encrypt } = require('../utils/crypto');
+const { encrypt } = require('../utils/tokenEncryption');
 const { getGitHubProfile, getVerifiedGitHubEmail } = require('../services/githubIdentity');
 const asyncHandler = require('../utils/asyncHandler');
 const { normalizeEmail, signAuthToken } = require('../utils/authToken');

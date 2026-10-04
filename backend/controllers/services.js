@@ -28,7 +28,7 @@ exports.getServices = asyncHandler(async (req, res) => {
 
                 if (token && name === 'github') {
                     try {
-                        const { decrypt } = require('../utils/crypto');
+                        const { decrypt } = require('../utils/tokenEncryption');
                         const accessToken = decrypt(token.accessToken);
                         const res = await fetch('https://api.github.com/user', {
                             headers: {
