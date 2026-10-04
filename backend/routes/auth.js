@@ -3,6 +3,7 @@ const requireAuth = require('../middleware/auth');
 const cookieParser = require('cookie-parser');
 const { rateLimit } = require('express-rate-limit');
 const authController = require('../controllers/auth');
+const env = require('../utils/env');
 
 const router = express.Router();
 
@@ -11,7 +12,7 @@ const { redisClient } = require('../utils/redisCache');
 
 const credentialsLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    limit: 20,
+    limit: env.AUTH_RATE_LIMIT_MAX,
     standardHeaders: 'draft-8',
     legacyHeaders: false,
     ...(process.env.NODE_ENV !== 'test' && redisClient

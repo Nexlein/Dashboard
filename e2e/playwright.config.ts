@@ -2,7 +2,6 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
     testDir: './tests',
-    fullyParallel: true,
     retries: 0,
     workers: 1,
     reporter: 'html',
@@ -20,6 +19,8 @@ export default defineConfig({
         {
             command: 'cd ../backend && npm run dev',
             port: 8080,
+            // Every test registers a fresh user; keep the production auth limit out of the way.
+            env: { AUTH_RATE_LIMIT_MAX: '1000' },
             reuseExistingServer: !process.env.CI,
         },
         {

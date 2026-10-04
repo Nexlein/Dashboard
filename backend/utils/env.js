@@ -7,6 +7,7 @@ const envSchema = z.object({
     JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters long'),
     JWT_EXPIRES_IN: z.string().default('24h'),
     SALT_ROUNDS: z.coerce.number().int().min(1).default(10),
+    AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(20),
     ENCRYPTION_KEY: z.string().min(32, 'ENCRYPTION_KEY must be at least 32 characters long'),
     REDIS_URL: z.string().url('REDIS_URL must be a valid URL').optional(),
     FRONTEND_URL: z.string().url('FRONTEND_URL must be a valid URL').optional(),

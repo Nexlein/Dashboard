@@ -1,42 +1,61 @@
 import { test, expect } from '@playwright/test';
+import { API_URL, signInFreshUser } from './helpers';
 
-test.describe('Dashboard Widgets', () => {
+const MODEL = 'llama3.2:1b';
+
+test.describe('Dashboard widgets', () => {
+    let token: string;
+
     test.beforeEach(async ({ page, request }) => {
-        const ts = Date.now();
-        const email = `widgetuser${ts}@example.com`;
-        const password = 'password1234';
-
-        await request.post('http://localhost:8080/auth/register', {
-            data: {
-                email,
-                password,
-                displayName: 'Widget User',
-                cguAccepted: true,
-                is16OrOlder: true,
-            },
-        });
-
-        const loginRes = await request.post('http://localhost:8080/auth/login', {
-            data: { email, password },
-        });
-        const { token } = await loginRes.json();
-
-        await page.goto('/');
-        await page.evaluate((t) => localStorage.setItem('dashboard-auth-token', t), token);
-        await page.goto('/');
+        ({ token } = await signInFreshUser(page, request));
+        // Ollama is external infrastructure that is not available in CI: stub only
+        // the model listing. Widget creation and rendering go through the real API.
+        await page.route(`${API_URL}/chatbot/models`, (route) =>
+            route.fulfill({ json: { models: [{ name: MODEL }] } }),
+        );
     });
 
-    test('can open widget configurator dialog', async ({ page }) => {
-        await expect(page.locator('text=Add Widget')).toBeVisible();
+    test('adds an Ollama widget through the configurator', async ({ page }) => {
+        await page.goto('/');
+        await page.getByRole('button', { name: 'Add Widget' }).click();
 
-        await page.click('text=Add Widget');
-        await expect(page.locator('text=Add New Widget')).toBeVisible();
+        const dialog = page.getByRole('dialog', { name: 'Add New Widget' });
+        await dialog.getByRole('combobox').click();
+        await page.getByRole('option', { name: 'Ollama' }).click();
+        await dialog.getByRole('button', { name: 'Select' }).first().click();
+        await dialog.getByRole('button', { name: 'Add to Dashboard' }).click();
 
-        // Select Service
-        await page.click('button[role="combobox"]');
-        await page.click('text=Ollama');
-        await expect(page.locator('text=Recommended Models')).toBeVisible();
+        await expect(dialog).toBeHidden();
+        await expect(page.getByText(`Ollama - ${MODEL}`)).toBeVisible();
 
-        // Dialog still open — verified content visible above
+        await page.reload();
+        await expect(page.getByText(`Ollama - ${MODEL}`)).toBeVisible();
+    });
+
+    test('deletes a widget', async ({ page, request }) => {
+        const res = await request.post(`${API_URL}/widgets`, {
+            headers: { Authorization: `Bearer ${token}` },
+            data: {
+                serviceName: 'chatbot',
+                widgetName: 'ai_chat',
+                params: { model: MODEL },
+                refreshRate: 60,
+                layout: { x: 0, y: 0, w: 2, h: 3 },
+            },
+        });
+        expect(res.status(), await res.text()).toBe(201);
+
+        await page.goto('/');
+        const title = `Ollama - ${MODEL}`;
+        await expect(page.getByText(title)).toBeVisible();
+
+        page.once('dialog', (d) => d.accept());
+        await page.getByRole('button', { name: `Configure ${title}` }).click();
+        await page.getByRole('menuitem', { name: 'Delete' }).click();
+
+        await expect(page.getByText(title)).toBeHidden();
+        await page.reload();
+        await expect(page.getByRole('button', { name: 'Add Widget' })).toBeVisible();
+        await expect(page.getByText(title)).toBeHidden();
     });
 });
