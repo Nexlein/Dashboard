@@ -1,7 +1,7 @@
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { WidgetParameterField } from './WidgetParameterField';
-import { MIN_REFRESH_RATE_SECONDS } from '@/lib/widgets';
+import { MIN_REFRESH_RATE_SECONDS } from '@/features/widgets/lib/widgets';
 
 export function WidgetForm({
     serviceDef,

@@ -1,4 +1,4 @@
-import { fetchClient } from './apiClient';
+import { fetchClient } from '../../../lib/apiClient';
 
 export type ServiceConnection = {
     name: string;

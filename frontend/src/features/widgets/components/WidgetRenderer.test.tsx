@@ -2,15 +2,15 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render as _originalRender, screen, waitFor } from '@testing-library/react';
 import WidgetRenderer from './WidgetRenderer';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { fetchWidgetData } from '@/lib/widgets';
+import { fetchWidgetData } from '@/features/widgets/lib/widgets';
 
 const mockUseUpdateWidgetMutate = vi.fn();
 
-vi.mock('@/hooks/useWidgets', () => ({
+vi.mock('@/features/widgets/hooks/useWidgets', () => ({
     useUpdateWidget: () => ({ mutate: mockUseUpdateWidgetMutate, isPending: false }),
 }));
 
-vi.mock('@/lib/widgets', () => ({ fetchWidgetData: vi.fn() }));
+vi.mock('@/features/widgets/lib/widgets', () => ({ fetchWidgetData: vi.fn() }));
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 const customRender = (ui: React.ReactElement) => {

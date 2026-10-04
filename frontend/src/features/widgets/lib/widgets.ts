@@ -1,4 +1,4 @@
-import { fetchClient } from './apiClient';
+import { fetchClient } from '../../../lib/apiClient';
 
 export const MIN_REFRESH_RATE_SECONDS = 60;
 

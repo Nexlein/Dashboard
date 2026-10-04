@@ -1,9 +1,9 @@
 import { useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
-import { fetchWidgetData } from '@/lib/widgets';
-import { useUpdateWidget } from '@/hooks/useWidgets';
-import { REGISTRY } from '@/lib/registry';
+import { fetchWidgetData } from '@/features/widgets/lib/widgets';
+import { useUpdateWidget } from '@/features/widgets/hooks/useWidgets';
+import { REGISTRY } from '@/features/widgets/lib/registry';
 
 export default function WidgetRenderer({ widget }: any) {
     const { id, serviceName, widgetName, refreshRate } = widget;

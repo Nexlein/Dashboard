@@ -1,13 +1,13 @@
-import { CurrentWeather, Forecast } from '@/features/widgets/WeatherWidgets';
+import { CurrentWeather, Forecast } from '@/features/widgets/catalog/WeatherWidgets';
 import {
     GithubRepoWidget,
     GithubProfileWidget,
     GithubCommitsWidget,
-} from '@/features/widgets/GithubWidgets';
-import { CryptoPrice } from '@/features/widgets/CryptoPrice';
-import { CryptoChartWidget } from '@/features/widgets/CryptoChartWidget';
-import { ChatbotWidget } from '@/features/widgets/ChatbotWidget';
-import { OllamaModelManager } from '@/components/OllamaModelManager';
+} from '@/features/widgets/catalog/GithubWidgets';
+import { CryptoPrice } from '@/features/widgets/catalog/CryptoPrice';
+import { CryptoChartWidget } from '@/features/widgets/catalog/CryptoChartWidget';
+import { ChatbotWidget } from '@/features/widgets/catalog/ChatbotWidget';
+import { OllamaModelManager } from '@/features/widgets/catalog/OllamaModelManager';
 
 export const REGISTRY = {
     weather: {

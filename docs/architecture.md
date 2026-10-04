@@ -39,6 +39,11 @@ flowchart TB
 - **State**: Manages widget configurations, OAuth states, and user sessions.
 - **Widgets**: `WidgetRenderer` fetches each widget's data with TanStack Query; `refetchInterval` follows the widget's `refreshRate`, so widgets refresh independently. Crypto comparison widgets render normalized SVG curves without a charting dependency.
 - **API access**: All requests go through `src/lib/apiClient.ts`, which attaches the JWT and turns error responses into exceptions.
+- **Source layout** (`frontend/src/`):
+    - `pages/`: one component per route.
+    - `features/<feature>/`: code owned by one feature, split into `components/`, `hooks/` and `lib/`. `features/widgets/catalog/` holds the per-service widget UIs referenced by `lib/registry.tsx`.
+    - `components/`: the app shell shared by every page (`Navbar`, `ErrorBoundary`, `ThemeProvider`, `CookieBanner`) and the `ui/` primitives from shadcn.
+    - `lib/`: cross-feature helpers (`apiClient`, `auth`, `utils`).
 
 ### 2. Backend (Server)
 

@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { KeyRound, Loader2 } from 'lucide-react';
-import { useAddWidget } from '@/hooks/useWidgets';
-import { MIN_REFRESH_RATE_SECONDS, getDefaultWidgetLayout } from '@/lib/widgets';
-import { fetchServices } from '@/lib/services';
-import { REGISTRY } from '@/lib/registry';
+import { useAddWidget } from '@/features/widgets/hooks/useWidgets';
+import { MIN_REFRESH_RATE_SECONDS, getDefaultWidgetLayout } from '@/features/widgets/lib/widgets';
+import { fetchServices } from '@/features/services/lib/services';
+import { REGISTRY } from '@/features/widgets/lib/registry';
 import { WidgetForm } from './WidgetForm';
 
 import { Button } from '@/components/ui/button';

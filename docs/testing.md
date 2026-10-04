@@ -64,13 +64,13 @@ The frontend uses **Vitest** and **React Testing Library**.
 - `npm test -w frontend` runs the frontend test suite in `happy-dom`.
 - Component tests are located alongside components (e.g. `Navbar.test.tsx`).
   `src/test-utils.tsx` renders components inside the Query client, theme and router providers.
-- `lib/widgets.test.ts` covers the API-to-dashboard widget mapping (titles, sizes, refresh rate).
+- `features/widgets/lib/widgets.test.ts` covers the API-to-dashboard widget mapping (titles, sizes, refresh rate).
 - `WidgetRenderer.test.tsx` covers crypto price rendering, multiple comparison
   curves, curve toggling, logos, and persisted period changes.
 - `WidgetParameterField.test.tsx` covers arbitrary CoinGecko IDs and removing
   selected assets from the widget configuration.
 - Global mocks (like `ResizeObserver` for the grid layout) are configured in `frontend/src/test/setup.ts`.
-- Hooks that call the API (`hooks/useWidgets.ts`, `hooks/useServices.ts`) are mocked with `vi.mock` in component tests.
+- Hooks that call the API (`features/widgets/hooks/useWidgets.ts`, `features/services/hooks/useServices.ts`) are mocked with `vi.mock` in component tests.
 
 ## GDPR regression coverage
 

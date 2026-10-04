@@ -7,7 +7,7 @@ import { getCurrentUser, hasValidAuthToken, logout, storeAuthToken } from '@/lib
 import { CookieBanner } from '@/components/CookieBanner';
 import { Loader2 } from 'lucide-react';
 
-const DashboardGrid = lazy(() => import('@/components/DashboardGrid'));
+const DashboardGrid = lazy(() => import('@/features/widgets/components/DashboardGrid'));
 const AuthPage = lazy(() => import('@/pages/AuthPage'));
 const TermsPage = lazy(() => import('@/pages/TermsPage'));
 const ServicesPage = lazy(() => import('@/pages/ServicesPage'));

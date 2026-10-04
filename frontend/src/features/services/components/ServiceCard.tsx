@@ -13,8 +13,8 @@ import { Github } from '@/components/ui/Github';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { type ServiceConnection } from '@/lib/services';
-import { useOAuthUrl } from '@/hooks/useServices';
+import { type ServiceConnection } from '@/features/services/lib/services';
+import { useOAuthUrl } from '@/features/services/hooks/useServices';
 
 interface ServiceCardProps {
     service: ServiceConnection;

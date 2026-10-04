@@ -1,16 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, fireEvent, waitFor } from '@testing-library/react';
-import { render } from '../test-utils';
+import { render } from '../../../test-utils';
 import { WidgetConfigurator } from './WidgetConfigurator';
-import { fetchServices } from '@/lib/services';
+import { fetchServices } from '@/features/services/lib/services';
 
 const mockUseAddWidgetMutate = vi.fn();
 
-vi.mock('@/hooks/useWidgets', () => ({
+vi.mock('@/features/widgets/hooks/useWidgets', () => ({
     useAddWidget: () => ({ mutate: mockUseAddWidgetMutate, isPending: false }),
 }));
 
-vi.mock('@/lib/services', () => ({
+vi.mock('@/features/services/lib/services', () => ({
     fetchServices: vi.fn(),
 }));
 

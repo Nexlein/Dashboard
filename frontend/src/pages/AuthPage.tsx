@@ -1,4 +1,4 @@
-import { AuthBackground } from '@/features/auth/AuthBackground';
+import { AuthBackground } from '@/features/auth/components/AuthBackground';
 import { LayoutDashboard } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';

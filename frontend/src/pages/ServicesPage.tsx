@@ -1,8 +1,12 @@
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
-import { useServices, useConnectService, useDisconnectService } from '@/hooks/useServices';
-import type { ServiceConnection } from '@/lib/services';
-import { ServiceCard } from '@/features/services/ServiceCard';
+import {
+    useServices,
+    useConnectService,
+    useDisconnectService,
+} from '@/features/services/hooks/useServices';
+import type { ServiceConnection } from '@/features/services/lib/services';
+import { ServiceCard } from '@/features/services/components/ServiceCard';
 
 export default function ServicesPage() {
     const [error, setError] = useState<string | null>(null);

@@ -16,7 +16,7 @@ import {
     Trash2,
     Shield,
 } from 'lucide-react';
-import { WidgetConfigurator } from '@/components/WidgetConfigurator';
+import { WidgetConfigurator } from '@/features/widgets/components/WidgetConfigurator';
 import { ProfileSettingsModal } from '@/components/ProfileSettingsModal';
 import {
     DropdownMenu,

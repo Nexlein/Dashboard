@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useUpdateWidget } from '@/hooks/useWidgets';
-import { MIN_REFRESH_RATE_SECONDS } from '@/lib/widgets';
+import { useUpdateWidget } from '@/features/widgets/hooks/useWidgets';
+import { MIN_REFRESH_RATE_SECONDS } from '@/features/widgets/lib/widgets';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -10,7 +10,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { REGISTRY } from '@/lib/registry';
+import { REGISTRY } from '@/features/widgets/lib/registry';
 import { WidgetForm } from './WidgetForm';
 
 function isRefreshRateValid(refreshTimer: string, serviceDef: any) {

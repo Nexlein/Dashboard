@@ -1,19 +1,19 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { screen, fireEvent } from '@testing-library/react';
-import { render } from '../test-utils';
+import { render } from '../../../test-utils';
 import DashboardGrid from './DashboardGrid';
-import { toDashboardWidget } from '@/lib/widgets';
+import { toDashboardWidget } from '@/features/widgets/lib/widgets';
 
 const mockUseWidgets = vi.fn();
 const mockRemoveWidgetMutate = vi.fn();
 const mockUpdateLayoutChange = vi.fn();
 
-vi.mock('@/hooks/useWidgets', () => ({
+vi.mock('@/features/widgets/hooks/useWidgets', () => ({
     useWidgets: () => mockUseWidgets(),
     useRemoveWidget: () => ({ mutate: mockRemoveWidgetMutate }),
 }));
 
-vi.mock('@/hooks/useWidgetLayoutManager', () => ({
+vi.mock('@/features/widgets/hooks/useWidgetLayoutManager', () => ({
     useWidgetLayoutManager: () => ({ onLayoutChange: mockUpdateLayoutChange }),
 }));
 

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Download, Check, Loader2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { fetchOllamaModels, pullOllamaModel } from '@/lib/ollama';
+import { fetchOllamaModels, pullOllamaModel } from '@/features/widgets/lib/ollama';
 
 const RECOMMENDED_MODELS = [
     { id: 'llama3.2:1b', name: 'Llama 3.2 (1B) - Very Fast' },

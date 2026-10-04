@@ -3,8 +3,8 @@ import { useMutation } from '@tanstack/react-query';
 import { Send, User, Loader2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { sendWidgetChatMessage } from '@/lib/widgets';
-import { OllamaLogo } from '@/components/OllamaLogo';
+import { sendWidgetChatMessage } from '@/features/widgets/lib/widgets';
+import { OllamaLogo } from '@/features/widgets/catalog/OllamaLogo';
 
 export function ChatbotWidget({ widget }: { widget: any }) {
     const { id } = widget;

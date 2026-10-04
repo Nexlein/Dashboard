@@ -2,9 +2,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render as _originalRender, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ServicesPage from './ServicesPage';
-import { fetchServices } from '@/lib/services';
+import { fetchServices } from '@/features/services/lib/services';
 
-vi.mock('@/lib/services', () => ({
+vi.mock('@/features/services/lib/services', () => ({
     fetchServices: vi.fn(),
     connectService: vi.fn(),
     disconnectService: vi.fn(),
