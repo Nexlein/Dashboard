@@ -13,7 +13,7 @@ import { useWidgets, useRemoveWidget } from '@/features/widgets/hooks/useWidgets
 import { useWidgetLayoutManager } from '@/features/widgets/hooks/useWidgetLayoutManager';
 import { useState } from 'react';
 import WidgetRenderer from './WidgetRenderer';
-import { ErrorBoundary } from '../../../components/ErrorBoundary';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Bitcoin, CloudSun, Edit2, EllipsisVertical, Trash2, Loader2 } from 'lucide-react';
 import { WidgetEditDialog } from './WidgetEditDialog';
 import type { DashboardWidget } from '@/features/widgets/lib/widgets';

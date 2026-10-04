@@ -10,8 +10,15 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import type { WidgetParamDefinition } from '@/features/widgets/lib/types';
 
-function selectedValues(value) {
+type FieldProps = {
+    param: WidgetParamDefinition;
+    value: string;
+    onChange: (value: string) => void;
+};
+
+function selectedValues(value: string) {
     return typeof value === 'string'
         ? value
               .split(',')
@@ -22,15 +29,15 @@ function selectedValues(value) {
 
 const MAX_SELECTED_COINS = 8;
 
-function normalizeCoinId(value) {
+function normalizeCoinId(value: string) {
     return value.trim().toLowerCase().replaceAll(' ', '-');
 }
 
-function CoinMultiSelectField({ param, value, onChange }) {
+function CoinMultiSelectField({ param, value, onChange }: FieldProps) {
     const selected = selectedValues(value);
     const [draft, setDraft] = useState('');
 
-    const addCoins = (values) => {
+    const addCoins = (values: string[]) => {
         const additions = values
             .map(normalizeCoinId)
             .filter((coin) => coin && /^[a-z0-9-]+$/.test(coin));
@@ -100,7 +107,7 @@ function CoinMultiSelectField({ param, value, onChange }) {
                 </Button>
             </form>
             <div className="flex flex-wrap gap-1.5" aria-label="Popular cryptocurrencies">
-                {param.options
+                {(param.options ?? [])
                     .filter((option) => !selected.includes(option.value))
                     .slice(0, 6)
                     .map((option) => (
@@ -122,7 +129,7 @@ function CoinMultiSelectField({ param, value, onChange }) {
     );
 }
 
-export function WidgetParameterField({ param, value, onChange }) {
+export function WidgetParameterField({ param, value, onChange }: FieldProps) {
     if (param.type === 'hidden') return null;
 
     if (param.type === 'coin-multiselect') {
@@ -138,7 +145,7 @@ export function WidgetParameterField({ param, value, onChange }) {
                         <SelectValue placeholder={param.placeholder || 'Select an option'} />
                     </SelectTrigger>
                     <SelectContent>
-                        {param.options.map((option) => (
+                        {(param.options ?? []).map((option) => (
                             <SelectItem key={option.value} value={option.value}>
                                 {option.label}
                             </SelectItem>

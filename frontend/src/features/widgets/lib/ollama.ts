@@ -1,4 +1,4 @@
-import { fetchClient } from '../../../lib/apiClient';
+import { fetchClient } from '@/lib/apiClient';
 
 /** Names of the models installed on the Ollama server. */
 export async function fetchOllamaModels(): Promise<string[]> {

@@ -2,9 +2,17 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { KeyRound, Loader2 } from 'lucide-react';
 import { useAddWidget } from '@/features/widgets/hooks/useWidgets';
-import { MIN_REFRESH_RATE_SECONDS, getDefaultWidgetLayout } from '@/features/widgets/lib/widgets';
-import { fetchServices } from '@/features/services/lib/services';
-import { REGISTRY } from '@/features/widgets/lib/registry';
+import {
+    getDefaultWidgetLayout,
+    isRefreshRateValid,
+    type WidgetParams,
+} from '@/features/widgets/lib/widgets';
+import { fetchServices, type ServiceConnection } from '@/features/services/lib/services';
+import {
+    REGISTRY,
+    findWidgetDefinition,
+    getServiceDefinition,
+} from '@/features/widgets/lib/registry';
 import { WidgetForm } from './WidgetForm';
 
 import { Button } from '@/components/ui/button';
@@ -26,25 +34,17 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 
-function areParamsComplete(service: string, widgetType: string, params: any) {
+function areParamsComplete(service: string, widgetType: string, params: WidgetParams) {
     if (!service || !widgetType) return false;
-    const widgetInfo = REGISTRY[service]?.widgets?.find(
-        (w: any) => w.id === widgetType || w.aliases?.includes(widgetType),
-    );
-    if (!widgetInfo || !widgetInfo.params) return true;
-    return widgetInfo.params.every((param: any) => {
+    const widgetInfo = findWidgetDefinition(service, widgetType);
+    if (!widgetInfo) return true;
+    return widgetInfo.params.every((param) => {
         if (param.label.includes('optional') || param.label.includes('leave empty')) return true;
         const val = params[param.id];
         if (Array.isArray(val)) return val.length > 0;
         if (typeof val === 'string') return val.trim().length > 0;
         return !!val;
     });
-}
-
-function isRefreshRateValid(refreshTimer: string, serviceDef: any) {
-    if (serviceDef?.hasRefresh === false) return true;
-    const refreshRate = Number(refreshTimer);
-    return Number.isInteger(refreshRate) && refreshRate >= MIN_REFRESH_RATE_SECONDS;
 }
 
 export function WidgetConfigurator() {
@@ -54,9 +54,9 @@ export function WidgetConfigurator() {
     const [open, setOpen] = useState(false);
     const [service, setService] = useState('');
     const [widgetType, setWidgetType] = useState('');
-    const [params, setParams] = useState<any>({});
+    const [params, setParams] = useState<WidgetParams>({});
     const [refreshTimer, setRefreshTimer] = useState('60'); // seconds
-    const [serviceConnections, setServiceConnections] = useState<any[]>([]);
+    const [serviceConnections, setServiceConnections] = useState<ServiceConnection[]>([]);
     const [connectionsLoading, setConnectionsLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -78,7 +78,7 @@ export function WidgetConfigurator() {
 
     const handleServiceChange = (val: string) => {
         setService(val);
-        const widgets = REGISTRY[val]?.widgets || [];
+        const widgets = getServiceDefinition(val)?.widgets ?? [];
         if (widgets.length === 1) {
             setWidgetType(widgets[0].id);
         } else {
@@ -88,10 +88,8 @@ export function WidgetConfigurator() {
         setError('');
     };
 
-    const serviceDef = REGISTRY[service];
-    const widgetDef = serviceDef?.widgets?.find(
-        (w: any) => w.id === widgetType || w.aliases?.includes(widgetType),
-    );
+    const serviceDef = getServiceDefinition(service);
+    const widgetDef = findWidgetDefinition(service, widgetType);
 
     const handleSave = () => {
         if (
@@ -121,7 +119,7 @@ export function WidgetConfigurator() {
                     setRefreshTimer('60');
                     setOpen(false);
                 },
-                onError: (err: any) => {
+                onError: (err: Error) => {
                     setError(err.message || 'Failed to create widget');
                 },
             },
@@ -187,7 +185,8 @@ export function WidgetConfigurator() {
                                 </div>
                             </div>
                         ) : (
-                            REGISTRY[service]?.widgets?.length > 1 && (
+                            serviceDef &&
+                            serviceDef.widgets.length > 1 && (
                                 <div className="grid gap-2 animate-in fade-in slide-in-from-top-2">
                                     <Label htmlFor="widgetType">Widget Type</Label>
                                     <Select value={widgetType} onValueChange={setWidgetType}>
@@ -195,7 +194,7 @@ export function WidgetConfigurator() {
                                             <SelectValue placeholder="Select a widget type..." />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {REGISTRY[service].widgets.map((w: any) => (
+                                            {serviceDef.widgets.map((w) => (
                                                 <SelectItem key={w.id} value={w.id}>
                                                     {w.name}
                                                 </SelectItem>
