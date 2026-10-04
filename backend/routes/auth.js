@@ -3,6 +3,8 @@ const requireAuth = require('../middleware/auth');
 const cookieParser = require('cookie-parser');
 const { rateLimit } = require('express-rate-limit');
 const authController = require('../controllers/auth');
+const githubAuthController = require('../controllers/githubAuth');
+const accountController = require('../controllers/account');
 const env = require('../utils/env');
 
 const router = express.Router();
@@ -35,11 +37,11 @@ router.post('/login', authController.login);
 router.get('/me', requireAuth, authController.getMe);
 router.put('/me', requireAuth, authController.updateMe);
 
-router.get('/github', requireAuth, authController.githubLink);
-router.get('/github/callback', authController.githubCallback);
-router.get('/github/login', authController.githubLogin);
+router.get('/github', requireAuth, githubAuthController.githubLink);
+router.get('/github/callback', githubAuthController.githubCallback);
+router.get('/github/login', githubAuthController.githubLogin);
 
-router.get('/download-data', requireAuth, authController.downloadData);
-router.delete('/delete-account', requireAuth, authController.deleteAccount);
+router.get('/download-data', requireAuth, accountController.downloadData);
+router.delete('/delete-account', requireAuth, accountController.deleteAccount);
 
 module.exports = router;
