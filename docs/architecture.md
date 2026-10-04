@@ -41,7 +41,7 @@ flowchart TB
 - **API access**: All requests go through `src/lib/apiClient.ts`, which attaches the JWT and turns error responses into exceptions.
 - **Source layout** (`frontend/src/`):
     - `pages/`: one component per route.
-    - `features/<feature>/`: code owned by one feature, split into `components/`, `hooks/` and `lib/`. `features/widgets/catalog/` holds the per-service widget UIs referenced by `lib/registry.tsx`.
+    - `features/<feature>/`: code owned by one feature, split into `components/`, `hooks/` and `lib/`. `features/widgets/catalog/` holds the per-service widget UIs referenced by `lib/registry.tsx`; each declares the response type of its backend service, and `lib/types.ts` types the registry.
     - `components/`: the app shell shared by every page (`Navbar`, `ErrorBoundary`, `ThemeProvider`, `CookieBanner`) and the `ui/` primitives from shadcn.
     - `lib/`: cross-feature helpers (`apiClient`, `auth`, `utils`).
 

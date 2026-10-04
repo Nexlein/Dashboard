@@ -13,7 +13,7 @@
 
 ## 3. Linting & Formatting
 
-- **oxlint** (`.oxlintrc.json`): one config for the whole repository. It also enforces package boundaries: `frontend` may not import `backend` or `e2e` code, and `shared` may not import either app.
+- **oxlint** (`.oxlintrc.json`): one config for the whole repository. `any` is rejected in TypeScript (`typescript/no-explicit-any`); use `unknown` and narrow it. It also enforces package boundaries: `frontend` may not import `backend` or `e2e` code, and `shared` may not import either app.
 - **Prettier** (`.prettierrc`): 4 spaces, single quotes, 100 columns. `.editorconfig` mirrors the basics for editors.
 - `npm run lint` runs both checks, as CI does. oxlint runs with `--deny-warnings`, so a warning fails the build; disable a rule for specific files in `.oxlintrc.json` overrides rather than leaving warnings.
 
