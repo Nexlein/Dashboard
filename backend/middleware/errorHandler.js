@@ -1,4 +1,5 @@
-function errorHandler(err, req, res, next) {
+// Express recognises error handlers by their 4-argument signature, so keep `_next`.
+function errorHandler(err, req, res, _next) {
     console.error('Unhandled error:', err);
 
     if (err.statusCode) {

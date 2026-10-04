@@ -272,7 +272,7 @@ exports.githubCallback = asyncHandler(async (req, res) => {
             !data.access_token
         )
             throw new Error('Could not obtain GitHub token');
-    } catch (err) {
+    } catch {
         return res.redirect(
             `${frontendUrl}/${isLogin ? 'login' : 'services'}?error=github_flow_failed`,
         );
@@ -338,7 +338,7 @@ exports.githubCallback = asyncHandler(async (req, res) => {
             });
             return accountId;
         });
-    } catch (err) {
+    } catch {
         return res.redirect(
             `${frontendUrl}/${isLogin ? 'login' : 'services'}?error=github_flow_failed`,
         );
@@ -393,7 +393,7 @@ exports.downloadData = asyncHandler(async (req, res) => {
             })),
         };
         res.json(responsePayload);
-    } catch (err) {
+    } catch {
         return res.status(500).json({ error: 'Internal server error' });
     }
 });

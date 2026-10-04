@@ -1,5 +1,5 @@
 require('dotenv').config({ path: require('node:path').join(__dirname, '.env') });
-const env = require('./utils/env'); // Boot-time validation
+require('./utils/env'); // Validates environment variables at boot (exits on error)
 
 const express = require('express');
 const cors = require('cors');

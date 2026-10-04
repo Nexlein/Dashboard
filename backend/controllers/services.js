@@ -45,7 +45,7 @@ exports.getServices = asyncHandler(async (req, res) => {
                                 description = data.name || data.bio || 'GitHub Account';
                             }
                         }
-                    } catch (e) {
+                    } catch {
                         // Silently ignore GitHub fetch error on listing
                     }
                 } else if (connection) {

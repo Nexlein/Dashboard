@@ -1,6 +1,6 @@
 const { z } = require('zod');
 const { PrismaClient } = require('@prisma/client');
-const { encryptParams, decryptParams, decryptJson, encryptJson } = require('../utils/encryption');
+const { encryptParams, decryptParams, decryptJson } = require('../utils/encryption');
 const registry = require('../services/registry');
 const asyncHandler = require('../utils/asyncHandler');
 

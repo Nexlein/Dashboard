@@ -1,6 +1,6 @@
 const request = require('supertest');
 const app = require('../../app'); // Assumes app.js is the express app
-const { registerSchema, loginSchema } = require('shared');
+const { registerSchema } = require('shared');
 
 describe('API Contract Tests', () => {
     describe('POST /auth/register contract', () => {

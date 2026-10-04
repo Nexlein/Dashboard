@@ -65,7 +65,7 @@ async function fetchWithRefresh(url, context) {
             context.credentials.accessToken = accessToken;
             headers.Authorization = `Bearer ${accessToken}`;
             res = await fetch(url, { headers });
-        } catch (err) {
+        } catch {
             // Let the original 401 fall through
         }
     }
