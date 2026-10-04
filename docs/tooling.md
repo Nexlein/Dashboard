@@ -1,35 +1,48 @@
 # Project Tooling & Automation
 
-## 1. Git Hooks (Husky & lint-staged)
+## 1. Workspaces & Node version
 
-- **Husky**: intercepts Git commands. We use it to catch `git commit`.
-- **lint-staged**: runs scripts only on files you are about to commit (staged files).
-- **Workflow**: When you commit, Husky triggers lint-staged. Lint-staged runs Prettier to auto-format your code. If it fails, the commit stops.
+- **npm workspaces**: `shared`, `backend`, `frontend` and `e2e` install together from the root with one `package-lock.json`. Run `npm ci` at the root, never inside a package.
+- **Node.js 24**: pinned in `.nvmrc` and used by CI and the Docker images (`engines` accepts >= 22.12).
+- **Install scripts**: `allowScripts` in the root `package.json` approves the packages that must run install scripts (bcrypt, Prisma).
 
-## 2. Code Formatting (Prettier)
+## 2. Git Hooks (Husky, lint-staged & commitlint)
 
-- **Prettier**: Enforces consistent code style (2 spaces, single quotes).
-- **.prettierrc**: The rules file.
-- **.editorconfig**: Helps your IDE (VSCode, IntelliJ) match Prettier's basic rules instantly while you type.
+- **pre-commit**: lint-staged runs oxlint and Prettier on staged files only. If either fails, the commit stops.
+- **commit-msg**: commitlint enforces [Conventional Commits](https://www.conventionalcommits.org) (`feat:`, `fix:`, `test:`, `docs:`, `build:`, `ci:`...).
 
-## 3. GitHub Actions (CI/CD)
+## 3. Linting & Formatting
 
-- **CI Pipeline (`.github/workflows/ci.yml`)**: Runs `npm test` and `docker-compose build` on every push. Ensures nobody pushes broken code.
-- **Mirror Pipeline (`.github/workflows/mirror.yml`)**: Automatically pushes your code to the Epitech grading repository when you push to `main`. Requires `GIT_SSH_PRIVATE_KEY` secret in GitHub.
+- **oxlint** (`.oxlintrc.json`): one config for the whole repository. It also enforces package boundaries: `frontend` may not import `backend` or `e2e` code, and `shared` may not import either app.
+- **Prettier** (`.prettierrc`): 4 spaces, single quotes, 100 columns. `.editorconfig` mirrors the basics for editors.
+- `npm run lint` runs both checks, as CI does.
 
-## 4. Docker Compose
+## 4. GitHub Actions (CI/CD)
 
-- **docker-compose.yml**: Orchestrates the entire app.
+- **CI Pipeline (`.github/workflows/ci.yml`)**, on pushes and pull requests to `main`:
+  - `lint`: oxlint and Prettier.
+  - `test-shared`, `test-backend` (with PostgreSQL and the GDPR integration check), `test-frontend` (with coverage).
+  - `test-e2e`: Playwright against the dev servers and a PostgreSQL service.
+  - `docker`: builds both images with Docker Compose.
+- **Mirror Pipeline (`.github/workflows/mirror.yml`)**: Automatically pushes your code to the Epitech grading repository when you push to `main`. Requires the `SSH_PRIVATE_KEY` secret in GitHub.
+- **Dependabot (`.github/dependabot.yml`)**: weekly updates for npm (root lockfile, minor/patch grouped), the Dockerfiles and GitHub Actions.
+
+## 5. Docker Compose
+
+- **docker-compose.yml**: Orchestrates the entire app. Images build with the repository root as context; the root `.dockerignore` keeps `.env` files and build output out of them.
   - `client`: React Vite frontend (port 8081).
   - `nginx`: Load balancer for backend replicas (port 8080).
   - `server`: Express Node.js backend replicas (internal).
-  - `redis`: Centralized caching and state store (internal).
+  - `redis`: Centralized caching and state store (port 6379).
   - `db`: PostgreSQL 15 database (port 5433).
+  - `ollama`: local LLM server for the chatbot widget (port 11434).
 
-## 5. Testing
+## 6. Testing
 
 - **Vitest & React Testing Library**: Frontend unit and component testing.
 
 - **Jest & Supertest**: Used for backend API integration tests (`backend/tests/`). Ensures routes like `/auth/login` and `/about.json` function correctly.
+
+- **Playwright & axe-core**: End-to-end and accessibility tests (`e2e/`).
 
 - **K6**: Used for backend load, stress, and spike testing (`backend/tests/k6/`). Ensures Nginx routing and Redis caching remain stable under extreme concurrency.

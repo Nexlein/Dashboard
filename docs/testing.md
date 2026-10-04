@@ -2,7 +2,15 @@
 
 ## Overview
 
-We use **Jest** and **Supertest** to verify our backend API routes. The CI pipeline runs these tests automatically on every PR and push to `main`.
+| Layer    | Tools                          | Location                         |
+| -------- | ------------------------------ | -------------------------------- |
+| Shared   | Vitest                         | `shared/tests/`                  |
+| Backend  | Jest, Supertest                | `backend/tests/`                 |
+| Frontend | Vitest, React Testing Library  | next to components (`*.test.tsx`)|
+| E2E      | Playwright, axe-core           | `e2e/tests/`                     |
+| Load     | k6                             | `backend/tests/k6/`              |
+
+The CI pipeline runs all of them except k6 on every PR and push to `main`.
 
 ## Rule for Developers
 
@@ -13,15 +21,25 @@ This ensures our API stays reliable and does not break existing integrations (li
 
 ## How to Run Tests
 
-1. Ensure your database is running via `docker-compose up db -d` (if your test interacts with DB).
-2. Go to the `backend/` folder.
-3. Run `npm test`.
+From the repository root:
+
+```bash
+npm test                 # shared, backend and frontend unit tests
+npm test -w backend      # a single workspace
+npm run test:e2e         # end-to-end (see below)
+```
+
+Unit tests mock Prisma and external providers; they need no database. Run
+`npx prisma generate` in `backend/` once after installing so the Prisma client exists.
 
 ## Structure
 
 All backend tests are located in `backend/tests/`.
 
-- `api.test.js`: Core tests for endpoints (`/about.json`, `/auth/*`).
+- `api.test.js`: Core tests for endpoints (`/health`, `/about.json`, `/auth/*`, `/widgets/*`
+  including id validation, update payloads, ownership and chat forwarding).
+- `env.test.js`: environment validation (defaults, empty values, invalid input).
+- `contract/api.contract.test.js`: the API rejects payloads the shared Zod schemas reject.
 - `oauth.test.js`: GitHub redirects, browser cookie binding, state expiration and
   replay protection, token persistence and error handling. GitHub and Prisma are
   mocked; these tests require no real credentials or running database.
@@ -43,14 +61,16 @@ The backend includes a **K6** testing suite in `backend/tests/k6/` to guarantee 
 
 The frontend uses **Vitest** and **React Testing Library**.
 
-- `npm test` runs the frontend test suite in `jsdom`.
-- Component tests are located alongside components (e.g. `Navbar.test.jsx`).
-- `WidgetRenderer.test.jsx` covers crypto price rendering, multiple comparison
+- `npm test -w frontend` runs the frontend test suite in `happy-dom`.
+- Component tests are located alongside components (e.g. `Navbar.test.tsx`).
+  `src/test-utils.tsx` renders components inside the Query client, theme and router providers.
+- `lib/widgets.test.ts` covers the API-to-dashboard widget mapping (titles, sizes, refresh rate).
+- `WidgetRenderer.test.tsx` covers crypto price rendering, multiple comparison
   curves, curve toggling, logos, and persisted period changes.
-- `WidgetParameterField.test.jsx` covers arbitrary CoinGecko IDs and removing
+- `WidgetParameterField.test.tsx` covers arbitrary CoinGecko IDs and removing
   selected assets from the widget configuration.
-- Global mocks (like `ResizeObserver` for the grid layout) are configured in `frontend/src/test/setup.js`.
-- Ensure the store (Zustand) is reset before each test if mocked state is required.
+- Global mocks (like `ResizeObserver` for the grid layout) are configured in `frontend/src/test/setup.ts`.
+- Hooks that call the API (`hooks/useWidgets.ts`, `hooks/useServices.ts`) are mocked with `vi.mock` in component tests.
 
 ## GDPR regression coverage
 
@@ -60,7 +80,7 @@ The frontend uses **Vitest** and **React Testing Library**.
 - `tokenEncryption.test.js`: shared key derivation, arbitrary secret lengths,
   missing/wrong keys, tamper rejection, multi-batch migration, initial PR format
   compatibility, idempotence, and concurrent refresh protection.
-- `PrivacyActions.test.jsx` and `AuthPage.test.tsx`: successful/failed downloads and
+- `PrivacyActions.test.tsx` and `AuthPage.test.tsx`: successful/failed downloads and
   deletions, cancellation, editable OAuth profiles and both registration checkboxes.
 
 Run frontend tests with Node 24 (the frontend dependency versions require it).
@@ -84,3 +104,26 @@ real PostgreSQL and simulated GitHub responses. Startup
 migration visits all OAuth rows in that database, so never target a real database.
 The test does not contact GitHub: a subprocess-only fixture supplies provider
 responses. Unit tests additionally cover provider and database failures.
+
+## End-to-End Tests
+
+Playwright tests in `e2e/tests/` drive the real frontend and backend:
+
+- `auth.spec.ts`: redirect of anonymous visitors, register / sign in / sign out
+  through the UI, wrong-password error.
+- `widgets.spec.ts`: add a widget through the configurator and delete one, both
+  checked after a reload. Only the Ollama model listing is stubbed.
+- `a11y.spec.ts`: axe scans of `/login`, `/register` and the dashboard with every
+  rule enabled, and the light theme on public pages under a dark OS scheme.
+
+Run them with the database up and `backend/.env` configured:
+
+```bash
+docker compose up -d db redis
+(cd backend && npx prisma db push)
+npm exec -w e2e -- playwright install chromium   # first time only
+npm run test:e2e
+```
+
+Playwright starts both dev servers and raises `AUTH_RATE_LIMIT_MAX` for the backend
+it starts, since every test registers a new user.

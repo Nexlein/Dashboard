@@ -243,7 +243,8 @@ CoinGecko widgets use the following parameters:
 ### `PUT /widgets/:id`
 
 Update an existing widget's parameters, refresh rate, or layout.
-When supplied, `refreshRate` must be an integer greater than or equal to `60`.
+When supplied, `params` must be an object, `refreshRate` an integer greater than or
+equal to `60`, and `layout` an object of integers `x`, `y`, `w`, `h`.
 
 **Request Body (Partial updates allowed):**
 
@@ -259,11 +260,23 @@ When supplied, `refreshRate` must be an integer greater than or equal to `60`.
 
 **Response (200 OK):** Returns the updated widget object.
 
+- `400 Bad Request` for an invalid id or body.
+- `403 Forbidden` when the widget belongs to another user.
+- `404 Not Found` when the widget does not exist.
+
+Widget ids in every `/widgets/:id` route must be positive integers written with
+digits only; anything else (`abc`, `0`, `1.5`) returns `400 Bad Request` with
+`{ "error": "Invalid widget id" }`.
+
 ### `DELETE /widgets/:id`
 
 Delete a widget.
 
 **Response (204 No Content)**
+
+- `400 Bad Request` for an invalid id.
+- `403 Forbidden` when the widget belongs to another user.
+- `404 Not Found` when the widget does not exist.
 
 ### `GET /widgets/:id/data`
 
@@ -291,7 +304,9 @@ assets with different price scales can be compared.
 
 ### `POST /widgets/:id/chat`
 
-Executes a chat completion request for the `ai_chat` widget, proxying the payload to the configured LLM API (e.g. OpenAI, Ollama). 
+Sends the conversation to the Ollama model saved in the `ai_chat` widget's `model`
+parameter (the `ollama` Docker Compose service). `messages` must be a non-empty array
+of `{ role, content }` objects with `role` among `system`, `user`, `assistant`.
 
 **Request Body:**
 
@@ -310,6 +325,12 @@ Executes a chat completion request for the `ai_chat` widget, proxying the payloa
     "reply": "Hello! How can I help you today?"
 }
 ```
+
+- `400 Bad Request` for an invalid id or payload, or a widget that is not a chatbot.
+- `403 Forbidden` when the widget belongs to another user.
+- `404 Not Found` when the widget does not exist, or Ollama's status when it rejects
+  the request (for example a model that is not installed).
+- `502 Bad Gateway` when Ollama cannot be reached.
 
 ## Service connections
 

@@ -4,16 +4,17 @@
 
 - **Component-Based**: Perfect for isolated widgets.
 - **Ecosystem**: Access to `react-grid-layout` for drag-and-drop dashboard grids.
-- **State Management**: `zustand` for lightweight, predictable global state (user auth, widget layout).
-- **UI Components**: `shadcn/ui` (Radix Primitives) for accessible, unstyled building blocks.
-- **Vite & PWA**: Fast build times with `vite-plugin-pwa` for standalone app installation.
+- **TypeScript**: Typed components and API contracts; types for auth payloads come from the `shared` workspace.
+- **Server State**: TanStack Query fetches, caches and refreshes widgets and services (`refetchInterval` drives widget auto-refresh). The theme preference is a small React context.
+- **UI Components**: `shadcn/ui` (Radix / Base UI primitives) for accessible, unstyled building blocks.
+- **Vite**: Fast dev server and builds, with route-level code splitting (`React.lazy`).
 - **Tailwind CSS**: Rapid UI development and native Dark/Light mode support.
-- **i18n**: `react-i18next` for English/French translations.
 
 ## Backend: Node.js (Express)
 
-- **Security & Caching**: `express-rate-limit` (backed by Redis) to prevent attacks, and Redis to protect external APIs.
-- **OAuth2 Support**: Passport.js simplifies integration with external services.
+- **Security & Caching**: `helmet` headers, `express-rate-limit` (the authentication limiter is backed by Redis so it holds across replicas), and Redis to cache external API responses.
+- **Validation**: Zod validates request bodies and the environment at boot. Auth schemas live in the `shared` workspace so backend and frontend agree on them.
+- **OAuth2 Support**: A dedicated GitHub OAuth flow (state cookie binding, encrypted token storage) without an extra auth framework.
 - **JSON Native**: Makes serving the required `about.json` and API routes trivial.
 - **Port 8080**: Replicas sit behind an Nginx reverse proxy.
 
@@ -25,7 +26,7 @@
 ## ORM: Prisma
 
 - **Type Safety**: Auto-generates client. Catch DB errors at compile time.
-- **Speed**: Schema syntax defines tables quickly. Easy migrations (`prisma migrate dev`).
+- **Speed**: Schema syntax defines tables quickly; the schema is applied with `prisma db push`.
 - **Connection**: Bridges Node.js Express backend directly to PostgreSQL container.
 
 ## Infrastructure: Docker Compose
@@ -36,3 +37,4 @@
   - Nginx Load Balancer
   - Redis Cache
   - PostgreSQL Database
+  - Ollama (local LLM for the chatbot widget)
