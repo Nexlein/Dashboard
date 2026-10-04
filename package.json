@@ -17,8 +17,8 @@
     ],
     "scripts": {
         "build": "npm run build -w shared && npm run build -w frontend",
-        "test": "npm run build -w shared && npm test -w shared -w backend -w frontend",
-        "test:e2e": "npm test -w e2e",
+        "test": "npm run build -w shared && npm run db:generate -w backend && npm test -w shared -w backend -w frontend",
+        "test:e2e": "npm run build -w shared && npm run db:generate -w backend && npm test -w e2e",
         "prepare": "husky",
         "lint": "oxlint --deny-warnings && prettier --check ."
     },

@@ -11,7 +11,8 @@
         "migrate:oauth-tokens": "node scripts/migrate-oauth-tokens.js",
         "test:load": "k6 run tests/k6/load.js",
         "test:stress": "k6 run tests/k6/stress.js",
-        "test:spike": "k6 run tests/k6/spike.js"
+        "test:spike": "k6 run tests/k6/spike.js",
+        "db:generate": "prisma generate"
     },
     "keywords": [],
     "author": "",

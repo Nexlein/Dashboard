@@ -29,8 +29,9 @@ npm test -w backend      # a single workspace
 npm run test:e2e         # end-to-end (see below)
 ```
 
-Unit tests mock Prisma and external providers; they need no database. Run
-`npx prisma generate` in `backend/` once after installing so the Prisma client exists.
+Unit tests mock Prisma and external providers; they need no database. The root
+`npm test` and `npm run test:e2e` scripts build `shared` and generate the Prisma client
+first; when running a single workspace, run `npm run db:generate -w backend` once.
 
 ## Structure
 
