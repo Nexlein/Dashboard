@@ -1,10 +1,9 @@
 const { z } = require('zod');
-const { PrismaClient } = require('@prisma/client');
 const { encryptParams, decryptParams, decryptJson } = require('../utils/encryption');
 const registry = require('../services/registry');
 const asyncHandler = require('../utils/asyncHandler');
 
-const prisma = new PrismaClient();
+const prisma = require('../utils/prisma');
 const MIN_REFRESH_RATE_SECONDS = 60;
 
 const createWidgetSchema = z.object({

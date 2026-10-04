@@ -1,11 +1,9 @@
 const app = require('./app');
-const { PrismaClient } = require('@prisma/client');
+const { PORT } = require('./utils/env');
+const prisma = require('./utils/prisma');
 const { migrateOAuthTokens } = require('./utils/migrateOAuthTokens');
 
-const PORT = process.env.PORT || 8080;
-const migrationClient = new PrismaClient();
-
-migrateOAuthTokens(migrationClient)
+migrateOAuthTokens(prisma)
     .then(() => app.listen(PORT, () => console.log(`Server running on port ${PORT}`)))
     .catch((err) => {
         console.error(
@@ -13,5 +11,4 @@ migrateOAuthTokens(migrationClient)
             err,
         );
         process.exit(1);
-    })
-    .finally(() => migrationClient.$disconnect());
+    });

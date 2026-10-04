@@ -1,9 +1,8 @@
-const { PrismaClient } = require('@prisma/client');
 const registry = require('../services/registry');
 const { encryptJson } = require('../utils/encryption');
 const asyncHandler = require('../utils/asyncHandler');
 
-const prisma = new PrismaClient();
+const prisma = require('../utils/prisma');
 
 exports.getServices = asyncHandler(async (req, res) => {
     const [connections, oauthTokens] = await Promise.all([

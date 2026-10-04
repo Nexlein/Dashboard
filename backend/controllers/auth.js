@@ -1,6 +1,5 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { PrismaClient } = require('@prisma/client');
 const crypto = require('node:crypto');
 const { getCache, setCache, deleteCache } = require('../utils/redisCache');
 const { encrypt, decrypt } = require('../utils/crypto');
@@ -10,7 +9,7 @@ const { registerSchema, loginSchema, updateMeSchema } = require('shared');
 const asyncHandler = require('../utils/asyncHandler');
 const env = require('../utils/env');
 
-const prisma = new PrismaClient();
+const prisma = require('../utils/prisma');
 const JWT_SECRET = env.JWT_SECRET;
 const JWT_EXPIRES_IN = env.JWT_EXPIRES_IN;
 const SALT_ROUNDS = env.SALT_ROUNDS;

@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../utils/prisma');
 
 const MAX_CACHE_TTL_MS = 5 * 60 * 1000;
 const MIN_REFRESH_RATE_SECONDS = 60;
