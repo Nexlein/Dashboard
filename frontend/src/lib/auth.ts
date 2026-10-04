@@ -1,8 +1,7 @@
-import { fetchClient, API_URL } from './apiClient';
-import type { RegisterFormData, LoginFormData, User } from 'shared';
+import { fetchClient, API_URL, AUTH_TOKEN_KEY } from './apiClient';
+import type { RegisterFormData, LoginFormData, UpdateMeFormData, User } from 'shared';
 
 export { API_URL };
-const AUTH_TOKEN_KEY = 'dashboard-auth-token';
 
 type AuthResponse = { message: string; token?: string; userId?: number };
 
@@ -27,6 +26,19 @@ export async function getCurrentUser(): Promise<User> {
     return fetchClient('/auth/me') as Promise<User>;
 }
 
+export async function updateProfile(payload: UpdateMeFormData): Promise<User> {
+    return fetchClient('/auth/me', { method: 'PUT', body: JSON.stringify(payload) });
+}
+
+/** GDPR export of everything stored about the current user. */
+export async function exportMyData(): Promise<unknown> {
+    return fetchClient('/auth/download-data');
+}
+
+export async function deleteMyAccount() {
+    await fetchClient('/auth/delete-account', { method: 'DELETE' });
+}
+
 export function hasValidAuthToken() {
     const token = localStorage.getItem(AUTH_TOKEN_KEY);
     if (!token) return false;
@@ -37,6 +49,11 @@ export function hasValidAuthToken() {
         localStorage.removeItem(AUTH_TOKEN_KEY);
         return false;
     }
+}
+
+/** Stores the JWT handed back by the GitHub OAuth redirect. */
+export function storeAuthToken(token: string) {
+    localStorage.setItem(AUTH_TOKEN_KEY, token);
 }
 
 export function logout() {

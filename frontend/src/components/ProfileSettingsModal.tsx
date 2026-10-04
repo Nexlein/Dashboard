@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { updateProfile } from '@/lib/auth';
 
 export function ProfileSettingsModal({ open, onOpenChange, user, onUserUpdated }) {
     const [displayName, setDisplayName] = useState(user?.displayName || '');
@@ -23,30 +24,12 @@ export function ProfileSettingsModal({ open, onOpenChange, user, onUserUpdated }
     const queryClient = useQueryClient();
 
     const updateProfileMutation = useMutation({
-        mutationFn: async ({ displayName, email }: { displayName: string; email: string }) => {
-            const token = localStorage.getItem('dashboard-auth-token');
-            const { API_URL } = await import('@/lib/auth');
-            const res = await fetch(`${API_URL}/auth/me`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({ displayName, email }),
-            });
-
-            if (!res.ok) {
-                const data = await res.json();
-                throw new Error(data.error || 'Failed to update profile');
-            }
-
-            return res.json() as Promise<{ displayName: string; email: string }>;
-        },
+        mutationFn: updateProfile,
         onMutate: () => {
             setError('');
             setSuccess('');
         },
-        onSuccess: (updatedUser: { displayName: string; email: string }) => {
+        onSuccess: (updatedUser) => {
             onUserUpdated(updatedUser);
             queryClient.setQueryData(['currentUser'], updatedUser);
             setSuccess('Profile updated successfully');

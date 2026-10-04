@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { BrowserRouter as Router, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import Navbar from '@/components/Navbar';
-import { getCurrentUser, hasValidAuthToken, logout } from '@/lib/auth';
+import { getCurrentUser, hasValidAuthToken, logout, storeAuthToken } from '@/lib/auth';
 import { CookieBanner } from '@/components/CookieBanner';
 import { Loader2 } from 'lucide-react';
 
@@ -80,7 +80,7 @@ function OAuthCallback() {
         const urlParams = new URLSearchParams(window.location.search);
         const token = urlParams.get('token');
         if (token) {
-            localStorage.setItem('dashboard-auth-token', token);
+            storeAuthToken(token);
             navigate('/', { replace: true });
         } else {
             navigate('/login', { replace: true });

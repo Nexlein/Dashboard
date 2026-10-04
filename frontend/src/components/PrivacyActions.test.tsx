@@ -10,6 +10,12 @@ const customRender = (ui: React.ReactElement) => {
     return _originalRender(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
 };
 
+const jsonResponse = (status: number, body: unknown = {}) =>
+    new Response(JSON.stringify(body), {
+        status,
+        headers: { 'Content-Type': 'application/json' },
+    });
+
 afterEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
@@ -31,7 +37,7 @@ it.each([401, 500])(
     'preserves the session and reports a deletion failure for HTTP %s',
     async (status) => {
         window.confirm = vi.fn().mockReturnValue(true) as any;
-        vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status }));
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(status, { error: 'x' })));
         const onLogout = openAccount();
         fireEvent.click(screen.getByRole('menuitem', { name: /delete my account/i }));
         expect(await screen.findByRole('alert')).toHaveTextContent(
@@ -53,15 +59,18 @@ it('reports a network failure without logging out', async () => {
 
 it('logs out only after a successful deletion', async () => {
     window.confirm = vi.fn().mockReturnValue(true) as any;
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
     vi.stubGlobal('fetch', fetchMock);
     const onLogout = openAccount();
     fireEvent.click(screen.getByRole('menuitem', { name: /delete my account/i }));
     await waitFor(() => expect(onLogout).toHaveBeenCalledOnce());
-    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/auth/delete-account'), {
-        method: 'DELETE',
-        headers: { Authorization: 'Bearer test-token' },
-    });
+    expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining('/auth/delete-account'),
+        expect.objectContaining({
+            method: 'DELETE',
+            headers: expect.objectContaining({ Authorization: 'Bearer test-token' }),
+        }),
+    );
     expect(screen.queryByRole('alert')).toBeNull();
 });
 
@@ -76,7 +85,7 @@ it('does not delete when the user cancels', () => {
 });
 
 it('reports a failed export instead of silently doing nothing', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500 }));
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(500)));
     openAccount();
     fireEvent.click(screen.getByRole('menuitem', { name: /download my data/i }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Le téléchargement a échoué');
@@ -84,7 +93,7 @@ it('reports a failed export instead of silently doing nothing', async () => {
 
 it('downloads a successful export as JSON', async () => {
     const data = { widgets: [{ params: { city: 'Paris' } }] };
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => data }));
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, data)));
     const createObjectURL = vi.fn().mockReturnValue('blob:export');
     const revokeObjectURL = vi.fn();
     vi.stubGlobal('URL', Object.assign(class extends URL {}, { createObjectURL, revokeObjectURL }));
@@ -98,9 +107,7 @@ it('downloads a successful export as JSON', async () => {
 });
 
 it('allows both display name and email changes for an OAuth profile', async () => {
-    const fetchMock = vi
-        .fn()
-        .mockResolvedValue({ ok: true, json: async () => ({ displayName: 'New name' }) });
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { displayName: 'New name' }));
     vi.stubGlobal('fetch', fetchMock);
     const onUserUpdated = vi.fn();
     customRender(

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useTheme } from '@/components/ThemeProvider';
-import { API_URL } from '@/lib/auth';
+import { deleteMyAccount, exportMyData } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import {
     Check,
@@ -53,13 +53,7 @@ export default function Navbar({ user, onLogout, showWidgetConfigurator = true }
         setPrivacyError('');
         setPrivacyBusy(true);
         try {
-            const response = await fetch(`${API_URL}/auth/download-data`, {
-                headers: {
-                    Authorization: `Bearer ${localStorage.getItem('dashboard-auth-token')}`,
-                },
-            });
-            if (!response.ok) throw new Error('Download failed');
-            const data = await response.json();
+            const data = await exportMyData();
             const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
@@ -86,13 +80,7 @@ export default function Navbar({ user, onLogout, showWidgetConfigurator = true }
         setPrivacyError('');
         setPrivacyBusy(true);
         try {
-            const response = await fetch(`${API_URL}/auth/delete-account`, {
-                method: 'DELETE',
-                headers: {
-                    Authorization: `Bearer ${localStorage.getItem('dashboard-auth-token')}`,
-                },
-            });
-            if (!response.ok) throw new Error('Deletion failed');
+            await deleteMyAccount();
             onLogout();
         } catch {
             setPrivacyError('La suppression n’a pas pu être confirmée. Veuillez réessayer.');

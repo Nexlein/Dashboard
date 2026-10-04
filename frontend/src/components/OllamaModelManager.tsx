@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Download, Check, Loader2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { API_URL } from '@/lib/auth';
+import { fetchOllamaModels, pullOllamaModel } from '@/lib/ollama';
 
 const RECOMMENDED_MODELS = [
     { id: 'llama3.2:1b', name: 'Llama 3.2 (1B) - Very Fast' },
@@ -29,34 +29,14 @@ export function OllamaModelManager({
         refetch: fetchModels,
     } = useQuery({
         queryKey: ['ollamaModels'],
-        queryFn: async () => {
-            const token = localStorage.getItem('dashboard-auth-token');
-            const res = await fetch(`${API_URL}/chatbot/models`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            if (!res.ok) throw new Error('Failed to fetch models');
-            const data = await res.json();
-            return (data.models?.map((m: { name: string }) => m.name) || []) as string[];
-        },
+        queryFn: fetchOllamaModels,
     });
 
     // sync error state
     if (queryError && !error) setError(queryError.message);
 
     const pullMutation = useMutation({
-        mutationFn: async (modelId: string) => {
-            const token = localStorage.getItem('dashboard-auth-token');
-            const res = await fetch(`${API_URL}/chatbot/pull`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({ model: modelId }),
-            });
-            if (!res.ok) throw new Error('Failed to pull model');
-            return modelId;
-        },
+        mutationFn: pullOllamaModel,
         onMutate: (modelId: string) => {
             setPulling(modelId);
             setError(null);
