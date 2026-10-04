@@ -30,7 +30,7 @@
 ## 5. Docker Compose
 
 - **docker-compose.yml**: Orchestrates the entire app. Images build with the repository root as context; the root `.dockerignore` keeps `.env` files and build output out of them.
-  - `client`: React Vite frontend (port 8081).
+  - `client`: React Vite frontend served by nginx (port 8081). `frontend/nginx/default.conf.template` adds security headers (Content-Security-Policy, `X-Frame-Options`, `nosniff`, `Referrer-Policy`), gzip, and long-term caching of hashed assets. Set `API_ORIGIN` to the backend URL the browser calls; the CSP only allows requests to it.
   - `nginx`: Load balancer for backend replicas (port 8080).
   - `server`: Express Node.js backend replicas (internal).
   - `redis`: Centralized caching and state store (port 6379).

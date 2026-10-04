@@ -39,7 +39,9 @@ services:
         build:
             context: .
             dockerfile: frontend/Dockerfile
-
+        environment:
+            # API origin allowed by the frontend Content-Security-Policy (connect-src).
+            - API_ORIGIN=http://localhost:8080
         ports:
             - '8081:80'
 
