@@ -81,15 +81,12 @@ Requirements: Node.js 24 (see `.nvmrc`, `nvm use`) and Docker with Docker Compos
 
 2. **Run with Docker**
 
-   Prepare the database schema once, then start the stack:
-
    ```bash
-   docker compose up -d db
-   docker compose exec db pg_isready -U user -d dashboard
-   # Wait for "accepting connections" before applying the schema.
-   docker compose run --rm --build --no-deps server npx prisma db push
    docker compose up --build
    ```
+
+   The server waits for PostgreSQL to be healthy and applies pending database
+   migrations before accepting requests.
 
 3. **Database Seeding (Test Data)**
 
@@ -108,7 +105,7 @@ Requirements: Node.js 24 (see `.nvmrc`, `nvm use`) and Docker with Docker Compos
    - Backend API: [http://localhost:8080](http://localhost:8080)
    - `about.json`: [http://localhost:8080/about.json](http://localhost:8080/about.json)
 
-*The schema must exist before backend startup. OAuth token data is migrated automatically before the API accepts requests.*
+*Database migrations and the OAuth token data migration both run automatically before the API accepts requests.*
 
 ### Run the backend outside Docker
 
@@ -118,17 +115,16 @@ itself runs inside Docker.
 
 ```bash
 docker compose up -d db redis
-docker compose exec db pg_isready -U user -d dashboard
 npm ci                          # from the repository root: installs every workspace
 npm run build -w shared
-(cd backend && npx prisma db push)
+npm run db:deploy -w backend    # apply database migrations
 npm run dev -w backend          # API on http://localhost:8080
 npm run dev -w frontend         # client on http://localhost:5173
 ```
 
-On the first database start, wait until `pg_isready` reports `accepting connections`
-before running `prisma db push`. Run either the Docker backend or the local backend
-on port 8080, not both at once.
+On the first database start, wait a few seconds for PostgreSQL to accept connections
+before applying migrations. Run either the Docker backend or the local backend on
+port 8080, not both at once.
 
 See the [manual browser flow](docs/api.md#manual-browser-flow) to test GitHub
 linking without a frontend.
@@ -146,6 +142,16 @@ npm run test:e2e   # Playwright; needs the database and backend/.env (starts bot
 
 Provider tests mock remote APIs and do not require real OpenWeather, GitHub, or
 CoinGecko credentials. See [Testing Guidelines](docs/testing.md) for details.
+
+To change the database, edit `backend/prisma/schema.prisma`, then create and apply a
+migration and commit the generated folder (CI fails when the schema and the migrations
+disagree):
+
+```bash
+npm run db:migrate -w backend -- --name add_widget_color
+```
+
+See [Database Schema](docs/db_schema.md#migrations) for the full workflow.
 
 Commits follow [Conventional Commits](https://www.conventionalcommits.org)
 (`feat:`, `fix:`, `test:`...), checked by commitlint. The pre-commit hook runs
@@ -178,19 +184,19 @@ cd backend
 npm run migrate:oauth-tokens
 ```
 
-This release adds a nullable, unique `User.githubId` column. For an existing
-database, apply the additive, repeatable upgrade before starting the new backend:
+### Databases created before migrations
+
+Databases created with `prisma db push` have no migration history, so
+`migrate deploy` would try to create existing tables. If the schema is up to date,
+mark the baseline migration as applied once:
 
 ```bash
 cd backend
-npx prisma db push
+npx prisma migrate resolve --applied 20261004000000_init
 ```
 
-For Docker, use `docker compose run --rm --build --no-deps server npx prisma db push`
-after stopping old backend instances. This adds only the nullable column and its
-unique index; it does not delete data or require `--accept-data-loss`. Fresh databases
-can use `npx prisma db push` as in the installation steps above. Existing accounts
-acquire their GitHub ID on their next GitHub login/linking or before changing their
-email. The OAuth token encryption migration itself does not change the schema.
+For disposable development data, `npm run db:reset -w backend` drops the database
+and recreates it from the migrations instead.
+
 Retained database backups may still contain old plaintext tokens; handle their
 access and retention separately.

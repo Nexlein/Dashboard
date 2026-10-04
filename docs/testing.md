@@ -93,7 +93,7 @@ For real PostgreSQL validation, prepare an **isolated, disposable** database:
 ```bash
 cd backend
 # Set TEST_DATABASE_URL to that disposable database only.
-DATABASE_URL="$TEST_DATABASE_URL" npx prisma db push
+DATABASE_URL="$TEST_DATABASE_URL" npx prisma migrate deploy
 npm run test:gdpr-integration
 ```
 
@@ -121,7 +121,7 @@ Run them with the database up and `backend/.env` configured:
 
 ```bash
 docker compose up -d db redis
-(cd backend && npx prisma db push)
+npm run db:deploy -w backend
 npm exec -w e2e -- playwright install chromium   # first time only
 npm run test:e2e
 ```

@@ -21,7 +21,7 @@
 
 - **CI Pipeline (`.github/workflows/ci.yml`)**, on pushes and pull requests to `main`:
   - `lint`: oxlint and Prettier.
-  - `test-shared`, `test-backend` (with PostgreSQL and the GDPR integration check), `test-frontend` (with coverage).
+  - `test-shared`, `test-backend` (with PostgreSQL: migrations applied and checked against the schema, then the GDPR integration check), `test-frontend` (with coverage).
   - `test-e2e`: Playwright against the dev servers and a PostgreSQL service.
   - `docker`: builds both images with Docker Compose.
 - **Mirror Pipeline (`.github/workflows/mirror.yml`)**: Automatically pushes your code to the Epitech grading repository when you push to `main`. Requires the `SSH_PRIVATE_KEY` secret in GitHub.
