@@ -20,7 +20,7 @@
         "test": "npm run build -w shared && npm test -w shared -w backend -w frontend",
         "test:e2e": "npm test -w e2e",
         "prepare": "husky",
-        "lint": "oxlint && prettier --check ."
+        "lint": "oxlint --deny-warnings && prettier --check ."
     },
     "repository": {
         "type": "git",

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { useTheme } from '@/components/ThemeProvider';
+import { useTheme } from '@/lib/theme';
 import { deleteMyAccount, exportMyData } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import {

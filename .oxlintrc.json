@@ -2,14 +2,23 @@
     "$schema": "./node_modules/oxlint/configuration_schema.json",
     "plugins": ["typescript", "oxc", "react"],
     "ignorePatterns": ["**/dist", "**/coverage", "**/playwright-report", "**/test-results"],
-    "env": { "es2024": true },
+    "env": {
+        "es2024": true
+    },
     "overrides": [
         {
             "files": ["frontend/**"],
-            "env": { "browser": true },
+            "env": {
+                "browser": true
+            },
             "rules": {
                 "react/rules-of-hooks": "error",
-                "react/only-export-components": ["warn", { "allowConstantExport": true }],
+                "react/only-export-components": [
+                    "warn",
+                    {
+                        "allowConstantExport": true
+                    }
+                ],
                 "no-restricted-imports": [
                     "error",
                     {
@@ -41,7 +50,19 @@
         },
         {
             "files": ["backend/**", "e2e/**", "**/*.config.{js,ts}"],
-            "env": { "node": true }
+            "env": {
+                "node": true
+            }
+        },
+        {
+            "files": [
+                "frontend/src/components/ui/**",
+                "frontend/src/test-utils.tsx",
+                "**/*.test.{ts,tsx}"
+            ],
+            "rules": {
+                "react/only-export-components": "off"
+            }
         }
     ]
 }
