@@ -3,7 +3,8 @@ import type { ReactNode } from 'react';
 import { BrowserRouter as Router, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import Navbar from '@/components/Navbar';
-import { getCurrentUser, hasValidAuthToken, logout, storeAuthToken } from '@/lib/auth';
+import { getCurrentUser, hasValidAuthToken, logout } from '@/lib/auth';
+import OAuthCallbackPage from '@/pages/OAuthCallbackPage';
 import { CookieBanner } from '@/components/CookieBanner';
 import { Loader2 } from 'lucide-react';
 
@@ -74,21 +75,6 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
     return hasValidAuthToken() ? children : <Navigate to="/login" replace />;
 }
 
-function OAuthCallback() {
-    const navigate = useNavigate();
-    useEffect(() => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const token = urlParams.get('token');
-        if (token) {
-            storeAuthToken(token);
-            navigate('/', { replace: true });
-        } else {
-            navigate('/login', { replace: true });
-        }
-    }, [navigate]);
-    return <div>Connexion en cours...</div>;
-}
-
 function PageFallback() {
     return (
         <div className="flex min-h-screen items-center justify-center bg-background">
@@ -119,7 +105,7 @@ export default function App() {
                         }
                     />
                     <Route path="/login" element={<AuthPage />} />
-                    <Route path="/login/oauth" element={<OAuthCallback />} />
+                    <Route path="/login/oauth" element={<OAuthCallbackPage />} />
                     <Route path="/register" element={<AuthPage />} />
                     <Route path="/cgu" element={<TermsPage />} />
                     <Route path="/privacy" element={<PrivacyPage />} />

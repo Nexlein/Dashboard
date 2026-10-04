@@ -28,6 +28,18 @@ beforeEach(() => {
 });
 afterEach(() => jest.restoreAllMocks());
 
+function tokenFromLocation(location) {
+    return new URLSearchParams(new URL(location).hash.slice(1)).get('token');
+}
+
+/** The JWT must only travel in the URL fragment, never in the query string. */
+function expectTokenInFragment(location) {
+    const url = new URL(location);
+    expect(url.pathname).toBe('/login/oauth');
+    expect(url.search).toBe('');
+    expect(tokenFromLocation(location)).toEqual(expect.any(String));
+}
+
 describe('Profile and data rights', () => {
     test('requires authentication on all new routes', async () => {
         await request(app).get('/auth/download-data').expect(401);
@@ -303,7 +315,7 @@ describe('Age confirmation', () => {
         prisma.user.create.mockResolvedValue({ id: 42 });
         prisma.oAuthToken.upsert.mockResolvedValue({ id: 1 });
         const res = await githubCallback({ cguAccepted: 'true', is16OrOlder: 'true' });
-        expect(res.headers.location).toContain('/login/oauth?token=');
+        expectTokenInFragment(res.headers.location);
         expect(prisma.user.create).toHaveBeenCalled();
         expect(decryptString(prisma.oAuthToken.upsert.mock.calls[0][0].create.accessToken)).toBe(
             'github-access',
@@ -314,7 +326,7 @@ describe('Age confirmation', () => {
         prisma.user.findUnique.mockResolvedValue({ id: 42 });
         prisma.oAuthToken.upsert.mockResolvedValue({ id: 1 });
         const res = await githubCallback();
-        expect(res.headers.location).toContain('/login/oauth?token=');
+        expectTokenInFragment(res.headers.location);
         expect(prisma.user.create).not.toHaveBeenCalled();
     });
 });
@@ -342,10 +354,7 @@ describe('GitHub identity after profile changes', () => {
             .set('Cookie', start.headers['set-cookie'][0].split(';')[0])
             .expect(302);
         expect(
-            jwt.verify(
-                new URL(res.headers.location).searchParams.get('token'),
-                process.env.JWT_SECRET,
-            ).userId,
+            jwt.verify(tokenFromLocation(res.headers.location), process.env.JWT_SECRET).userId,
         ).toBe(42);
         expect(prisma.user.create).not.toHaveBeenCalled();
         expect(prisma.user.findUnique).not.toHaveBeenCalledWith({
@@ -407,7 +416,7 @@ describe('GitHub identity validation', () => {
             { email: 'verified@example.com', primary: false, verified: true },
         ]);
         expect(response.status).toBe(302);
-        expect(response.headers.location).toContain('/login/oauth?token=');
+        expectTokenInFragment(response.headers.location);
         expect(prisma.user.findUnique).toHaveBeenCalledWith({
             where: { email: 'verified@example.com' },
         });

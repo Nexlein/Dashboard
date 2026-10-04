@@ -227,7 +227,9 @@ exports.githubCallback = asyncHandler(async (req, res) => {
     if (isLogin) {
         const user = await prisma.user.findUnique({ where: { id: userId } });
         const token = signAuthToken(user);
-        res.redirect(`${frontendUrl}/login/oauth?token=${token}`);
+        // In the fragment, not the query: browsers never send a fragment to a server, so the
+        // JWT stays out of access logs and Referer headers.
+        res.redirect(`${frontendUrl}/login/oauth#token=${encodeURIComponent(token)}`);
     } else {
         res.redirect(`${frontendUrl}/services?linked=github`);
     }
