@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, fireEvent } from '@testing-library/react';
 import { render } from '../test-utils';
 import DashboardGrid from './DashboardGrid';
+import { toDashboardWidget } from '@/lib/widgets';
 
 const mockUseWidgets = vi.fn();
 const mockRemoveWidgetMutate = vi.fn();
@@ -32,20 +33,22 @@ describe('DashboardGrid Component', () => {
         vi.clearAllMocks();
         mockUseWidgets.mockReturnValue({
             data: [
-                {
+                toDashboardWidget({
                     id: 1,
-                    i: '1',
-                    widgetName: 'weather_current',
                     serviceName: 'weather',
+                    widgetName: 'current_weather',
+                    params: { city: 'Paris' },
+                    refreshRate: 60,
                     layout: { x: 0, y: 0, w: 2, h: 2 },
-                },
-                {
+                }),
+                toDashboardWidget({
                     id: 2,
-                    i: '2',
-                    widgetName: 'github_stats',
                     serviceName: 'github',
+                    widgetName: 'repo_stats',
+                    params: {},
+                    refreshRate: 300,
                     layout: { x: 2, y: 0, w: 2, h: 2 },
-                },
+                }),
             ],
             isLoading: false,
         });
@@ -57,6 +60,12 @@ describe('DashboardGrid Component', () => {
         expect(screen.getByTestId('widget-2')).toBeInTheDocument();
     });
 
+    it('shows presentation titles instead of raw widget ids', () => {
+        render(<DashboardGrid />);
+        expect(screen.getByText('Weather')).toBeInTheDocument();
+        expect(screen.getByText('GitHub - Repository Stats')).toBeInTheDocument();
+    });
+
     it('calls remove mutation after confirmation', async () => {
         window.confirm = vi.fn().mockReturnValue(true);
         render(<DashboardGrid />);
@@ -65,6 +74,6 @@ describe('DashboardGrid Component', () => {
         fireEvent.click(settingsButtons[0]);
         fireEvent.click(await screen.findByText('Delete'));
 
-        expect(mockRemoveWidgetMutate).toHaveBeenCalledWith('1');
+        expect(mockRemoveWidgetMutate).toHaveBeenCalledWith(1);
     });
 });

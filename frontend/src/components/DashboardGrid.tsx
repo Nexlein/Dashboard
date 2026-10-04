@@ -16,6 +16,7 @@ import WidgetRenderer from './WidgetRenderer';
 import { ErrorBoundary } from './ErrorBoundary';
 import { Bitcoin, CloudSun, Edit2, EllipsisVertical, Trash2, Loader2 } from 'lucide-react';
 import { WidgetEditDialog } from './WidgetEditDialog';
+import type { DashboardWidget } from '@/lib/widgets';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
@@ -24,11 +25,11 @@ export default function DashboardGrid() {
     const removeMutation = useRemoveWidget();
     const { onLayoutChange } = useWidgetLayoutManager();
 
-    const [editingWidget, setEditingWidget] = useState<any>(null);
+    const [editingWidget, setEditingWidget] = useState<DashboardWidget | null>(null);
 
-    const handleDelete = async (widget: any) => {
-        if (!window.confirm(`Delete widget?`)) return;
-        removeMutation.mutate(widget.i);
+    const handleDelete = (widget: DashboardWidget) => {
+        if (!window.confirm(`Delete ${widget.title}?`)) return;
+        removeMutation.mutate(widget.id);
     };
 
     if (isLoading) {
@@ -51,31 +52,31 @@ export default function DashboardGrid() {
                 isDraggable={true}
                 isResizable={true}
             >
-                {widgets.map((widget: any) => (
+                {widgets.map((widget) => (
                     <div key={widget.i} data-grid={widget}>
                         <Card className="flex h-full w-full cursor-move flex-col overflow-hidden">
                             <CardHeader className="flex shrink-0 flex-row items-center justify-between border-b border-border bg-muted/50 p-4">
                                 <CardTitle className="flex items-center gap-2 text-sm">
-                                    {widget.service === 'weather' && (
+                                    {widget.serviceName === 'weather' && (
                                         <CloudSun
                                             aria-hidden="true"
                                             className="h-5 w-5 text-sky-500"
                                         />
                                     )}
-                                    {widget.service === 'crypto' && (
+                                    {widget.serviceName === 'crypto' && (
                                         <Bitcoin
                                             aria-hidden="true"
                                             className="h-5 w-5 text-amber-500"
                                         />
                                     )}
-                                    <span className="capitalize">{widget.type}</span>
+                                    <span>{widget.title}</span>
                                 </CardTitle>
                                 <DropdownMenu>
                                     <DropdownMenuTrigger
                                         render={
                                             <Button
                                                 type="button"
-                                                aria-label="Configure widget"
+                                                aria-label={`Configure ${widget.title}`}
                                                 variant="ghost"
                                                 size="icon-sm"
                                                 className="cursor-pointer text-muted-foreground"
