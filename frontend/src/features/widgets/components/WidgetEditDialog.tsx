@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useUpdateWidget } from '@/features/widgets/hooks/useWidgets';
 import { MIN_REFRESH_RATE_SECONDS } from '@/features/widgets/lib/widgets';
 import { Button } from '@/components/ui/button';
@@ -19,21 +19,13 @@ function isRefreshRateValid(refreshTimer: string, serviceDef: any) {
     return Number.isInteger(refreshRate) && refreshRate >= MIN_REFRESH_RATE_SECONDS;
 }
 
+// Mounted only while a widget is being edited (keyed by widget id), so the form
+// state is seeded from the widget once instead of being synced in an effect.
 export function WidgetEditDialog({ widget, open, onOpenChange }: any) {
     const updateWidgetMutation = useUpdateWidget();
-    const [params, setParams] = useState({});
-    const [refreshTimer, setRefreshTimer] = useState('60');
+    const [params, setParams] = useState(widget.params || {});
+    const [refreshTimer, setRefreshTimer] = useState(widget.refreshRate?.toString() || '60');
     const [error, setError] = useState('');
-
-    useEffect(() => {
-        if (open && widget) {
-            setParams(widget.params || {});
-            setRefreshTimer(widget.refreshRate?.toString() || '60');
-            setError('');
-        }
-    }, [open, widget]);
-
-    if (!widget) return null;
 
     const service = widget.serviceName;
     const widgetType = widget.widgetName;

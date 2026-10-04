@@ -119,6 +119,7 @@ export default function DashboardGrid() {
 
             {editingWidget && (
                 <WidgetEditDialog
+                    key={editingWidget.id}
                     widget={editingWidget}
                     open={!!editingWidget}
                     onOpenChange={(open: boolean) => !open && setEditingWidget(null)}

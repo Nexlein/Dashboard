@@ -130,3 +130,21 @@ it('allows both display name and email changes for an OAuth profile', async () =
         email: 'new@example.com',
     });
 });
+
+it('discards unsaved profile edits when the dialog is reopened', () => {
+    const props = {
+        onOpenChange: vi.fn(),
+        user: { displayName: 'Ada', email: 'ada@example.com' },
+        onUserUpdated: vi.fn(),
+    };
+    const { rerender } = customRender(<ProfileSettingsModal open {...props} />);
+    fireEvent.change(screen.getByLabelText('Display Name'), { target: { value: 'Draft' } });
+
+    const wrap = (ui: React.ReactElement) => (
+        <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
+    );
+    rerender(wrap(<ProfileSettingsModal open={false} {...props} />));
+    rerender(wrap(<ProfileSettingsModal open {...props} />));
+
+    expect(screen.getByLabelText('Display Name')).toHaveValue('Ada');
+});

@@ -11,6 +11,7 @@ const mockUpdateLayoutChange = vi.fn();
 vi.mock('@/features/widgets/hooks/useWidgets', () => ({
     useWidgets: () => mockUseWidgets(),
     useRemoveWidget: () => ({ mutate: mockRemoveWidgetMutate }),
+    useUpdateWidget: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
 vi.mock('@/features/widgets/hooks/useWidgetLayoutManager', () => ({
@@ -45,7 +46,7 @@ describe('DashboardGrid Component', () => {
                     id: 2,
                     serviceName: 'github',
                     widgetName: 'repo_stats',
-                    params: {},
+                    params: { owner: 'facebook', repo: 'react' },
                     refreshRate: 300,
                     layout: { x: 2, y: 0, w: 2, h: 2 },
                 }),
@@ -75,5 +76,22 @@ describe('DashboardGrid Component', () => {
         fireEvent.click(await screen.findByText('Delete'));
 
         expect(mockRemoveWidgetMutate).toHaveBeenCalledWith(1);
+    });
+
+    it('opens the edit dialog with the values of the widget being edited', async () => {
+        render(<DashboardGrid />);
+
+        fireEvent.click(screen.getByRole('button', { name: 'Configure Weather' }));
+        fireEvent.click(await screen.findByText('Edit'));
+        expect(await screen.findByLabelText('City Name')).toHaveValue('Paris');
+        expect(screen.getByLabelText('Refresh Rate (seconds)')).toHaveValue(60);
+        fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+        fireEvent.click(
+            screen.getByRole('button', { name: 'Configure GitHub - Repository Stats' }),
+        );
+        fireEvent.click(await screen.findByText('Edit'));
+        expect(await screen.findByLabelText('Repository Name')).toHaveValue('react');
+        expect(screen.getByLabelText('Refresh Rate (seconds)')).toHaveValue(300);
     });
 });
