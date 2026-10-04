@@ -17,7 +17,7 @@ jobs:
             - uses: actions/checkout@v4
             - uses: actions/setup-node@v4
               with:
-                  node-version: 20
+                  node-version-file: .nvmrc
                   cache: 'npm'
             - run: npm ci
             - run: npm run lint -w frontend
@@ -30,7 +30,7 @@ jobs:
             - uses: actions/checkout@v4
             - uses: actions/setup-node@v4
               with:
-                  node-version: 20
+                  node-version-file: .nvmrc
                   cache: 'npm'
             - run: npm ci
             - run: npm test -w shared
@@ -55,7 +55,7 @@ jobs:
             - uses: actions/checkout@v4
             - uses: actions/setup-node@v4
               with:
-                  node-version: 20
+                  node-version-file: .nvmrc
                   cache: 'npm'
             - run: cp backend/.env.example backend/.env
             - run: npm ci
@@ -82,11 +82,11 @@ jobs:
             - uses: actions/checkout@v4
             - uses: actions/setup-node@v4
               with:
-                  node-version: 20
+                  node-version-file: .nvmrc
                   cache: 'npm'
             - run: npm ci
             - run: npm run build -w shared
-            - run: cd frontend && npm run test -- --coverage
+            - run: npm test -w frontend -- --coverage
 
     test-e2e:
         runs-on: ubuntu-latest
@@ -108,7 +108,7 @@ jobs:
             - uses: actions/checkout@v4
             - uses: actions/setup-node@v4
               with:
-                  node-version: 20
+                  node-version-file: .nvmrc
                   cache: 'npm'
             - run: npm ci
             - run: npm run build -w shared
@@ -116,9 +116,8 @@ jobs:
             - run: cd backend && npx prisma db push
               env:
                   DATABASE_URL: postgresql://postgres:postgres@localhost:5432/dashboard_e2e_test
-            - run: cd e2e && npm install
-            - run: cd e2e && npx playwright install --with-deps
-            - run: cd e2e && npx playwright test
+            - run: npm exec -w e2e -- playwright install --with-deps chromium
+            - run: npm run test:e2e
               env:
                   DATABASE_URL: postgresql://postgres:postgres@localhost:5432/dashboard_e2e_test
             - uses: actions/upload-artifact@v4
