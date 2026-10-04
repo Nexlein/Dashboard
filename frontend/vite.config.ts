@@ -14,5 +14,18 @@ export default defineConfig({
         environment: 'happy-dom',
         globals: true,
         setupFiles: './src/test/setup.ts',
+        coverage: {
+            // Count every source file, not only the ones a test happens to load.
+            include: ['src/**/*.{ts,tsx}'],
+            exclude: [
+                'src/**/*.test.{ts,tsx}',
+                'src/test/**',
+                'src/test-utils.tsx',
+                'src/main.tsx',
+                'src/components/ui/**',
+            ],
+            // Regression floor a few points under the current numbers; raise it as coverage grows.
+            thresholds: { statements: 50, branches: 44, functions: 43, lines: 52 },
+        },
     },
 });
