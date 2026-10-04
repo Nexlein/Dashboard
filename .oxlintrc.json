@@ -76,5 +76,8 @@
                 "jest": true
             }
         }
-    ]
+    ],
+    "rules": {
+        "typescript/no-explicit-any": "error"
+    }
 }
