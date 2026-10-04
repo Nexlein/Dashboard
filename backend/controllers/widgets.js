@@ -6,35 +6,56 @@ const asyncHandler = require('../utils/asyncHandler');
 const prisma = require('../utils/prisma');
 const MIN_REFRESH_RATE_SECONDS = 60;
 
+const layoutSchema = z.object({
+    x: z.number().int(),
+    y: z.number().int(),
+    w: z.number().int(),
+    h: z.number().int(),
+});
+const paramsSchema = z.record(z.string(), z.unknown());
+const refreshRateSchema = z
+    .number()
+    .int()
+    .min(MIN_REFRESH_RATE_SECONDS, { message: 'Refresh rate must be at least 60 seconds' });
+
 const createWidgetSchema = z.object({
     serviceName: z.string(),
     widgetName: z.string(),
-    params: z.record(z.any()),
-    refreshRate: z.number().int().min(60, { message: 'Refresh rate must be at least 60 seconds' }),
-    layout: z.object({
-        x: z.number().int(),
-        y: z.number().int(),
-        w: z.number().int(),
-        h: z.number().int(),
-    }),
+    params: paramsSchema,
+    refreshRate: refreshRateSchema,
+    layout: layoutSchema,
+});
+
+const updateWidgetSchema = z.object({
+    params: paramsSchema.optional(),
+    refreshRate: refreshRateSchema.optional(),
+    layout: layoutSchema.optional(),
 });
 
 const updateLayoutSchema = z.object({
-    layouts: z.array(
-        z.object({
-            id: z.number().int(),
-            layout: z.object({
-                x: z.number().int(),
-                y: z.number().int(),
-                w: z.number().int(),
-                h: z.number().int(),
-            }),
-        }),
-    ),
+    layouts: z.array(z.object({ id: z.number().int(), layout: layoutSchema })),
 });
 
-function isValidRefreshRate(rate) {
-    return Number.isInteger(rate) && rate >= MIN_REFRESH_RATE_SECONDS;
+const chatSchema = z.object({
+    messages: z
+        .array(
+            z.object({
+                role: z.enum(['system', 'user', 'assistant']),
+                content: z.string(),
+            }),
+        )
+        .min(1, { message: 'Messages array is required' }),
+});
+
+/** Returns the positive integer id from a route param, or null. */
+function parseWidgetId(raw) {
+    if (!/^\d+$/.test(raw)) return null;
+    const id = Number(raw);
+    return Number.isSafeInteger(id) && id > 0 ? id : null;
+}
+
+function invalid(res, result) {
+    return res.status(400).json({ error: result.error.issues[0].message });
 }
 
 exports.getWidgets = asyncHandler(async (req, res) => {
@@ -49,8 +70,7 @@ exports.getWidgets = asyncHandler(async (req, res) => {
 
 exports.addWidget = asyncHandler(async (req, res) => {
     const validated = createWidgetSchema.safeParse(req.body);
-    if (!validated.success)
-        return res.status(400).json({ error: validated.error.issues[0].message });
+    if (!validated.success) return invalid(res, validated);
     const { serviceName, widgetName, params, refreshRate, layout } = validated.data;
 
     const service = registry.getService(serviceName);
@@ -108,8 +128,7 @@ exports.addWidget = asyncHandler(async (req, res) => {
 
 exports.updateLayout = asyncHandler(async (req, res) => {
     const validated = updateLayoutSchema.safeParse(req.body);
-    if (!validated.success)
-        return res.status(400).json({ error: validated.error.issues[0].message });
+    if (!validated.success) return invalid(res, validated);
     const { layouts } = validated.data;
     await prisma.$transaction(
         layouts.map((l) =>
@@ -123,9 +142,8 @@ exports.updateLayout = asyncHandler(async (req, res) => {
 });
 
 exports.getWidgetData = asyncHandler(async (req, res) => {
-    const widgetId = Number.parseInt(req.params.id, 10);
-    if (!Number.isInteger(widgetId) || widgetId <= 0)
-        return res.status(400).json({ error: 'Invalid widget id' });
+    const widgetId = parseWidgetId(req.params.id);
+    if (!widgetId) return res.status(400).json({ error: 'Invalid widget id' });
     const widget = await prisma.widgetConfig.findUnique({ where: { id: widgetId } });
     if (!widget) return res.status(404).json({ error: 'Widget not found' });
     if (widget.userId !== req.user.userId)
@@ -164,10 +182,11 @@ exports.getWidgetData = asyncHandler(async (req, res) => {
 });
 
 exports.updateWidget = asyncHandler(async (req, res) => {
-    const widgetId = parseInt(req.params.id, 10);
-    const { params, refreshRate, layout } = req.body;
-    if (refreshRate !== undefined && !isValidRefreshRate(refreshRate))
-        return res.status(400).json({ error: 'Refresh rate must be at least 60 seconds' });
+    const widgetId = parseWidgetId(req.params.id);
+    if (!widgetId) return res.status(400).json({ error: 'Invalid widget id' });
+    const validated = updateWidgetSchema.safeParse(req.body);
+    if (!validated.success) return invalid(res, validated);
+    const { params, refreshRate, layout } = validated.data;
 
     const existing = await prisma.widgetConfig.findUnique({ where: { id: widgetId } });
     if (!existing) return res.status(404).json({ error: 'Widget not found' });
@@ -187,7 +206,8 @@ exports.updateWidget = asyncHandler(async (req, res) => {
 });
 
 exports.deleteWidget = asyncHandler(async (req, res) => {
-    const widgetId = parseInt(req.params.id, 10);
+    const widgetId = parseWidgetId(req.params.id);
+    if (!widgetId) return res.status(400).json({ error: 'Invalid widget id' });
     const existing = await prisma.widgetConfig.findUnique({ where: { id: widgetId } });
     if (!existing) return res.status(404).json({ error: 'Widget not found' });
     if (existing.userId !== req.user.userId)
@@ -198,32 +218,29 @@ exports.deleteWidget = asyncHandler(async (req, res) => {
 });
 
 exports.chatWidget = asyncHandler(async (req, res) => {
-    const widgetId = parseInt(req.params.id, 10);
-    const { messages } = req.body;
-    if (!Array.isArray(messages))
-        return res.status(400).json({ error: 'Messages array is required' });
+    const widgetId = parseWidgetId(req.params.id);
+    if (!widgetId) return res.status(400).json({ error: 'Invalid widget id' });
+    const validated = chatSchema.safeParse(req.body);
+    if (!validated.success) return invalid(res, validated);
 
     const widget = await prisma.widgetConfig.findUnique({ where: { id: widgetId } });
     if (!widget) return res.status(404).json({ error: 'Widget not found' });
     if (widget.userId !== req.user.userId) return res.status(403).json({ error: 'Unauthorized' });
-    if (widget.serviceName !== 'chatbot')
+
+    const service = registry.getService(widget.serviceName);
+    if (typeof service?.chat !== 'function')
         return res.status(400).json({ error: 'Widget does not support chat' });
 
-    const service = registry.getService('chatbot');
-    const params = decryptParams(widget.params);
-
-    let data;
     try {
-        data = await service.execute(
-            'chatbot_message',
-            { ...params, messages },
+        const data = await service.chat(
+            decryptParams(widget.params),
             { userId: req.user.userId },
+            validated.data.messages,
         );
-    } catch (execError) {
-        return res
-            .status(502)
-            .json({ error: execError.message || 'Failed to communicate with chatbot' });
+        res.json(data);
+    } catch (chatError) {
+        // Ollama answered with an error status: forward it. Otherwise it is unreachable.
+        if (chatError.statusCode) throw chatError;
+        res.status(502).json({ error: 'Failed to communicate with chatbot' });
     }
-
-    res.json(data);
 });

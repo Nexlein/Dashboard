@@ -408,6 +408,141 @@ describe('API Endpoints', () => {
             expect(res.body.error).toMatch(/OpenWeather is not connected/);
             expect(prisma.widgetConfig.create).not.toHaveBeenCalled();
         });
+
+        it.each([
+            ['get', '/widgets/abc/data'],
+            ['put', '/widgets/abc'],
+            ['delete', '/widgets/abc'],
+            ['post', '/widgets/abc/chat'],
+            ['delete', '/widgets/0'],
+            ['put', '/widgets/1.5'],
+        ])('rejects an invalid widget id on %s %s', async (method, url) => {
+            const res = await request(app)
+                [method](url)
+                .set('Authorization', `Bearer ${token}`)
+                .send({});
+
+            expect(res.statusCode).toBe(400);
+            expect(res.body.error).toBe('Invalid widget id');
+            expect(prisma.widgetConfig.findUnique).not.toHaveBeenCalled();
+        });
+
+        it.each([
+            [{ refreshRate: 30 }],
+            [{ refreshRate: '120' }],
+            [{ params: 'city=Paris' }],
+            [{ layout: { x: 'left', y: 0, w: 2, h: 2 } }],
+        ])('rejects an invalid widget update %j', async (body) => {
+            const res = await request(app)
+                .put('/widgets/1')
+                .set('Authorization', `Bearer ${token}`)
+                .send(body);
+
+            expect(res.statusCode).toBe(400);
+            expect(prisma.widgetConfig.update).not.toHaveBeenCalled();
+        });
+
+        it('updates a widget owned by the user', async () => {
+            prisma.widgetConfig.findUnique.mockResolvedValue(mockWidget);
+            prisma.widgetConfig.update.mockImplementation(({ data }) =>
+                Promise.resolve({ ...mockWidget, ...data }),
+            );
+
+            const res = await request(app)
+                .put('/widgets/1')
+                .set('Authorization', `Bearer ${token}`)
+                .send({ params: { city: 'Lyon' }, refreshRate: 120 });
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.params).toEqual({ city: 'Lyon' });
+            expect(res.body.refreshRate).toBe(120);
+        });
+
+        it("refuses to delete another user's widget", async () => {
+            prisma.widgetConfig.findUnique.mockResolvedValue({ ...mockWidget, userId: 2 });
+
+            const res = await request(app)
+                .delete('/widgets/1')
+                .set('Authorization', `Bearer ${token}`);
+
+            expect(res.statusCode).toBe(403);
+            expect(prisma.widgetConfig.delete).not.toHaveBeenCalled();
+        });
+
+        describe('POST /widgets/:id/chat', () => {
+            const chatbotService = require('../services/chatbot');
+            const chatWidget = {
+                ...mockWidget,
+                serviceName: 'chatbot',
+                widgetName: 'ai_chat',
+                params: { model: 'llama3.2:1b' },
+            };
+            const messages = [{ role: 'user', content: 'Hello' }];
+
+            it('forwards the conversation to the chatbot service', async () => {
+                prisma.widgetConfig.findUnique.mockResolvedValue(chatWidget);
+                const chat = jest
+                    .spyOn(chatbotService, 'chat')
+                    .mockResolvedValue({ reply: 'Hi there' });
+
+                const res = await request(app)
+                    .post('/widgets/1/chat')
+                    .set('Authorization', `Bearer ${token}`)
+                    .send({ messages });
+
+                expect(res.statusCode).toBe(200);
+                expect(res.body).toEqual({ reply: 'Hi there' });
+                expect(chat).toHaveBeenCalledWith(
+                    { model: 'llama3.2:1b' },
+                    { userId: 1 },
+                    messages,
+                );
+                chat.mockRestore();
+            });
+
+            it('keeps the status code of chatbot errors', async () => {
+                prisma.widgetConfig.findUnique.mockResolvedValue(chatWidget);
+                const error = Object.assign(new Error('Ollama API Error: Not Found'), {
+                    statusCode: 404,
+                });
+                const chat = jest.spyOn(chatbotService, 'chat').mockRejectedValue(error);
+
+                const res = await request(app)
+                    .post('/widgets/1/chat')
+                    .set('Authorization', `Bearer ${token}`)
+                    .send({ messages });
+
+                expect(res.statusCode).toBe(404);
+                expect(res.body.error).toBe('Ollama API Error: Not Found');
+                chat.mockRestore();
+            });
+
+            it.each([
+                [{}],
+                [{ messages: 'Hello' }],
+                [{ messages: [{ role: 'hacker', content: 'x' }] }],
+                [{ messages: [{ role: 'user' }] }],
+            ])('rejects an invalid chat payload %j', async (body) => {
+                const res = await request(app)
+                    .post('/widgets/1/chat')
+                    .set('Authorization', `Bearer ${token}`)
+                    .send(body);
+
+                expect(res.statusCode).toBe(400);
+                expect(prisma.widgetConfig.findUnique).not.toHaveBeenCalled();
+            });
+
+            it('rejects chat on a widget that is not a chatbot', async () => {
+                prisma.widgetConfig.findUnique.mockResolvedValue(mockWidget);
+
+                const res = await request(app)
+                    .post('/widgets/1/chat')
+                    .set('Authorization', `Bearer ${token}`)
+                    .send({ messages });
+
+                expect(res.statusCode).toBe(400);
+            });
+        });
     });
 
     describe('Service connections API', () => {
