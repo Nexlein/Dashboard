@@ -1,6 +1,24 @@
 import { Droplets, Wind } from 'lucide-react';
+import type { WidgetViewProps } from '@/features/widgets/lib/types';
 
-function WeatherIcon({ code, description }) {
+type WeatherLocation = { name: string; country: string };
+
+export type CurrentWeatherData = {
+    location: WeatherLocation;
+    temperature: number;
+    feelsLike: number;
+    humidity: number;
+    windSpeed: number;
+    condition: string;
+    icon: string;
+};
+
+export type ForecastData = {
+    location: WeatherLocation;
+    days: { date: string; min: number; max: number; condition: string; icon: string }[];
+};
+
+function WeatherIcon({ code, description }: { code: string; description: string }) {
     if (!code) return null;
     return (
         <img
@@ -11,7 +29,7 @@ function WeatherIcon({ code, description }) {
     );
 }
 
-export function CurrentWeather({ data }) {
+export function CurrentWeather({ data }: WidgetViewProps<CurrentWeatherData>) {
     return (
         <div
             className="flex h-full w-full flex-col justify-between gap-3"
@@ -42,7 +60,7 @@ export function CurrentWeather({ data }) {
     );
 }
 
-export function Forecast({ data }) {
+export function Forecast({ data }: WidgetViewProps<ForecastData>) {
     return (
         <div className="h-full w-full" data-testid="weather-forecast">
             <p className="mb-3 text-sm text-muted-foreground">

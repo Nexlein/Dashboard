@@ -1,6 +1,34 @@
 import { GitFork, Star, CircleDot, User, Users, BookOpen } from 'lucide-react';
+import type { WidgetViewProps } from '@/features/widgets/lib/types';
 
-export function GithubRepoWidget({ data }) {
+export type GithubRepoData = {
+    name: string;
+    description: string | null;
+    stars: number;
+    forks: number;
+    open_issues: number;
+};
+
+export type GithubProfileData = {
+    login: string;
+    name: string | null;
+    avatar_url: string;
+    public_repos: number;
+    followers: number;
+    following: number;
+    bio: string | null;
+};
+
+export type GithubCommitData = {
+    sha: string;
+    message: string;
+    author: string;
+    date: string;
+    avatar?: string;
+    url: string;
+};
+
+export function GithubRepoWidget({ data }: WidgetViewProps<GithubRepoData>) {
     if (!data) return null;
     return (
         <div className="flex h-full w-full flex-col gap-3 p-1" data-testid="github-repo-stats">
@@ -29,7 +57,7 @@ export function GithubRepoWidget({ data }) {
     );
 }
 
-export function GithubProfileWidget({ data }) {
+export function GithubProfileWidget({ data }: WidgetViewProps<GithubProfileData>) {
     if (!data) return null;
     return (
         <div className="flex h-full w-full flex-col gap-4 p-1" data-testid="github-profile">
@@ -84,7 +112,7 @@ export function GithubProfileWidget({ data }) {
     );
 }
 
-export function GithubCommitsWidget({ data }) {
+export function GithubCommitsWidget({ data }: WidgetViewProps<GithubCommitData[]>) {
     if (!data || !Array.isArray(data)) return null;
     return (
         <div className="flex h-full w-full flex-col p-1" data-testid="github-commits">

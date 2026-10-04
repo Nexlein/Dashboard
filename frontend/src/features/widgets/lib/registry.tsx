@@ -8,8 +8,9 @@ import { CryptoPrice } from '@/features/widgets/catalog/CryptoPrice';
 import { CryptoChartWidget } from '@/features/widgets/catalog/CryptoChartWidget';
 import { ChatbotWidget } from '@/features/widgets/catalog/ChatbotWidget';
 import { OllamaModelManager } from '@/features/widgets/catalog/OllamaModelManager';
+import type { ServiceDefinition, WidgetDefinition } from './types';
 
-export const REGISTRY = {
+export const REGISTRY: Record<string, ServiceDefinition> = {
     weather: {
         name: 'Weather',
         hasRefresh: true,
@@ -186,3 +187,17 @@ export const REGISTRY = {
         ],
     },
 };
+
+export function getServiceDefinition(serviceName: string): ServiceDefinition | undefined {
+    return Object.hasOwn(REGISTRY, serviceName) ? REGISTRY[serviceName] : undefined;
+}
+
+/** Finds a widget by id or by one of its legacy aliases. */
+export function findWidgetDefinition(
+    serviceName: string,
+    widgetName: string,
+): WidgetDefinition | undefined {
+    return getServiceDefinition(serviceName)?.widgets.find(
+        (w) => w.id === widgetName || w.aliases?.includes(widgetName),
+    );
+}

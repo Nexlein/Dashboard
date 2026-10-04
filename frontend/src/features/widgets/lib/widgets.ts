@@ -157,10 +157,13 @@ export async function removeWidgetConfig(widgetId: number) {
     });
 }
 
+/** Same roles as the backend chat schema. */
+export type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string };
+
 export async function sendWidgetChatMessage(
     widgetId: number,
-    messages: { role: string; content: string }[],
-) {
+    messages: ChatMessage[],
+): Promise<{ reply: string }> {
     return fetchClient(`/widgets/${widgetId}/chat`, {
         method: 'POST',
         body: JSON.stringify({ messages }),

@@ -3,14 +3,18 @@ import { useMutation } from '@tanstack/react-query';
 import { Send, User, Loader2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { sendWidgetChatMessage } from '@/features/widgets/lib/widgets';
+import {
+    sendWidgetChatMessage,
+    type ChatMessage,
+    type DashboardWidget,
+} from '@/features/widgets/lib/widgets';
 import { OllamaLogo } from '@/features/widgets/catalog/OllamaLogo';
 
-export function ChatbotWidget({ widget }: { widget: any }) {
+export function ChatbotWidget({ widget }: { widget: DashboardWidget }) {
     const { id } = widget;
     const storageKey = `dashboard-chat-${id}`;
 
-    const [messages, setMessages] = useState<any[]>(() => {
+    const [messages, setMessages] = useState<ChatMessage[]>(() => {
         try {
             const saved = localStorage.getItem(storageKey);
             return saved
@@ -31,8 +35,8 @@ export function ChatbotWidget({ widget }: { widget: any }) {
     }, [messages, storageKey]);
 
     const chatMutation = useMutation({
-        mutationFn: (payloadMessages: any[]) => sendWidgetChatMessage(id, payloadMessages),
-        onSuccess: (data: any) => {
+        mutationFn: (payloadMessages: ChatMessage[]) => sendWidgetChatMessage(id, payloadMessages),
+        onSuccess: (data) => {
             setMessages((prev) => [...prev, { role: 'assistant', content: data.reply }]);
         },
         onError: (err: Error) => {
@@ -50,7 +54,7 @@ export function ChatbotWidget({ widget }: { widget: any }) {
         e.preventDefault();
         if (!input.trim() || loading) return;
 
-        const userMsg = { role: 'user', content: input.trim() };
+        const userMsg: ChatMessage = { role: 'user', content: input.trim() };
         const newMessages = [...messages, userMsg];
         setMessages(newMessages);
         setInput('');
@@ -59,7 +63,7 @@ export function ChatbotWidget({ widget }: { widget: any }) {
         // Sliding window
         const MAX_CHARS = 12000;
         let charCount = 0;
-        const payloadMessages: any[] = [];
+        const payloadMessages: ChatMessage[] = [];
         for (let i = newMessages.length - 1; i >= 0; i--) {
             charCount += newMessages[i].content.length;
             if (charCount > MAX_CHARS && payloadMessages.length > 0) break;

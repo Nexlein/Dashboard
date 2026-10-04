@@ -1,4 +1,4 @@
-export function OllamaLogo({ className }) {
+export function OllamaLogo({ className }: { className?: string }) {
     return (
         <img
             src="https://ollama.com/public/ollama.png"

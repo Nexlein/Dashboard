@@ -1,21 +1,19 @@
 import { useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
-import { fetchWidgetData } from '@/features/widgets/lib/widgets';
+import { fetchWidgetData, type DashboardWidget } from '@/features/widgets/lib/widgets';
 import { useUpdateWidget } from '@/features/widgets/hooks/useWidgets';
-import { REGISTRY } from '@/features/widgets/lib/registry';
+import { findWidgetDefinition, getServiceDefinition } from '@/features/widgets/lib/registry';
 
-export default function WidgetRenderer({ widget }: any) {
+export default function WidgetRenderer({ widget }: { widget: DashboardWidget }) {
     const { id, serviceName, widgetName, refreshRate } = widget;
     const updateWidgetMutation = useUpdateWidget();
 
-    const serviceDef = REGISTRY[serviceName as keyof typeof REGISTRY];
-    const widgetDef = serviceDef?.widgets?.find(
-        (w: any) => w.id === widgetName || w.aliases?.includes(widgetName),
-    );
-    const Component = widgetDef?.component;
+    const serviceDef = getServiceDefinition(serviceName);
+    const widgetDef = findWidgetDefinition(serviceName, widgetName);
 
-    const isDataFetchingWidget = serviceDef ? serviceDef.hasRefresh !== false : false;
+    // Widgets without a refresh (the chatbot) render without loading any data.
+    const isDataFetchingWidget = serviceDef?.hasRefresh ?? false;
 
     const {
         data,
@@ -24,8 +22,7 @@ export default function WidgetRenderer({ widget }: any) {
     } = useQuery({
         queryKey: ['widget', id, widget.params],
         queryFn: () => fetchWidgetData(id),
-        refetchInterval:
-            isDataFetchingWidget && serviceDef?.hasRefresh ? refreshRate * 1000 : false,
+        refetchInterval: isDataFetchingWidget ? refreshRate * 1000 : false,
         enabled: isDataFetchingWidget,
         retry: false,
     });
@@ -35,7 +32,7 @@ export default function WidgetRenderer({ widget }: any) {
     const periodUpdating = updateWidgetMutation.isPending;
 
     const handlePeriodChange = useCallback(
-        (days: any) => {
+        (days: string) => {
             if (String(widget.params?.days) === String(days)) return;
             updateWidgetMutation.mutate({ id, updates: { params: { ...widget.params, days } } });
         },
@@ -50,11 +47,17 @@ export default function WidgetRenderer({ widget }: any) {
         );
     }
 
-    if (!isDataFetchingWidget) {
-        if (!Component) return null;
-        const C = Component as any;
-        return <C widget={widget} />;
-    }
+    const Component = widgetDef.component;
+    const viewProps = {
+        widget,
+        selectedPeriod: widget.params?.days,
+        onPeriodChange: handlePeriodChange,
+        periodUpdating,
+    };
+
+    // The response shape depends on the widget; each catalog component declares its own
+    // data type, so this is the one place where the untyped API response is handed over.
+    if (!isDataFetchingWidget) return <Component {...viewProps} data={undefined as never} />;
 
     if (error) {
         const needsServiceConnection = error.includes('Configure it in Services');
@@ -84,21 +87,5 @@ export default function WidgetRenderer({ widget }: any) {
         );
     }
 
-    if (!Component) {
-        return (
-            <pre className="h-full w-full overflow-auto text-xs">
-                {JSON.stringify(data, null, 2)}
-            </pre>
-        );
-    }
-
-    return (
-        <Component
-            data={data}
-            widget={widget}
-            selectedPeriod={widget.params?.days}
-            onPeriodChange={handlePeriodChange}
-            periodUpdating={periodUpdating}
-        />
-    );
+    return <Component {...viewProps} data={data as never} />;
 }
