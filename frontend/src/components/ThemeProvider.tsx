@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useState } from 'react';
 
 type Theme = 'dark' | 'light' | 'system';
 
@@ -14,38 +14,23 @@ type ThemeProviderState = {
 };
 
 const initialState: ThemeProviderState = {
-    theme: 'system',
+    theme: 'light',
     setTheme: () => null,
 };
 
+// Holds the user's preference only. The `dark` class is applied by the authenticated
+// shell (Navbar) so public pages (login, CGU, privacy) always render in the light theme.
 const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
 
 export function ThemeProvider({
     children,
-    defaultTheme = 'system',
+    defaultTheme = 'light',
     storageKey = 'vite-ui-theme',
     ...props
 }: ThemeProviderProps) {
     const [theme, setTheme] = useState<Theme>(
         () => (localStorage.getItem(storageKey) as Theme) || defaultTheme,
     );
-
-    useEffect(() => {
-        const root = window.document.documentElement;
-
-        root.classList.remove('light', 'dark');
-
-        if (theme === 'system') {
-            const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
-                ? 'dark'
-                : 'light';
-
-            root.classList.add(systemTheme);
-            return;
-        }
-
-        root.classList.add(theme);
-    }, [theme]);
 
     const value = {
         theme,
