@@ -17,8 +17,7 @@ process.env.TEST_GITHUB_ID = String(randomInt(1000000, 1000000000));
 process.env.TEST_GITHUB_EMAIL = `${randomUUID()}@integration.test`;
 const { PrismaClient } = require('@prisma/client');
 const jwt = require('jsonwebtoken');
-const { encryptParams, encryptJson } = require('../../utils/encryption');
-const { encrypt, decrypt } = require('../../utils/tokenEncryption');
+const { encryptJson, encryptString, decryptString } = require('../../utils/encryption');
 const prisma = new PrismaClient();
 let child;
 const ids = [];
@@ -33,7 +32,7 @@ async function main() {
                 create: {
                     serviceName: 'weather',
                     widgetName: 'current_weather',
-                    params: encryptParams({ city: 'Paris' }),
+                    params: encryptJson({ city: 'Paris' }),
                     refreshRate: 60,
                     layout: { x: 0, y: 0, w: 3, h: 2 },
                 },
@@ -41,8 +40,8 @@ async function main() {
             tokens: {
                 create: {
                     provider: 'github',
-                    accessToken: encrypt('stored-access'),
-                    refreshToken: encrypt('stored-refresh'),
+                    accessToken: encryptString('stored-access'),
+                    refreshToken: encryptString('stored-refresh'),
                 },
             },
             serviceConnections: {
@@ -93,8 +92,8 @@ async function main() {
     const stored = await prisma.oAuthToken.findUnique({
         where: { userId_provider: { userId: user.id, provider: 'github' } },
     });
-    assert.equal(decrypt(stored.accessToken), 'stored-access');
-    assert.equal(decrypt(stored.refreshToken), 'stored-refresh');
+    assert.equal(decryptString(stored.accessToken), 'stored-access');
+    assert.equal(decryptString(stored.refreshToken), 'stored-refresh');
 
     const base = `http://127.0.0.1:${port}`;
     const headers = {

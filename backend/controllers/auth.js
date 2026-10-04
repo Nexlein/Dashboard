@@ -1,5 +1,5 @@
 const bcrypt = require('bcrypt');
-const { decrypt } = require('../utils/tokenEncryption');
+const { decryptString } = require('../utils/encryption');
 const { getGitHubProfile } = require('../services/githubIdentity');
 const { registerSchema, loginSchema, updateMeSchema } = require('shared');
 const asyncHandler = require('../utils/asyncHandler');
@@ -77,7 +77,7 @@ exports.updateMe = asyncHandler(async (req, res) => {
         });
         if (githubToken) {
             try {
-                const profile = await getGitHubProfile(decrypt(githubToken.accessToken));
+                const profile = await getGitHubProfile(decryptString(githubToken.accessToken));
                 githubId = String(profile.id);
             } catch {
                 return res

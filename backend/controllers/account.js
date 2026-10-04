@@ -1,4 +1,4 @@
-const { decryptParamsStrict } = require('../utils/encryption');
+const { decryptJsonStrict } = require('../utils/encryption');
 const asyncHandler = require('../utils/asyncHandler');
 const prisma = require('../utils/prisma');
 
@@ -38,7 +38,7 @@ exports.downloadData = asyncHandler(async (req, res) => {
             ...user,
             widgets: user.widgets.map((widget) => ({
                 ...widget,
-                params: decryptParamsStrict(widget.params),
+                params: decryptJsonStrict(widget.params),
             })),
         };
         res.json(responsePayload);
