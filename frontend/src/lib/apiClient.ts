@@ -11,7 +11,11 @@ export function authHeaders() {
     return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-export async function fetchClient(endpoint: string, options: RequestInit = {}) {
+/** Calls the API and returns the parsed JSON body as T; throws with the API's error message. */
+export async function fetchClient<T = unknown>(
+    endpoint: string,
+    options: RequestInit = {},
+): Promise<T> {
     const headers = {
         ...authHeaders(),
         ...(options.body && typeof options.body === 'string'
@@ -25,10 +29,13 @@ export async function fetchClient(endpoint: string, options: RequestInit = {}) {
         headers: headers as HeadersInit,
     });
 
-    const body = await response.json().catch(() => ({}));
+    const body: unknown = await response.json().catch(() => ({}));
     if (!response.ok) {
-        throw new Error(body.error || `Request failed with status ${response.status}`);
+        const message = (body as { error?: unknown }).error;
+        throw new Error(
+            typeof message === 'string' ? message : `Request failed with status ${response.status}`,
+        );
     }
 
-    return body;
+    return body as T;
 }

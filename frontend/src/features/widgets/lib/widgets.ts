@@ -154,15 +154,17 @@ export async function updateWidgetConfig(
     });
 }
 
-export async function updateWidgetsLayout(layouts: { id: number; layout: WidgetLayout }[]) {
-    return fetchClient('/widgets/layout', {
+export async function updateWidgetsLayout(
+    layouts: { id: number; layout: WidgetLayout }[],
+): Promise<void> {
+    await fetchClient('/widgets/layout', {
         method: 'PUT',
         body: JSON.stringify({ layouts }),
     });
 }
 
-export async function removeWidgetConfig(widgetId: number) {
-    return fetchClient(`/widgets/${widgetId}`, {
+export async function removeWidgetConfig(widgetId: number): Promise<void> {
+    await fetchClient(`/widgets/${widgetId}`, {
         method: 'DELETE',
     });
 }
