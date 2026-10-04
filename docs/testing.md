@@ -78,9 +78,9 @@ The frontend uses **Vitest** and **React Testing Library**.
 - `gdpr.test.js`: profile validation, OAuth email editing and stable GitHub login identity, readable exports
   without credentials, failed exports, account deletion errors, and age/terms
   checks on password and GitHub registration (including callback tampering).
-- `tokenEncryption.test.js`: shared key derivation, arbitrary secret lengths,
-  missing/wrong keys, tamper rejection, multi-batch migration, initial PR format
-  compatibility, idempotence, and concurrent refresh protection.
+- `encryption.test.js`: key derivation from `ENCRYPTION_KEY` / `JWT_SECRET`, JSON and
+  string round trips, tamper and wrong-key rejection, and ciphertexts written by the
+  previous implementation that must stay readable.
 - `PrivacyActions.test.tsx` and `AuthPage.test.tsx`: successful/failed downloads and
   deletions, cancellation, editable OAuth profiles and both registration checkboxes.
 
@@ -98,11 +98,11 @@ npm run test:gdpr-integration
 ```
 
 The integration check creates temporary users, starts a backend on a temporary
-port, verifies automatic token migration, exports, OAuth email editing and
+port, verifies encrypted token storage, exports, OAuth email editing and
 foreign-key cascades, then removes its fixtures and stops the server. It also tests
 GitHub account creation, the age gate, an email change and subsequent login using
-real PostgreSQL and simulated GitHub responses. Startup
-migration visits all OAuth rows in that database, so never target a real database.
+real PostgreSQL and simulated GitHub responses. It writes and deletes users, so never
+target a real database.
 The test does not contact GitHub: a subprocess-only fixture supplies provider
 responses. Unit tests additionally cover provider and database failures.
 

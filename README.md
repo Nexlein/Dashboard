@@ -105,7 +105,7 @@ Requirements: Node.js 24 (see `.nvmrc`, `nvm use`) and Docker with Docker Compos
    - Backend API: [http://localhost:8080](http://localhost:8080)
    - `about.json`: [http://localhost:8080/about.json](http://localhost:8080/about.json)
 
-*Database migrations and the OAuth token data migration both run automatically before the API accepts requests.*
+*Database migrations run automatically before the API accepts requests.*
 
 ### Run the backend outside Docker
 
@@ -157,32 +157,16 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org)
 (`feat:`, `fix:`, `test:`...), checked by commitlint. The pre-commit hook runs
 oxlint and Prettier on staged files. See [Tooling](docs/tooling.md).
 
-### OAuth encryption and upgrades
+### Encryption at rest
 
-OAuth tokens, widget parameters and API credentials use the same secret derivation
-(AES-256-GCM with scrypt). `ENCRYPTION_KEY` may be a long random string such as the
-64-character output of `openssl rand -hex 32`; when empty, the configured
-`JWT_SECRET` is used. There is no public fallback key for new encrypted data.
+OAuth tokens, widget parameters and service API keys are encrypted with AES-256-GCM
+(`backend/utils/encryption.js`). The key is derived with scrypt from `ENCRYPTION_KEY`,
+or from `JWT_SECRET` when `ENCRYPTION_KEY` is empty. Use a long random value such as
+the output of `openssl rand -hex 32`.
 
-Keep the chosen secret stable across restarts and identical across replicas.
-Changing it without re-encrypting existing data makes that data unreadable. If
-upgrading an existing installation that uses the JWT secret for encryption, keep
-that configuration during the upgrade rather than introducing a new key.
-
-Back up the database and stop old backend versions before upgrading. Every backend
-startup migrates existing plaintext access and refresh tokens to the versioned
-format before listening. It also upgrades tokens from the initial PR's unversioned
-ciphertext, using the original key for decryption only. The migration is batched,
-idempotent, and does not overwrite a concurrent refresh by another new replica.
-A wrong key or damaged token stops startup without deleting or replacing that token.
-Earlier successfully migrated batches remain valid and are skipped on retry.
-
-To run the same migration explicitly after applying the schema:
-
-```bash
-cd backend
-npm run migrate:oauth-tokens
-```
+Keep the secret stable across restarts and identical across replicas: changing it
+makes existing encrypted data unreadable. Database backups contain the encrypted
+values; protect the secret separately from them.
 
 ### Databases created before migrations
 
@@ -197,6 +181,3 @@ npx prisma migrate resolve --applied 20261004000000_init
 
 For disposable development data, `npm run db:reset -w backend` drops the database
 and recreates it from the migrations instead.
-
-Retained database backups may still contain old plaintext tokens; handle their
-access and retention separately.
