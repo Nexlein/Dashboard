@@ -54,7 +54,10 @@ function AuthenticatedShell({
 function Dashboard() {
     return (
         <AuthenticatedShell showWidgetConfigurator>
-            <DashboardGrid />
+            <main>
+                <h1 className="sr-only">Dashboard</h1>
+                <DashboardGrid />
+            </main>
         </AuthenticatedShell>
     );
 }
