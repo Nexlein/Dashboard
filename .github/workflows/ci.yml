@@ -20,9 +20,7 @@ jobs:
                   node-version-file: .nvmrc
                   cache: 'npm'
             - run: npm ci
-            - run: npm run lint -w frontend
-            - run: npx eslint .
-            - run: npx prettier --check .
+            - run: npm run lint
 
     test-shared:
         runs-on: ubuntu-latest

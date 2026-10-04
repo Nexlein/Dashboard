@@ -1,5 +1,0 @@
-#!/bin/sh
-. "$(dirname "$0")/_/husky.sh"
-
-echo "Skipping local tests. CI will run them to keep push fast."
-exit 0
