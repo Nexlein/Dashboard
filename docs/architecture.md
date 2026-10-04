@@ -63,7 +63,7 @@ flowchart TB
 ### 3. Caching & Load Balancing
 
 - **Load Balancer**: Nginx routes incoming API requests across the 3 backend replicas using dynamic Docker DNS resolution.
-- **Redis Cache**: A centralized Redis container manages widget data caching, the authentication rate limiter (`rate-limit-redis`, shared by all replicas), and transient OAuth states. The global request limiter is kept in memory per replica. Cache entries expire according to the widget refresh interval, capped at five minutes.
+- **Redis Cache**: A centralized Redis container manages widget data caching, the rate limit counters (global and authentication, shared by all replicas through `utils/rateLimit.js`), and transient OAuth states. If Redis is unreachable, the cache falls back to memory and rate limiting is skipped rather than blocking requests. Cache entries expire according to the widget refresh interval, capped at five minutes.
 
 ### 4. Shared Package
 

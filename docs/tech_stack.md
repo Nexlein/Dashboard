@@ -12,7 +12,7 @@
 
 ## Backend: Node.js (Express)
 
-- **Security & Caching**: `helmet` headers, `express-rate-limit` (the authentication limiter is backed by Redis so it holds across replicas), and Redis to cache external API responses.
+- **Security & Caching**: `helmet` headers, `express-rate-limit` (global and authentication limits backed by Redis so they hold across replicas), and Redis to cache external API responses.
 - **Validation**: Zod validates request bodies and the environment at boot. Auth schemas live in the `shared` workspace so backend and frontend agree on them.
 - **OAuth2 Support**: A dedicated GitHub OAuth flow (state cookie binding, encrypted token storage) without an extra auth framework.
 - **JSON Native**: Makes serving the required `about.json` and API routes trivial.
