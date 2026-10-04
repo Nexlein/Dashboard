@@ -3,13 +3,15 @@ import { render as _originalRender, screen, fireEvent, waitFor } from '@testing-
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ChatbotWidget } from './ChatbotWidget';
 import { API_URL } from '@/lib/auth';
+import { makeWidget } from '@/test/fixtures';
 
-const mockWidget = {
+const mockWidget = makeWidget({
     id: 99,
     serviceName: 'chatbot',
     widgetName: 'ai_chat',
     params: { model: 'llama3' },
-};
+});
+const fetchMock = vi.fn<typeof fetch>();
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 const customRender = (ui: React.ReactElement) => {
@@ -19,7 +21,7 @@ describe('ChatbotWidget', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         localStorage.clear();
-        global.fetch = vi.fn();
+        vi.stubGlobal('fetch', fetchMock);
         window.HTMLElement.prototype.scrollIntoView = vi.fn();
     });
 
@@ -29,14 +31,13 @@ describe('ChatbotWidget', () => {
     });
 
     it('sends message and updates UI', async () => {
-        global.fetch.mockResolvedValueOnce({
-            ok: true,
-            json: async () => ({ reply: 'I am doing well, thanks!' }),
-        });
+        fetchMock.mockResolvedValueOnce(
+            new Response(JSON.stringify({ reply: 'I am doing well, thanks!' }), { status: 200 }),
+        );
 
         customRender(<ChatbotWidget widget={mockWidget} />);
 
-        const input = screen.getByPlaceholderText('Type a message...');
+        const input = screen.getByPlaceholderText<HTMLInputElement>('Type a message...');
         const sendBtn = screen.getByRole('button', { name: /send/i });
 
         fireEvent.change(input, { target: { value: 'How are you?' } });
@@ -54,7 +55,7 @@ describe('ChatbotWidget', () => {
         });
 
         // Ensure fetch was called correctly
-        expect(global.fetch).toHaveBeenCalledWith(
+        expect(fetchMock).toHaveBeenCalledWith(
             `${API_URL}/widgets/99/chat`,
             expect.objectContaining({
                 method: 'POST',
@@ -64,10 +65,9 @@ describe('ChatbotWidget', () => {
     });
 
     it('shows error message on failure', async () => {
-        global.fetch.mockResolvedValueOnce({
-            ok: false,
-            json: async () => ({ error: 'API Error' }),
-        });
+        fetchMock.mockResolvedValueOnce(
+            new Response(JSON.stringify({ error: 'API Error' }), { status: 500 }),
+        );
 
         customRender(<ChatbotWidget widget={mockWidget} />);
 
