@@ -22,7 +22,8 @@
 .vscode
 .idea
 docs
-e2e
+e2e/*
+!e2e/package.json
 nginx
 **/*.log
 **/.DS_Store
