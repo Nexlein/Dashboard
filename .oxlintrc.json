@@ -63,6 +63,18 @@
             "rules": {
                 "react/only-export-components": "off"
             }
+        },
+        {
+            "files": ["backend/**/*.js"],
+            "rules": {
+                "no-undef": "error"
+            }
+        },
+        {
+            "files": ["backend/tests/**", "backend/__mocks__/**", "backend/jest.setup.js"],
+            "env": {
+                "jest": true
+            }
         }
     ]
 }
