@@ -1,4 +1,0 @@
-- find other possible infrastructure, codebase, file / code architecture, upgrades / refacto / improvements
-- Update all the tests and add if needed
-- Update the doc
-- update CI (dependa bot, separated clean github actions (lint/test/build/format/...), add hooks, other ideas you can have)
