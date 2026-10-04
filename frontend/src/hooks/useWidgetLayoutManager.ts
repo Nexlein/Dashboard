@@ -4,7 +4,7 @@ import type { Layout } from 'react-grid-layout';
 
 export function useWidgetLayoutManager() {
     const updateLayoutMutation = useUpdateLayout();
-    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const onLayoutChange = (layout: Layout[]) => {
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
