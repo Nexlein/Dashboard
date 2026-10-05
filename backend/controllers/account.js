@@ -1,6 +1,7 @@
 const { decryptJsonStrict } = require('../utils/encryption');
 const asyncHandler = require('../utils/asyncHandler');
 const prisma = require('../utils/prisma');
+const { endSession } = require('../utils/session');
 
 // GDPR: export and delete everything stored about the current user.
 
@@ -50,6 +51,7 @@ exports.downloadData = asyncHandler(async (req, res) => {
 exports.deleteAccount = asyncHandler(async (req, res) => {
     try {
         await prisma.user.delete({ where: { id: req.user.userId } });
+        endSession(req, res);
         res.json({ message: 'Account deleted successfully' });
     } catch (err) {
         if (err.code === 'P2025') return res.status(404).json({ error: 'Resource not found' });

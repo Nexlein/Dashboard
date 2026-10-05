@@ -3,7 +3,8 @@ const { getCache, setCache, deleteCache } = require('../utils/redisCache');
 const { encryptString } = require('../utils/encryption');
 const { getGitHubProfile, getVerifiedGitHubEmail } = require('../services/githubIdentity');
 const asyncHandler = require('../utils/asyncHandler');
-const { normalizeEmail, signAuthToken } = require('../utils/authToken');
+const { normalizeEmail } = require('../utils/authToken');
+const { startSession } = require('../utils/session');
 const prisma = require('../utils/prisma');
 
 // GitHub OAuth: link an account to GitHub, or sign in / sign up with GitHub.
@@ -226,10 +227,9 @@ exports.githubCallback = asyncHandler(async (req, res) => {
 
     if (isLogin) {
         const user = await prisma.user.findUnique({ where: { id: userId } });
-        const token = signAuthToken(user);
-        // In the fragment, not the query: browsers never send a fragment to a server, so the
-        // JWT stays out of access logs and Referer headers.
-        res.redirect(`${frontendUrl}/login/oauth#token=${encodeURIComponent(token)}`);
+        // The session cookie carries the JWT: no token ever appears in a URL.
+        startSession(req, res, user);
+        res.redirect(`${frontendUrl}/`);
     } else {
         res.redirect(`${frontendUrl}/services?linked=github`);
     }

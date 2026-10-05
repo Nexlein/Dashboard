@@ -35,8 +35,8 @@ test.describe('Accessibility', () => {
         }
     });
 
-    test('dashboard has no axe violations', async ({ page, request }) => {
-        await signInFreshUser(page, request);
+    test('dashboard has no axe violations', async ({ page }) => {
+        await signInFreshUser(page);
         await page.goto('/');
         await expect(page.getByRole('button', { name: 'Add Widget' })).toBeVisible();
         expect(await scan(page)).toEqual([]);

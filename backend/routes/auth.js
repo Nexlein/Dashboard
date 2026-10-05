@@ -1,6 +1,5 @@
 const express = require('express');
 const requireAuth = require('../middleware/auth');
-const cookieParser = require('cookie-parser');
 const authController = require('../controllers/auth');
 const githubAuthController = require('../controllers/githubAuth');
 const accountController = require('../controllers/account');
@@ -16,7 +15,7 @@ const credentialsLimiter = createRateLimiter({
     message: 'Too many authentication attempts. Please try again later.',
 });
 
-router.use('/github', cookieParser(), (req, res, next) => {
+router.use('/github', (req, res, next) => {
     res.set('Cache-Control', 'no-store');
     res.set('Referrer-Policy', 'no-referrer');
     next();
@@ -26,6 +25,7 @@ router.use(['/register', '/login'], credentialsLimiter);
 
 router.post('/register', authController.register);
 router.post('/login', authController.login);
+router.post('/logout', authController.logout);
 
 router.get('/me', requireAuth, authController.getMe);
 router.put('/me', requireAuth, authController.updateMe);

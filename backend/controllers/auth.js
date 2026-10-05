@@ -3,7 +3,8 @@ const { decryptString } = require('../utils/encryption');
 const { getGitHubProfile } = require('../services/githubIdentity');
 const { registerSchema, loginSchema, updateMeSchema } = require('shared');
 const asyncHandler = require('../utils/asyncHandler');
-const { normalizeEmail, signAuthToken } = require('../utils/authToken');
+const { normalizeEmail } = require('../utils/authToken');
+const { startSession, endSession } = require('../utils/session');
 const env = require('../utils/env');
 const prisma = require('../utils/prisma');
 
@@ -45,9 +46,14 @@ exports.login = asyncHandler(async (req, res) => {
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(401).json({ error: 'Invalid credentials' });
 
-    const token = signAuthToken(user);
-    res.json({ message: 'Login successful', token });
+    startSession(req, res, user);
+    res.json({ message: 'Login successful' });
 });
+
+exports.logout = (req, res) => {
+    endSession(req, res);
+    res.status(204).send();
+};
 
 exports.getMe = asyncHandler(async (req, res) => {
     const user = await prisma.user.findUnique({

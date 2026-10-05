@@ -3,6 +3,7 @@ const env = require('./utils/env'); // Validates environment variables at boot (
 
 const express = require('express');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const helmet = require('helmet');
 
 const adminRoutes = require('./routes/admin');
@@ -17,6 +18,7 @@ const authMiddleware = require('./middleware/auth');
 const adminMiddleware = require('./middleware/admin');
 const errorHandler = require('./middleware/errorHandler');
 const { createRateLimiter } = require('./utils/rateLimit');
+const { allowedOrigins } = require('./utils/origins');
 
 const swaggerUi = require('swagger-ui-express');
 const swaggerJsdoc = require('swagger-jsdoc');
@@ -35,12 +37,6 @@ app.use(
     }),
 );
 
-const allowedOrigins = (
-    process.env.CORS_ORIGINS || 'http://localhost:5173,http://localhost:5174,http://localhost:8081'
-)
-    .split(',')
-    .map((o) => o.trim())
-    .filter(Boolean);
 app.use(
     cors({
         origin: allowedOrigins,
@@ -50,6 +46,7 @@ app.use(
     }),
 );
 app.use(express.json());
+app.use(cookieParser());
 
 const swaggerOptions = {
     definition: {

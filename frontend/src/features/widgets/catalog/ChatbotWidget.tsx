@@ -9,10 +9,11 @@ import {
     type DashboardWidget,
 } from '@/features/widgets/lib/widgets';
 import { OllamaLogo } from '@/features/widgets/catalog/OllamaLogo';
+import { CHAT_HISTORY_PREFIX } from '@/lib/auth';
 
 export function ChatbotWidget({ widget }: { widget: DashboardWidget }) {
     const { id } = widget;
-    const storageKey = `dashboard-chat-${id}`;
+    const storageKey = `${CHAT_HISTORY_PREFIX}${id}`;
 
     const [messages, setMessages] = useState<ChatMessage[]>(() => {
         try {

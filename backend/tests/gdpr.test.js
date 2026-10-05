@@ -17,6 +17,7 @@ const { PrismaClient } = require('@prisma/client');
 const express = require('express');
 const app = express();
 app.use(express.json());
+app.use(require('cookie-parser')());
 app.use('/auth', require('../routes/auth'));
 const prisma = PrismaClient.mock.results[0].value;
 const { encryptJson, encryptString, decryptString } = require('../utils/encryption');
@@ -28,16 +29,23 @@ beforeEach(() => {
 });
 afterEach(() => jest.restoreAllMocks());
 
-function tokenFromLocation(location) {
-    return new URLSearchParams(new URL(location).hash.slice(1)).get('token');
+/** JWT stored in the session cookie set by the response. */
+function sessionToken(res) {
+    const cookie = (res.headers['set-cookie'] || []).find((c) =>
+        c.startsWith('dashboard_session='),
+    );
+    return cookie?.split(';')[0].slice('dashboard_session='.length);
 }
 
-/** The JWT must only travel in the URL fragment, never in the query string. */
-function expectTokenInFragment(location) {
-    const url = new URL(location);
-    expect(url.pathname).toBe('/login/oauth');
-    expect(url.search).toBe('');
-    expect(tokenFromLocation(location)).toEqual(expect.any(String));
+/** GitHub login ends on the dashboard with an httpOnly session cookie and no token in the URL. */
+function expectSignedIn(res) {
+    const url = new URL(res.headers.location);
+    expect(url.pathname).toBe('/');
+    expect(url.search + url.hash).toBe('');
+    expect(sessionToken(res)).toEqual(expect.any(String));
+    expect(res.headers['set-cookie'].find((c) => c.startsWith('dashboard_session='))).toMatch(
+        /HttpOnly/,
+    );
 }
 
 describe('Profile and data rights', () => {
@@ -315,7 +323,7 @@ describe('Age confirmation', () => {
         prisma.user.create.mockResolvedValue({ id: 42 });
         prisma.oAuthToken.upsert.mockResolvedValue({ id: 1 });
         const res = await githubCallback({ cguAccepted: 'true', is16OrOlder: 'true' });
-        expectTokenInFragment(res.headers.location);
+        expectSignedIn(res);
         expect(prisma.user.create).toHaveBeenCalled();
         expect(decryptString(prisma.oAuthToken.upsert.mock.calls[0][0].create.accessToken)).toBe(
             'github-access',
@@ -326,7 +334,7 @@ describe('Age confirmation', () => {
         prisma.user.findUnique.mockResolvedValue({ id: 42 });
         prisma.oAuthToken.upsert.mockResolvedValue({ id: 1 });
         const res = await githubCallback();
-        expectTokenInFragment(res.headers.location);
+        expectSignedIn(res);
         expect(prisma.user.create).not.toHaveBeenCalled();
     });
 });
@@ -353,9 +361,7 @@ describe('GitHub identity after profile changes', () => {
             .query({ state, code: 'code' })
             .set('Cookie', start.headers['set-cookie'][0].split(';')[0])
             .expect(302);
-        expect(
-            jwt.verify(tokenFromLocation(res.headers.location), process.env.JWT_SECRET).userId,
-        ).toBe(42);
+        expect(jwt.verify(sessionToken(res), process.env.JWT_SECRET).userId).toBe(42);
         expect(prisma.user.create).not.toHaveBeenCalled();
         expect(prisma.user.findUnique).not.toHaveBeenCalledWith({
             where: { email: 'original@example.com' },
@@ -416,7 +422,7 @@ describe('GitHub identity validation', () => {
             { email: 'verified@example.com', primary: false, verified: true },
         ]);
         expect(response.status).toBe(302);
-        expectTokenInFragment(response.headers.location);
+        expectSignedIn(response);
         expect(prisma.user.findUnique).toHaveBeenCalledWith({
             where: { email: 'verified@example.com' },
         });

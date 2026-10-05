@@ -1,23 +1,14 @@
 export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
-export const AUTH_TOKEN_KEY = 'dashboard-auth-token';
-
-export function getAuthToken() {
-    return localStorage.getItem(AUTH_TOKEN_KEY);
-}
-
-export function authHeaders() {
-    const token = getAuthToken();
-    return token ? { Authorization: `Bearer ${token}` } : {};
-}
-
-/** Calls the API and returns the parsed JSON body as T; throws with the API's error message. */
+/**
+ * Calls the API and returns the parsed JSON body as T; throws with the API's error message.
+ * The session travels in an httpOnly cookie, so every request includes credentials.
+ */
 export async function fetchClient<T = unknown>(
     endpoint: string,
     options: RequestInit = {},
 ): Promise<T> {
     const headers = {
-        ...authHeaders(),
         ...(options.body && typeof options.body === 'string'
             ? { 'Content-Type': 'application/json' }
             : {}),
@@ -26,6 +17,7 @@ export async function fetchClient<T = unknown>(
 
     const response = await fetch(`${API_URL}${endpoint}`, {
         ...options,
+        credentials: 'include',
         headers: headers as HeadersInit,
     });
 

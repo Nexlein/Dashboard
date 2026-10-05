@@ -1,10 +1,10 @@
-import { useEffect, Suspense, lazy } from 'react';
+import { Suspense, lazy } from 'react';
 import type { ReactNode } from 'react';
 import { BrowserRouter as Router, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import Navbar from '@/components/Navbar';
-import { getCurrentUser, hasValidAuthToken, logout } from '@/lib/auth';
-import OAuthCallbackPage from '@/pages/OAuthCallbackPage';
+import { logout } from '@/lib/auth';
+import { useCurrentUser } from '@/features/auth/hooks/useCurrentUser';
 import { CookieBanner } from '@/components/CookieBanner';
 import { Loader2 } from 'lucide-react';
 
@@ -22,21 +22,13 @@ function AuthenticatedShell({
     showWidgetConfigurator?: boolean;
 }) {
     const navigate = useNavigate();
-    const { data: user, isError } = useQuery({
-        queryKey: ['currentUser'],
-        queryFn: getCurrentUser,
-        retry: false,
-    });
+    const queryClient = useQueryClient();
+    const { data: user } = useCurrentUser();
 
-    useEffect(() => {
-        if (isError) {
-            logout();
-            navigate('/login', { replace: true });
-        }
-    }, [isError, navigate]);
-
-    function handleLogout() {
-        logout();
+    async function handleLogout() {
+        await logout().catch(() => {});
+        // Drop every cached response of this user before showing the login page.
+        queryClient.clear();
         navigate('/login', { replace: true });
     }
 
@@ -72,7 +64,9 @@ function Services() {
 }
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
-    return hasValidAuthToken() ? children : <Navigate to="/login" replace />;
+    const { isPending, isError } = useCurrentUser();
+    if (isPending) return <PageFallback />;
+    return isError ? <Navigate to="/login" replace /> : children;
 }
 
 function PageFallback() {
@@ -106,7 +100,6 @@ export function AppRoutes() {
                         }
                     />
                     <Route path="/login" element={<AuthPage />} />
-                    <Route path="/login/oauth" element={<OAuthCallbackPage />} />
                     <Route path="/register" element={<AuthPage />} />
                     <Route path="/cgu" element={<TermsPage />} />
                     <Route path="/privacy" element={<PrivacyPage />} />

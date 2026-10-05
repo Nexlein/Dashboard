@@ -148,18 +148,27 @@ async function main() {
             },
         );
         assert.equal(callback.status, 302);
-        return callback.headers.get('location');
+        const session = callback.headers
+            .getSetCookie()
+            .find((cookie) => cookie.startsWith('dashboard_session='));
+        return { location: callback.headers.get('location'), session };
     }
+    const jwtFrom = (session) => session.split(';')[0].slice('dashboard_session='.length);
 
     // The login page may not silently create a new account without the age declaration.
-    assert.ok((await githubLogin()).includes('/register?error=github_registration_requirements'));
+    const refused = await githubLogin();
+    assert.ok(refused.location.includes('/register?error=github_registration_requirements'));
+    assert.equal(refused.session, undefined);
     assert.equal(await prisma.user.count({ where: { githubId: process.env.TEST_GITHUB_ID } }), 0);
     const firstLogin = await githubLogin('?cguAccepted=true&is16OrOlder=true');
-    const firstJwt = new URLSearchParams(new URL(firstLogin).hash.slice(1)).get('token');
-    const githubUserId = jwt.verify(firstJwt, process.env.JWT_SECRET).userId;
+    assert.equal(new URL(firstLogin.location).pathname, '/');
+    assert.match(firstLogin.session, /HttpOnly/);
+    const githubUserId = jwt.verify(jwtFrom(firstLogin.session), process.env.JWT_SECRET).userId;
     ids.push(githubUserId);
+    // Same as the browser: session cookie plus the frontend Origin required for writes.
     const githubHeaders = {
-        Authorization: `Bearer ${firstJwt}`,
+        Cookie: firstLogin.session.split(';')[0],
+        Origin: 'http://localhost:5173',
         'Content-Type': 'application/json',
     };
     const changedEmail = `${randomUUID()}@integration.test`;
@@ -173,7 +182,7 @@ async function main() {
         ).status,
         200,
     );
-    const repeatJwt = new URLSearchParams(new URL(await githubLogin()).hash.slice(1)).get('token');
+    const repeatJwt = jwtFrom((await githubLogin()).session);
     assert.equal(jwt.verify(repeatJwt, process.env.JWT_SECRET).userId, githubUserId);
     assert.equal(await prisma.user.count({ where: { email: process.env.TEST_GITHUB_EMAIL } }), 0);
     assert.equal(
