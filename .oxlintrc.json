@@ -1,0 +1,80 @@
+{
+    "$schema": "./node_modules/oxlint/configuration_schema.json",
+    "plugins": ["typescript", "oxc", "react"],
+    "ignorePatterns": ["**/dist", "**/coverage", "**/playwright-report", "**/test-results"],
+    "env": {
+        "es2024": true
+    },
+    "overrides": [
+        {
+            "files": ["frontend/**"],
+            "env": {
+                "browser": true
+            },
+            "rules": {
+                "react/rules-of-hooks": "error",
+                "react/only-export-components": [
+                    "warn",
+                    {
+                        "allowConstantExport": true
+                    }
+                ],
+                "no-restricted-imports": [
+                    "error",
+                    {
+                        "patterns": [
+                            {
+                                "group": ["**/backend/**", "backend", "**/e2e/**"],
+                                "message": "frontend may only depend on shared, not on backend or e2e code."
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "files": ["shared/**"],
+            "rules": {
+                "no-restricted-imports": [
+                    "error",
+                    {
+                        "patterns": [
+                            {
+                                "group": ["**/backend/**", "backend", "**/frontend/**", "frontend"],
+                                "message": "shared must stay independent of backend and frontend."
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "files": ["backend/**", "e2e/**", "**/*.config.{js,ts}"],
+            "env": {
+                "node": true
+            }
+        },
+        {
+            "files": [
+                "frontend/src/components/ui/**",
+                "frontend/src/test-utils.tsx",
+                "**/*.test.{ts,tsx}"
+            ],
+            "rules": {
+                "react/only-export-components": "off"
+            }
+        },
+        {
+            "files": ["backend/**/*.js"],
+            "rules": {
+                "no-undef": "error"
+            }
+        },
+        {
+            "files": ["backend/tests/**", "backend/__mocks__/**", "backend/jest.setup.js"],
+            "env": {
+                "jest": true
+            }
+        }
+    ]
+}

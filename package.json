@@ -1,14 +1,26 @@
 {
     "name": "dashboard",
     "version": "1.0.0",
+    "private": true,
     "description": "Customizable dashboard to monitor digital content.",
-    "main": "index.js",
     "directories": {
         "doc": "docs"
     },
+    "engines": {
+        "node": ">=22.12"
+    },
+    "workspaces": [
+        "shared",
+        "backend",
+        "frontend",
+        "e2e"
+    ],
     "scripts": {
-        "test": "echo \"Error: no test specified\" && exit 1",
-        "prepare": "husky"
+        "build": "npm run build -w shared && npm run build -w frontend",
+        "test": "npm run build -w shared && npm run db:generate -w backend && npm test -w shared -w backend -w frontend",
+        "test:e2e": "npm run build -w shared && npm run db:generate -w backend && npm test -w e2e",
+        "prepare": "husky",
+        "lint": "oxlint --deny-warnings && prettier --check ."
     },
     "repository": {
         "type": "git",
@@ -22,8 +34,20 @@
     },
     "homepage": "https://github.com/Nexlein/Dashboard#readme",
     "devDependencies": {
+        "@commitlint/cli": "^21.2.3",
+        "@commitlint/config-conventional": "^21.2.3",
         "husky": "^9.1.7",
         "lint-staged": "^17.5.1",
+        "oxlint": "^1.86.0",
         "prettier": "^3.9.6"
+    },
+    "allowScripts": {
+        "bcrypt": true,
+        "prisma": true,
+        "@prisma/client": true,
+        "@prisma/engines": true,
+        "@scarf/scarf": false,
+        "@parcel/watcher": false,
+        "unrs-resolver": false
     }
 }

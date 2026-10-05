@@ -28,10 +28,25 @@ individually toggleable normalized curves, and 1W, 1M, 3M, and 1Y periods.
 
 ## Tech Stack
 
-- **Frontend**: React, Vite, TailwindCSS, shadcn/ui, React-Grid-Layout, Zustand
-- **Backend**: Node.js, Express
+- **Frontend**: React, Vite, TypeScript, TailwindCSS, shadcn/ui, React-Grid-Layout, TanStack Query
+- **Backend**: Node.js, Express, Zod
 - **Database**: PostgreSQL with Prisma ORM
-- **Infrastructure**: Docker & Docker Compose, Nginx (Load Balancer), Redis (Shared Cache)
+- **Infrastructure**: Docker & Docker Compose, Nginx (Load Balancer), Redis (Shared Cache), Ollama (local LLM)
+- **Tooling**: npm workspaces, Vitest, Jest, Playwright, oxlint, Prettier, Husky
+
+## Repository Layout
+
+npm workspaces sharing one root `package-lock.json`:
+
+| Path        | Content                                                          |
+| ----------- | ---------------------------------------------------------------- |
+| `frontend/` | React + Vite client                                              |
+| `backend/`  | Express API, Prisma schema, service integrations                 |
+| `shared/`   | Zod schemas and TypeScript types used by backend and frontend    |
+| `e2e/`      | Playwright end-to-end and accessibility tests                    |
+| `docs/`     | Architecture, API, database, testing and compliance documents    |
+
+Requirements: Node.js 24 (see `.nvmrc`, `nvm use`) and Docker with Docker Compose.
 
 ## Documentation
 
@@ -40,6 +55,8 @@ individually toggleable normalized curves, and 1W, 1M, 3M, and 1Y periods.
 - [Database Schema](docs/db_schema.md)
 - [API Reference](docs/api.md)
 - [Testing Guidelines](docs/testing.md)
+- [Tooling & CI](docs/tooling.md)
+- [Tech Stack Decisions](docs/tech_stack.md)
 
 ## Installation & Usage
 
@@ -57,6 +74,9 @@ individually toggleable normalized curves, and 1W, 1M, 3M, and 1Y periods.
    your GitHub OAuth App: `http://localhost:8080/auth/github/callback`.
    `CORS_ORIGINS` lists the frontend origins allowed to call the API; the example
    includes Vite on ports 5173/5174 and the Docker frontend on port 8081.
+   `AUTH_RATE_LIMIT_MAX` caps login/register attempts per IP every 15 minutes
+   (default 20). The backend validates these variables at startup and exits with
+   an explicit message when one is invalid; empty values count as unset.
    Keep `backend/.env` private; commit only the example file.
 
 2. **Run with Docker**
@@ -97,12 +117,13 @@ After configuring `backend/.env` as above, keep `localhost:5433` in its
 itself runs inside Docker.
 
 ```bash
-docker compose up -d db
+docker compose up -d db redis
 docker compose exec db pg_isready -U user -d dashboard
-cd backend
-npm ci
-npx prisma db push
-node index.js
+npm ci                          # from the repository root: installs every workspace
+npm run build -w shared
+(cd backend && npx prisma db push)
+npm run dev -w backend          # API on http://localhost:8080
+npm run dev -w frontend         # client on http://localhost:5173
 ```
 
 On the first database start, wait until `pg_isready` reports `accepting connections`
@@ -110,9 +131,25 @@ before running `prisma db push`. Run either the Docker backend or the local back
 on port 8080, not both at once.
 
 See the [manual browser flow](docs/api.md#manual-browser-flow) to test GitHub
-linking without a frontend. Run backend tests with `npm test` from `backend/`
-and frontend tests with `npm test` from `frontend/`. Provider tests mock remote
-APIs and do not require real OpenWeather, GitHub, or CoinGecko credentials.
+linking without a frontend.
+
+## Development
+
+Run from the repository root:
+
+```bash
+npm test           # shared, backend and frontend unit tests
+npm run lint       # oxlint + Prettier check
+npm run build      # shared package and frontend production build
+npm run test:e2e   # Playwright; needs the database and backend/.env (starts both dev servers)
+```
+
+Provider tests mock remote APIs and do not require real OpenWeather, GitHub, or
+CoinGecko credentials. See [Testing Guidelines](docs/testing.md) for details.
+
+Commits follow [Conventional Commits](https://www.conventionalcommits.org)
+(`feat:`, `fix:`, `test:`...), checked by commitlint. The pre-commit hook runs
+oxlint and Prettier on staged files. See [Tooling](docs/tooling.md).
 
 ### OAuth encryption and upgrades
 
@@ -146,11 +183,10 @@ database, apply the additive, repeatable upgrade before starting the new backend
 
 ```bash
 cd backend
-npm run migrate:github-identity
-npx prisma generate
+npx prisma db push
 ```
 
-For Docker, use `docker compose run --rm --build --no-deps server npm run migrate:github-identity`
+For Docker, use `docker compose run --rm --build --no-deps server npx prisma db push`
 after stopping old backend instances. This adds only the nullable column and its
 unique index; it does not delete data or require `--accept-data-loss`. Fresh databases
 can use `npx prisma db push` as in the installation steps above. Existing accounts

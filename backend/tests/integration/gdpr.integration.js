@@ -7,9 +7,9 @@ const net = require('node:net');
 if (!process.env.TEST_DATABASE_URL)
     throw new Error('TEST_DATABASE_URL must point to an isolated test database');
 process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
-process.env.JWT_SECRET = 'gdpr-integration-jwt-secret';
-process.env.ENCRYPTION_KEY = 'gdpr-integration-encryption-secret-that-is-not-32-bytes';
-process.env.REDIS_URL = '';
+process.env.JWT_SECRET = 'gdpr-integration-jwt-secret-at-least-32-chars-long';
+process.env.ENCRYPTION_KEY = 'gdpr-integration-encryption-secret-that-is-at-least-32-bytes';
+delete process.env.REDIS_URL;
 process.env.GITHUB_CLIENT_ID = 'integration-client';
 process.env.GITHUB_CLIENT_SECRET = 'integration-client-secret';
 process.env.GITHUB_CALLBACK_URL = 'http://localhost/auth/github/callback';
@@ -18,7 +18,7 @@ process.env.TEST_GITHUB_EMAIL = `${randomUUID()}@integration.test`;
 const { PrismaClient } = require('@prisma/client');
 const jwt = require('jsonwebtoken');
 const { encryptParams, encryptJson } = require('../../utils/encryption');
-const { decrypt } = require('../../utils/crypto');
+const { decrypt } = require('../../utils/tokenEncryption');
 const { migrateOAuthTokens } = require('../../utils/migrateOAuthTokens');
 const prisma = new PrismaClient();
 let child;
@@ -70,11 +70,11 @@ async function main() {
     });
     child = spawn(
         process.execPath,
-        ['--require', require.resolve('./github.fixture'), 'index.js'],
+        ['--require', require.resolve('./github.fixture'), 'server.js'],
         {
             cwd: require('node:path').join(__dirname, '../..'),
             env: { ...process.env, PORT: String(port) },
-            stdio: ['ignore', 'pipe', 'pipe'],
+            stdio: ['ignore', 'pipe', 'inherit'],
         },
     );
     await new Promise((resolve, reject) => {

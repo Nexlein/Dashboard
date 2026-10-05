@@ -1,0 +1,31 @@
+# Build context is the repo root (see docker-compose.yml), so this file
+# applies to every image. Per-package .dockerignore files are not read.
+
+# Secrets
+**/.env
+**/.env.*
+!**/.env.example
+
+# Dependencies and build output (reinstalled/rebuilt inside the image)
+**/node_modules
+**/dist
+**/build
+**/coverage
+**/playwright-report
+**/test-results
+
+# Not needed in any image
+.git
+.github
+.husky
+.claude
+.vscode
+.idea
+docs
+e2e/*
+!e2e/package.json
+nginx
+**/*.log
+**/.DS_Store
+backend/tests
+backend/__mocks__

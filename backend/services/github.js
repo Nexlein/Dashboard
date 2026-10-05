@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../utils/prisma');
 
 const MAX_CACHE_TTL_MS = 5 * 60 * 1000;
 const MIN_REFRESH_RATE_SECONDS = 60;
@@ -29,7 +28,7 @@ async function refreshGitHubToken(userId, refreshToken) {
         throw new Error('Could not refresh GitHub token');
     }
 
-    const { encrypt } = require('../utils/crypto');
+    const { encrypt } = require('../utils/tokenEncryption');
     await prisma.oAuthToken.update({
         where: { userId_provider: { userId, provider: 'github' } },
         data: {
@@ -65,7 +64,7 @@ async function fetchWithRefresh(url, context) {
             context.credentials.accessToken = accessToken;
             headers.Authorization = `Bearer ${accessToken}`;
             res = await fetch(url, { headers });
-        } catch (err) {
+        } catch {
             // Let the original 401 fall through
         }
     }

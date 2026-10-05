@@ -1,4 +1,4 @@
-process.env.JWT_SECRET = 'test-secret';
+process.env.JWT_SECRET = 'test-secret-with-at-least-32-characters!';
 
 const request = require('supertest');
 const jwt = require('jsonwebtoken');
@@ -19,7 +19,7 @@ jest.mock('@prisma/client', () => {
 
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
-const app = require('../index');
+const app = require('../app');
 
 const adminToken = jwt.sign({ userId: 1, isAdmin: true }, process.env.JWT_SECRET);
 

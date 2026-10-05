@@ -1,17 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useEffect, Suspense, lazy } from 'react';
 import type { ReactNode } from 'react';
 import { BrowserRouter as Router, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import Navbar from '@/components/Navbar';
-import DashboardGrid from '@/components/DashboardGrid';
-import { getCurrentUser, hasValidAuthToken, logout, type AuthUser } from '@/lib/auth';
-import AuthPage from '@/pages/AuthPage';
-import TermsPage from '@/pages/TermsPage';
-import ServicesPage from '@/pages/ServicesPage';
-import PrivacyPage from '@/pages/PrivacyPage';
+import { getCurrentUser, hasValidAuthToken, logout, storeAuthToken } from '@/lib/auth';
 import { CookieBanner } from '@/components/CookieBanner';
+import { Loader2 } from 'lucide-react';
 
-import { useStore } from '@/store/useStore';
-import { fetchWidgets, toDashboardWidget, type ApiWidget } from '@/lib/widgets';
+const DashboardGrid = lazy(() => import('@/features/widgets/components/DashboardGrid'));
+const AuthPage = lazy(() => import('@/pages/AuthPage'));
+const TermsPage = lazy(() => import('@/pages/TermsPage'));
+const ServicesPage = lazy(() => import('@/pages/ServicesPage'));
+const PrivacyPage = lazy(() => import('@/pages/PrivacyPage'));
 
 function AuthenticatedShell({
     children,
@@ -21,25 +21,18 @@ function AuthenticatedShell({
     showWidgetConfigurator?: boolean;
 }) {
     const navigate = useNavigate();
-    const [user, setUser] = useState<AuthUser | null>(null);
+    const { data: user, isError } = useQuery({
+        queryKey: ['currentUser'],
+        queryFn: getCurrentUser,
+        retry: false,
+    });
 
     useEffect(() => {
-        let isActive = true;
-
-        getCurrentUser()
-            .then((profile) => {
-                if (isActive) setUser(profile);
-            })
-            .catch(() => {
-                if (!isActive) return;
-                logout();
-                navigate('/login', { replace: true });
-            });
-
-        return () => {
-            isActive = false;
-        };
-    }, [navigate]);
+        if (isError) {
+            logout();
+            navigate('/login', { replace: true });
+        }
+    }, [isError, navigate]);
 
     function handleLogout() {
         logout();
@@ -49,7 +42,7 @@ function AuthenticatedShell({
     return (
         <div className="min-h-screen bg-background text-foreground transition-colors duration-200">
             <Navbar
-                user={user}
+                user={user || null}
                 onLogout={handleLogout}
                 showWidgetConfigurator={showWidgetConfigurator}
             />
@@ -59,23 +52,12 @@ function AuthenticatedShell({
 }
 
 function Dashboard() {
-    const navigate = useNavigate();
-    const setWidgets = useStore((state) => state.setWidgets);
-
-    useEffect(() => {
-        fetchWidgets()
-            .then((apiWidgets) => {
-                setWidgets(apiWidgets.map((widget: ApiWidget) => toDashboardWidget(widget)));
-            })
-            .catch(() => {
-                logout();
-                navigate('/login', { replace: true });
-            });
-    }, [navigate, setWidgets]);
-
     return (
         <AuthenticatedShell showWidgetConfigurator>
-            <DashboardGrid />
+            <main>
+                <h1 className="sr-only">Dashboard</h1>
+                <DashboardGrid />
+            </main>
         </AuthenticatedShell>
     );
 }
@@ -98,7 +80,7 @@ function OAuthCallback() {
         const urlParams = new URLSearchParams(window.location.search);
         const token = urlParams.get('token');
         if (token) {
-            localStorage.setItem('dashboard-auth-token', token);
+            storeAuthToken(token);
             navigate('/', { replace: true });
         } else {
             navigate('/login', { replace: true });
@@ -107,32 +89,42 @@ function OAuthCallback() {
     return <div>Connexion en cours...</div>;
 }
 
+function PageFallback() {
+    return (
+        <div className="flex min-h-screen items-center justify-center bg-background">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+    );
+}
+
 export default function App() {
     return (
         <Router>
-            <Routes>
-                <Route
-                    path="/"
-                    element={
-                        <ProtectedRoute>
-                            <Dashboard />
-                        </ProtectedRoute>
-                    }
-                />
-                <Route
-                    path="/services"
-                    element={
-                        <ProtectedRoute>
-                            <Services />
-                        </ProtectedRoute>
-                    }
-                />
-                <Route path="/login" element={<AuthPage />} />
-                <Route path="/login/oauth" element={<OAuthCallback />} />
-                <Route path="/register" element={<AuthPage />} />
-                <Route path="/cgu" element={<TermsPage />} />
-                <Route path="/privacy" element={<PrivacyPage />} />
-            </Routes>
+            <Suspense fallback={<PageFallback />}>
+                <Routes>
+                    <Route
+                        path="/"
+                        element={
+                            <ProtectedRoute>
+                                <Dashboard />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/services"
+                        element={
+                            <ProtectedRoute>
+                                <Services />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route path="/login" element={<AuthPage />} />
+                    <Route path="/login/oauth" element={<OAuthCallback />} />
+                    <Route path="/register" element={<AuthPage />} />
+                    <Route path="/cgu" element={<TermsPage />} />
+                    <Route path="/privacy" element={<PrivacyPage />} />
+                </Routes>
+            </Suspense>
             <CookieBanner />
         </Router>
     );

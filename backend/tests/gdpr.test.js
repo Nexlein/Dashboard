@@ -1,9 +1,8 @@
-process.env.JWT_SECRET = 'gdpr-test-secret';
-process.env.ENCRYPTION_KEY = 'gdpr-encryption-test-secret';
+process.env.JWT_SECRET = 'gdpr-test-secret-with-at-least-32-chars!';
+process.env.ENCRYPTION_KEY = 'gdpr-encryption-test-secret-32chars!!';
 process.env.GITHUB_CLIENT_ID = 'test-client';
 process.env.GITHUB_CLIENT_SECRET = 'test-client-secret';
 process.env.GITHUB_CALLBACK_URL = 'http://localhost:8080/auth/github/callback';
-process.env.REDIS_URL = '';
 
 const request = require('supertest');
 const jwt = require('jsonwebtoken');
@@ -21,7 +20,7 @@ app.use(express.json());
 app.use('/auth', require('../routes/auth'));
 const prisma = PrismaClient.mock.results[0].value;
 const { encryptParams } = require('../utils/encryption');
-const { encrypt, decrypt } = require('../utils/crypto');
+const { encrypt, decrypt } = require('../utils/tokenEncryption');
 const authorization = `Bearer ${jwt.sign({ userId: 42 }, process.env.JWT_SECRET)}`;
 
 beforeEach(() => {
@@ -231,7 +230,10 @@ describe('Profile and data rights', () => {
             .delete('/auth/delete-account')
             .set('Authorization', authorization)
             .expect(500);
-        prisma.user.delete.mockRejectedValue({ code: 'P2025' });
+        prisma.user.delete.mockRejectedValue({
+            name: 'PrismaClientKnownRequestError',
+            code: 'P2025',
+        });
         await request(app)
             .delete('/auth/delete-account')
             .set('Authorization', authorization)

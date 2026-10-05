@@ -17,8 +17,9 @@ services:
         env_file:
             - ./backend/.env
         build:
-            context: ./backend
-            dockerfile: Dockerfile
+            context: .
+            dockerfile: backend/Dockerfile
+
         environment:
             - PORT=8080
             - DATABASE_URL=postgres://user:password@db:5432/dashboard
@@ -34,8 +35,9 @@ services:
 
     client:
         build:
-            context: ./frontend
-            dockerfile: Dockerfile
+            context: .
+            dockerfile: frontend/Dockerfile
+
         ports:
             - '8081:80'
 

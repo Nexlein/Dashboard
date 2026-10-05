@@ -1,7 +1,39 @@
 name: CI Pipeline
-on: [push, pull_request]
+
+on:
+    push:
+        branches: [main, master]
+    pull_request:
+        branches: [main, master]
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
 jobs:
-    build:
+    lint:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version-file: .nvmrc
+                  cache: 'npm'
+            - run: npm ci
+            - run: npm run lint
+
+    test-shared:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version-file: .nvmrc
+                  cache: 'npm'
+            - run: npm ci
+            - run: npm test -w shared
+
+    test-backend:
         runs-on: ubuntu-latest
         services:
             postgres:
@@ -18,19 +50,22 @@ jobs:
                     --health-timeout 5s
                     --health-retries 10
         steps:
-            - uses: actions/checkout@v3
-            - name: Prepare example environment
-              run: cp backend/.env.example backend/.env
-            - name: Setup Node
-              uses: actions/setup-node@v3
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
               with:
-                  node-version: 20
-            - name: Install dependencies and Test
-              run: |
-                  cd backend
-                  npm ci
-                  npm test
-            - name: Verify GDPR flows with PostgreSQL
+                  node-version-file: .nvmrc
+                  cache: 'npm'
+            - run: cp backend/.env.example backend/.env
+            - run: npm ci
+            - run: npm run build -w shared
+            - run: cd backend && npx prisma generate
+            - name: Run backend tests
+              env:
+                  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/dashboard_gdpr_test
+                  JWT_SECRET: dummy_jwt_secret_with_at_least_32_characters
+                  ENCRYPTION_KEY: dummy_encryption_key_with_at_least_32_chars
+              run: npm test -w backend -- --coverage
+            - name: Verify GDPR flows
               working-directory: backend
               env:
                   DATABASE_URL: postgresql://postgres:postgres@localhost:5432/dashboard_gdpr_test
@@ -38,20 +73,60 @@ jobs:
               run: |
                   npx prisma db push
                   npm run test:gdpr-integration
-            - name: Test Docker Compose Build
-              run: docker compose build
 
-    frontend:
+    test-frontend:
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v3
-            - uses: actions/setup-node@v3
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
               with:
-                  node-version: 24
-            - name: Test and build frontend
-              working-directory: frontend
-              run: |
-                  npm ci
-                  npm test
-                  npm run build
-                  npm run lint
+                  node-version-file: .nvmrc
+                  cache: 'npm'
+            - run: npm ci
+            - run: npm run build -w shared
+            - run: npm test -w frontend -- --coverage
+
+    test-e2e:
+        runs-on: ubuntu-latest
+        services:
+            postgres:
+                image: postgres:15
+                env:
+                    POSTGRES_USER: postgres
+                    POSTGRES_PASSWORD: postgres
+                    POSTGRES_DB: dashboard_e2e_test
+                ports:
+                    - 5432:5432
+                options: >-
+                    --health-cmd "pg_isready -U postgres -d dashboard_e2e_test"
+                    --health-interval 5s
+                    --health-timeout 5s
+                    --health-retries 10
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version-file: .nvmrc
+                  cache: 'npm'
+            - run: npm ci
+            - run: npm run build -w shared
+            - run: cp backend/.env.example backend/.env
+            - run: cd backend && npx prisma db push
+              env:
+                  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/dashboard_e2e_test
+            - run: npm exec -w e2e -- playwright install --with-deps chromium
+            - run: npm run test:e2e
+              env:
+                  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/dashboard_e2e_test
+            - uses: actions/upload-artifact@v4
+              if: failure()
+              with:
+                  name: playwright-report
+                  path: e2e/playwright-report/
+                  retention-days: 7
+
+    docker:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - run: docker compose build

@@ -58,11 +58,13 @@ Stores a widget instance configured by a user. Supports multiple instances of th
 | ------------ | ------ | ------------------------------------------------------ |
 | `id`         | Int    | Primary Key                                            |
 | `userId`     | Int    | Foreign Key to `User`                                  |
-| `serviceName | String | Name of the service (e.g., `weather` or `crypto`)      |
+| `serviceName` | String | Name of the service (e.g., `weather` or `crypto`)      |
 | `widgetName` | String | Name of the widget (e.g., `current_weather`)            |
 | `params`     | Json   | Configurable parameters stored as JSON                 |
-| `refreshRate | Int    | Refresh interval in seconds                            |
+| `refreshRate` | Int    | Refresh interval in seconds                            |
 | `layout`     | Json   | Grid coordinates for UI rendering (`x`, `y`, `w`, `h`) |
+
+`userId` is indexed: the dashboard loads widgets by owner on every visit.
 
 **Relations:**
 

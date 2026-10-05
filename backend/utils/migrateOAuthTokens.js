@@ -1,5 +1,5 @@
 const crypto = require('node:crypto');
-const { encrypt, decrypt, isEncryptedToken, decryptWithKey } = require('./crypto');
+const { encrypt, decrypt, isEncryptedToken, decryptWithKey } = require('./tokenEncryption');
 const { getEncryptionKey } = require('./encryption');
 
 function migrateValue(value) {
