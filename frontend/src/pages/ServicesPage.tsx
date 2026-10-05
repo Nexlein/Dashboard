@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import {
     useServices,
     useConnectService,
@@ -8,8 +9,17 @@ import {
 import type { ServiceConnection } from '@/features/services/lib/services';
 import { ServiceCard } from '@/features/services/components/ServiceCard';
 
+/** Error codes GitHub linking sends back in `?error=` (Better Auth). */
+const LINK_ERRORS: Record<string, string> = {
+    account_already_linked_to_different_user:
+        'This GitHub account is already linked to another Dashboard account.',
+};
+
 export default function ServicesPage() {
-    const [error, setError] = useState<string | null>(null);
+    const linkError = new URLSearchParams(useLocation().search).get('error');
+    const [error, setError] = useState<string | null>(
+        linkError ? (LINK_ERRORS[linkError] ?? 'Linking the account failed. Try again.') : null,
+    );
 
     const { data: services = [], isLoading: loading, isError, error: queryError } = useServices();
     const connectMutation = useConnectService();

@@ -37,7 +37,7 @@ export function ProfileSettingsModal({
 }
 
 function ProfileForm({ user, onUserUpdated, onOpenChange }: ProfileProps) {
-    const [displayName, setDisplayName] = useState(user?.displayName || '');
+    const [name, setName] = useState(user?.name || '');
     const [email, setEmail] = useState(user?.email || '');
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
@@ -63,7 +63,7 @@ function ProfileForm({ user, onUserUpdated, onOpenChange }: ProfileProps) {
 
     function handleSubmit(e: React.SubmitEvent) {
         e.preventDefault();
-        updateProfileMutation.mutate({ displayName, email });
+        updateProfileMutation.mutate({ name, email });
     }
 
     return (
@@ -73,8 +73,8 @@ function ProfileForm({ user, onUserUpdated, onOpenChange }: ProfileProps) {
                 <Input
                     id="displayName"
                     maxLength={50}
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
                 />
             </div>
             <div className="space-y-2">

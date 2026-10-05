@@ -1,10 +1,10 @@
 /**
  * @swagger
  * tags:
- *   - name: Admin
- *     description: Admin operations
  *   - name: Auth
- *     description: Authentication operations
+ *     description: Better Auth (https://www.better-auth.com/docs). The main endpoints are listed; all of them live under /api/auth.
+ *   - name: Account
+ *     description: The signed-in user's own data
  *   - name: Chatbot
  *     description: Chatbot operations
  *   - name: Services
@@ -12,34 +12,10 @@
  *   - name: Widgets
  *     description: User widgets configuration
  *
- * /admin/users:
- *   get:
- *     summary: Get all users
- *     tags: [Admin]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: List of users
- * /admin/users/{id}:
- *   delete:
- *     summary: Delete a user
- *     tags: [Admin]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       204:
- *         description: User deleted
- *
- * /auth/register:
+ * /api/auth/sign-up/email:
  *   post:
- *     summary: Register a new user
+ *     summary: Register with an email and a password, and sign in
+ *     description: cguAccepted and is16OrOlder are required by the project (checked before Better Auth runs). Sets the session cookie; the token is never in the body.
  *     tags: [Auth]
  *     security: []
  *     requestBody:
@@ -48,61 +24,97 @@
  *         application/json:
  *           schema:
  *             type: object
- *             required: [email, password, cguAccepted, is16OrOlder]
+ *             required: [email, password, name, cguAccepted, is16OrOlder]
  *             properties:
- *               email: { type: string, format: email }
- *               password: { type: string, minLength: 8, maxLength: 72 }
- *               displayName: { type: string, maxLength: 50 }
+ *               email: { type: string, format: email, maxLength: 254 }
+ *               password: { type: string, minLength: 8, maxLength: 128 }
+ *               name: { type: string, maxLength: 50 }
  *               cguAccepted: { type: boolean, enum: [true] }
  *               is16OrOlder: { type: boolean, enum: [true] }
  *     responses:
- *       201:
- *         description: User created
- * /auth/login:
+ *       200:
+ *         description: Account created and signed in
+ *       400:
+ *         description: Invalid input or missing declaration
+ *       422:
+ *         description: Email already registered
+ * /api/auth/sign-in/email:
  *   post:
- *     summary: Login user
+ *     summary: Sign in with an email and a password
  *     tags: [Auth]
- *     responses:
- *       200:
- *         description: Login successful
- * /auth/me:
- *   get:
- *     summary: Get current user profile
- *     tags: [Auth]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: User profile
- *   put:
- *     summary: Update current user's display name or email
- *     description: GitHub login uses a stable ID; old accounts may need to reconnect GitHub before an email change.
- *     tags: [Auth]
- *     security:
- *       - bearerAuth: []
+ *     security: []
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required: [email, password]
  *             properties:
- *               displayName: { type: string, maxLength: 50 }
- *               email: { type: string, format: email, maxLength: 254 }
+ *               email: { type: string, format: email }
+ *               password: { type: string }
  *     responses:
  *       200:
- *         description: Updated public profile
- *       400:
- *         description: Invalid input
- *       409:
- *         description: Duplicate email or GitHub reconnection required
- * /auth/download-data:
- *   get:
- *     summary: Export profile, readable widgets and connected-service metadata
- *     description: Excludes password hashes, API keys and OAuth token values. Fails if widget parameters cannot be decrypted.
+ *         description: Signed in (session cookie set)
+ *       401:
+ *         description: Invalid email or password
+ *       429:
+ *         description: Too many attempts
+ * /api/auth/sign-in/social:
+ *   post:
+ *     summary: Start GitHub sign-in
+ *     description: Only creates an account with requestSignUp and additionalData { cguAccepted, is16OrOlder } set to true. Returns the GitHub authorization URL.
  *     tags: [Auth]
- *     security:
- *       - bearerAuth: []
+ *     security: []
+ *     responses:
+ *       200:
+ *         description: "{ url, redirect }"
+ * /api/auth/link-social:
+ *   post:
+ *     summary: Link GitHub to the signed-in account (GitHub widgets)
+ *     tags: [Auth]
+ *     responses:
+ *       200:
+ *         description: "{ url, redirect }"
+ * /api/auth/get-session:
+ *   get:
+ *     summary: The signed-in user and session (without the session token)
+ *     tags: [Auth]
+ *     responses:
+ *       200:
+ *         description: "{ user, session }, or null when signed out"
+ * /api/auth/sign-out:
+ *   post:
+ *     summary: Sign out and revoke the session
+ *     tags: [Auth]
+ *     responses:
+ *       200:
+ *         description: Signed out
+ * /api/auth/delete-user:
+ *   post:
+ *     summary: Delete the account and everything stored about it
+ *     description: Needs a session created less than a day ago, or the password.
+ *     tags: [Auth]
+ *     responses:
+ *       200:
+ *         description: Account deleted
+ *       400:
+ *         description: SESSION_EXPIRED (sign in again) or invalid password
+ * /api/auth/admin/list-users:
+ *   get:
+ *     summary: List users (administrators only, admin plugin)
+ *     tags: [Auth]
+ *     responses:
+ *       200:
+ *         description: "{ users, total }"
+ *       403:
+ *         description: Not an administrator
+ *
+ * /account/export:
+ *   get:
+ *     summary: Export profile, readable widgets, sign-in methods, sessions and connected-service metadata
+ *     description: Excludes passwords, tokens and API keys. Fails if widget parameters cannot be decrypted.
+ *     tags: [Account]
  *     responses:
  *       200:
  *         description: JSON export with Cache-Control no-store
@@ -110,58 +122,32 @@
  *         description: User not found
  *       500:
  *         description: Export failed
- * /auth/delete-account:
- *   delete:
- *     summary: Delete the authenticated account and cascade its stored data
- *     tags: [Auth]
- *     security:
- *       - bearerAuth: []
+ * /account/profile:
+ *   put:
+ *     summary: Update the display name or the email
+ *     description: A new email is marked unverified. GitHub sign-in is bound to the GitHub account and keeps working.
+ *     tags: [Account]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name: { type: string, maxLength: 50 }
+ *               email: { type: string, format: email, maxLength: 254 }
  *     responses:
  *       200:
- *         description: Deletion completed
- *       404:
- *         description: User not found
- *       500:
- *         description: Deletion failed
- * /auth/github:
- *   get:
- *     summary: Initiate GitHub connection
- *     tags: [Auth]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       302:
- *         description: Redirect to GitHub
- * /auth/github/callback:
- *   get:
- *     summary: GitHub OAuth callback
- *     tags: [Auth]
- *     responses:
- *       200:
- *         description: OAuth handled
- * /auth/github/login:
- *   get:
- *     summary: Login via GitHub
- *     tags: [Auth]
- *     security: []
- *     description: New accounts require both declarations in the initiating request. Existing accounts do not repeat registration.
- *     parameters:
- *       - in: query
- *         name: cguAccepted
- *         schema: { type: boolean }
- *       - in: query
- *         name: is16OrOlder
- *         schema: { type: boolean }
- *     responses:
- *       302:
- *         description: Redirect to GitHub
+ *         description: Updated public profile
+ *       400:
+ *         description: Invalid input
+ *       409:
+ *         description: Email already taken
  *
  * /chatbot/models:
  *   get:
  *     summary: Get available AI models
  *     tags: [Chatbot]
- *     security:
- *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: List of models
@@ -169,8 +155,6 @@
  *   post:
  *     summary: Pull a new AI model
  *     tags: [Chatbot]
- *     security:
- *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Model pulling started
@@ -179,8 +163,6 @@
  *   get:
  *     summary: Get all connected services
  *     tags: [Services]
- *     security:
- *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: List of connected services
@@ -188,8 +170,6 @@
  *   put:
  *     summary: Connect a service
  *     tags: [Services]
- *     security:
- *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: serviceName
@@ -202,8 +182,6 @@
  *   delete:
  *     summary: Disconnect a service
  *     tags: [Services]
- *     security:
- *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: serviceName
@@ -218,16 +196,12 @@
  *   get:
  *     summary: Get user widgets
  *     tags: [Widgets]
- *     security:
- *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: List of user widgets
  *   post:
  *     summary: Create a widget
  *     tags: [Widgets]
- *     security:
- *       - bearerAuth: []
  *     responses:
  *       201:
  *         description: Widget created
@@ -235,8 +209,6 @@
  *   put:
  *     summary: Update widgets layout
  *     tags: [Widgets]
- *     security:
- *       - bearerAuth: []
  *     responses:
  *       204:
  *         description: Layout updated
@@ -244,8 +216,6 @@
  *   put:
  *     summary: Update a widget
  *     tags: [Widgets]
- *     security:
- *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -258,8 +228,6 @@
  *   delete:
  *     summary: Delete a widget
  *     tags: [Widgets]
- *     security:
- *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -273,8 +241,6 @@
  *   get:
  *     summary: Get widget data
  *     tags: [Widgets]
- *     security:
- *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -288,8 +254,6 @@
  *   post:
  *     summary: Chat with a widget (chatbot specific)
  *     tags: [Widgets]
- *     security:
- *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id

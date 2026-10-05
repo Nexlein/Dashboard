@@ -28,13 +28,3 @@ export async function connectService(serviceName: string, apiKey: string) {
 export async function disconnectService(serviceName: string): Promise<void> {
     await fetchClient(`/services/${serviceName}/connection`, { method: 'DELETE' });
 }
-
-export async function getOAuthUrl(serviceName: string) {
-    const response = await fetchClient<{ authorizationUrl: string }>(
-        `/auth/${serviceName}?format=json`,
-        {
-            credentials: 'include',
-        },
-    );
-    return response.authorizationUrl;
-}

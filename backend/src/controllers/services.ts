@@ -1,35 +1,42 @@
+import { APIError } from 'better-auth/api';
+import { fromNodeHeaders } from 'better-auth/node';
+import { auth } from '../auth.ts';
 import registry from '../services/registry.ts';
-import { decryptString, encryptJson } from '../utils/encryption.ts';
+import { encryptJson } from '../utils/encryption.ts';
 import asyncHandler from '../utils/asyncHandler.ts';
-
+import { getProviderAccessToken } from '../utils/oauthAccounts.ts';
 import prisma from '../utils/prisma.ts';
 import { authUser } from '../middleware/auth.ts';
 
 export const getServices = asyncHandler(async (req, res) => {
-    const [connections, oauthTokens] = await Promise.all([
-        prisma.serviceConnection.findMany({ where: { userId: authUser(req).userId } }),
-        prisma.oAuthToken.findMany({ where: { userId: authUser(req).userId } }),
+    const userId = authUser(req).userId;
+    const [connections, accounts] = await Promise.all([
+        prisma.serviceConnection.findMany({ where: { userId } }),
+        // OAuth services are connected through a linked Better Auth account.
+        prisma.account.findMany({ where: { userId }, select: { providerId: true } }),
     ]);
 
     const connectedServiceNames = new Set([
         ...connections.map((c) => c.serviceName),
-        ...oauthTokens.map((t) => t.provider),
+        ...accounts.map((a) => a.providerId),
     ]);
 
     const servicesList = await Promise.all(
         registry.getAllServices().map(async (service) => {
             const name = service.name;
-            const isConnected = connectedServiceNames.has(name) || !service.configurable;
+            // Services without a connection (YouTube, chatbot) need nothing from the user.
+            const isConnected = service.connection ? connectedServiceNames.has(name) : true;
             let displayName = service.displayName || name;
             let description = '';
 
             if (isConnected) {
                 const connection = connections.find((c) => c.serviceName === name);
-                const token = oauthTokens.find((t) => t.provider === name);
+                const linked = accounts.some((a) => a.providerId === name);
 
-                if (token && name === 'github') {
+                if (linked && name === 'github') {
                     try {
-                        const accessToken = decryptString(token.accessToken);
+                        const accessToken = await getProviderAccessToken(userId, name);
+                        if (!accessToken) throw new Error('No GitHub token');
                         const res = await fetch('https://api.github.com/user', {
                             headers: {
                                 Authorization: `Bearer ${accessToken}`,
@@ -119,9 +126,24 @@ export const disconnectService = asyncHandler(async (req, res) => {
         return res.status(400).json({ error: 'Service is not configurable' });
 
     if (service.connection?.type === 'oauth') {
-        await prisma.oAuthToken.deleteMany({
-            where: { userId: authUser(req).userId, provider: service.name },
+        const account = await prisma.account.findFirst({
+            where: { userId: authUser(req).userId, providerId: service.name },
+            select: { id: true },
         });
+        if (!account) return res.status(204).send();
+        try {
+            await auth.api.unlinkAccount({
+                body: { accountId: String(account.id) },
+                headers: fromNodeHeaders(req.headers),
+            });
+        } catch (error) {
+            // Better Auth keeps the last sign-in method of an account (e.g. GitHub-only users).
+            if (error instanceof APIError && error.body?.code === 'FAILED_TO_UNLINK_LAST_ACCOUNT')
+                return res.status(409).json({
+                    error: 'GitHub is how you sign in to this account, so it cannot be disconnected.',
+                });
+            throw error;
+        }
     } else {
         await prisma.serviceConnection.deleteMany({
             where: { userId: authUser(req).userId, serviceName: service.name },

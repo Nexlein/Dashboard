@@ -7,7 +7,7 @@ describe('Shared Schemas', () => {
             const data = {
                 email: 'test@example.com',
                 password: 'password123',
-                displayName: 'Test User',
+                name: 'Test User',
                 cguAccepted: true,
                 is16OrOlder: true,
             };
@@ -19,7 +19,7 @@ describe('Shared Schemas', () => {
             const data = {
                 email: 'invalid-email',
                 password: 'password123',
-                displayName: 'Test User',
+                name: 'Test User',
                 cguAccepted: true,
                 is16OrOlder: true,
             };
@@ -31,7 +31,7 @@ describe('Shared Schemas', () => {
             const data = {
                 email: 'test@example.com',
                 password: 'password123',
-                displayName: 'Test User',
+                name: 'Test User',
                 cguAccepted: false,
                 is16OrOlder: true,
             };
@@ -79,7 +79,7 @@ describe('Shared Schemas', () => {
     describe('updateMeSchema', () => {
         it('should validate partial updates', () => {
             const data = {
-                displayName: 'New Name',
+                name: 'New Name',
             };
             const result = updateMeSchema.safeParse(data);
             expect(result.success).toBe(true);

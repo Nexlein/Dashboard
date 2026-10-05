@@ -1,32 +1,31 @@
 import type { NextFunction, Request, Response } from 'express';
-import { verifyAuthToken, type AuthPayload } from '../utils/authToken.ts';
-import { SESSION_COOKIE } from '../utils/session.ts';
+import { fromNodeHeaders } from 'better-auth/node';
+import { auth } from '../auth.ts';
+import env from '../utils/env.ts';
 import { isAllowedOrigin } from '../utils/origins.ts';
 
+/** The signed-in user, as the routes behind requireAuth see it. */
+export type AuthPayload = { userId: number };
+
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+// Swagger UI calls the API from the API's own origin.
+const API_ORIGIN = new URL(env.BETTER_AUTH_URL).origin;
 
 /**
- * Authenticates with the session cookie set at login, or an `Authorization: Bearer` header
- * (API clients, tests). Browsers attach the cookie automatically, so a state-changing
- * request authenticated by it must come from an allowed frontend origin (CSRF protection).
+ * Authenticates the Better Auth session cookie. Browsers attach the cookie automatically, so a
+ * state-changing request must also come from an allowed frontend origin (CSRF protection; Better
+ * Auth applies the same rule to its own /api/auth/* routes).
  */
-function requireAuth(req: Request, res: Response, next: NextFunction) {
-    const authorization = req.get('Authorization');
-    const bearer = authorization?.startsWith('Bearer ') ? authorization.slice(7) : null;
-    const token: string | undefined = bearer || req.cookies?.[SESSION_COOKIE];
+async function requireAuth(req: Request, res: Response, next: NextFunction) {
+    const session = await auth.api.getSession({ headers: fromNodeHeaders(req.headers) });
+    if (!session) return res.status(401).json({ error: 'Authentication required' });
 
-    if (!token) return res.status(401).json({ error: 'Missing authentication token' });
-
-    if (!bearer && !SAFE_METHODS.has(req.method) && !isAllowedOrigin(req.get('Origin'))) {
+    const origin = req.get('Origin');
+    if (!SAFE_METHODS.has(req.method) && !isAllowedOrigin(origin) && origin !== API_ORIGIN) {
         return res.status(403).json({ error: 'Request origin not allowed' });
     }
 
-    try {
-        req.user = verifyAuthToken(token);
-    } catch {
-        return res.status(401).json({ error: 'Invalid or expired authentication token' });
-    }
-
+    req.user = { userId: Number(session.user.id) };
     next();
 }
 

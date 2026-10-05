@@ -1,16 +1,14 @@
 import crypto from 'node:crypto';
 
-// AES-256-GCM with a key derived from ENCRYPTION_KEY (JWT_SECRET when unset).
-// One cipher, two storage formats:
-// - objects (widget params, service credentials), stored in JSON columns:
+// AES-256-GCM with a key derived from ENCRYPTION_KEY (BETTER_AUTH_SECRET when unset).
+// Encrypts objects (widget params, service API keys) for JSON columns, hex encoded:
 //   { _encrypted: true, iv, authTag, data }
-// - strings (OAuth tokens), stored in text columns: "v1:<iv>:<authTag>:<data>"
-// Both are hex encoded. Keep the secret stable: changing it makes stored data unreadable.
+// Keep the secret stable: changing it makes stored data unreadable. (OAuth tokens are encrypted
+// by Better Auth: account.encryptOAuthTokens in src/auth.ts.)
 
 const ALGORITHM = 'aes-256-gcm';
 const IV_BYTES = 12; // GCM standard nonce size; decryption accepts the IV stored with the data
 const KEY_SALT = 'dashboard-widget-encryption';
-const STRING_PATTERN = /^v1:([a-f0-9]{24}):([a-f0-9]{32}):((?:[a-f0-9]{2})*)$/i;
 
 /** Shape of an object encrypted for a JSON column. */
 export type EncryptedJson = { _encrypted: true; iv: string; authTag: string; data: string };
@@ -19,9 +17,11 @@ type Sealed = Omit<EncryptedJson, '_encrypted'>;
 let key: Buffer | null = null;
 function getEncryptionKey(): Buffer {
     if (key) return key;
-    const secret = process.env.ENCRYPTION_KEY || process.env.JWT_SECRET;
+    const secret = process.env.ENCRYPTION_KEY || process.env.BETTER_AUTH_SECRET;
     if (!secret) {
-        throw new Error('ENCRYPTION_KEY or JWT_SECRET must be set in environment variables');
+        throw new Error(
+            'ENCRYPTION_KEY or BETTER_AUTH_SECRET must be set in environment variables',
+        );
     }
     key = crypto.scryptSync(secret, KEY_SALT, 32);
     return key;
@@ -69,30 +69,4 @@ function decryptJson(payload: unknown): unknown {
     }
 }
 
-/** Encrypts a string for a text column. null and undefined are returned unchanged. */
-function encryptString(text: string): string;
-function encryptString(text: null | undefined): null | undefined;
-function encryptString(text: string | null | undefined): string | null | undefined {
-    if (text == null) return text;
-    const { iv, authTag, data } = seal(text);
-    return `v1:${iv}:${authTag}:${data}`;
-}
-
-/** Decrypts a value from encryptString. Throws on plaintext, damaged data or a wrong key. */
-function decryptString(text: string): string;
-function decryptString(text: null | undefined): null | undefined;
-function decryptString(text: string | null | undefined): string | null | undefined {
-    if (text == null) return text;
-    const match = STRING_PATTERN.exec(text);
-    if (!match) throw new Error('Value is not an encrypted string');
-    return open({ iv: match[1], authTag: match[2], data: match[3] });
-}
-
-export {
-    getEncryptionKey,
-    encryptJson,
-    decryptJson,
-    decryptJsonStrict,
-    encryptString,
-    decryptString,
-};
+export { getEncryptionKey, encryptJson, decryptJson, decryptJsonStrict };

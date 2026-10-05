@@ -9,46 +9,49 @@ The schema lives in `backend/prisma/schema.prisma` and its history in
 
 ### 1. User
 
-The core entity representing a registered user on the platform.
+The core entity representing a registered user. `User`, `Session`, `Account` and
+`Verification` follow [Better Auth's schema](https://www.better-auth.com/docs/concepts/database)
+(`backend/src/auth.ts`), with integer ids (`generateId: "serial"`).
 
 | Field           | Type      | Description                                                   |
 | --------------- | --------- | ------------------------------------------------------------- |
 | `id`            | Int       | Primary Key                                                   |
-| `githubId`      | String?   | Unique stable GitHub account ID, independent of the editable email |
+| `name`          | String    | Display name; empty when the user did not give one            |
 | `email`         | String    | Unique email address                                          |
-| `displayName`   | String?   | Optional display name used to personalize the interface       |
-| `password`      | String?   | Hashed password (Nullable if logged in exclusively via OAuth) |
-| `isAdmin`       | Boolean   | Flag for administrative privileges                            |
-| `cguAcceptedAt` | DateTime? | Timestamp when user accepted CGU                              |
+| `emailVerified` | Boolean   | `true` when GitHub verified it; reset when the email changes  |
+| `image`         | String?   | Avatar URL (GitHub)                                           |
+| `role`          | String?   | `user` or `admin` (admin plugin)                              |
+| `banned`, `banReason`, `banExpires` | | Ban state (admin plugin)                          |
+| `cguAcceptedAt` | DateTime? | When the user accepted the CGU and confirmed being 16 or older |
 | `language`      | String    | User's i18n preference (`en` or `fr`), defaults to `en`       |
 | `theme`         | String    | User's theme preference (`light`, `dark`, or `system`)        |
 | `createdAt`     | DateTime  | Timestamp of creation                                         |
 | `updatedAt`     | DateTime  | Timestamp of last update                                      |
 
-**Relations:**
-
-- `widgets`: One-to-Many with `WidgetConfig`
-- `tokens`: One-to-Many with `OAuthToken`
-- `serviceConnections`: One-to-Many with `ServiceConnection`
+**Relations:** `sessions`, `accounts`, `widgets`, `serviceConnections` (One-to-Many, each
+cascades on delete).
 
 ---
 
-### 2. OAuthToken
+### 2. Account, Session and Verification (Better Auth)
 
-Stores OAuth 2.0 access and refresh tokens for 3rd party services linked to a User account.
+**Account**: one row per sign-in method of a user.
 
-| Field         | Type      | Description                              |
-| ------------- | --------- | ---------------------------------------- |
-| `id`          | Int       | Primary Key                              |
-| `userId`      | Int       | Foreign Key to `User`                    |
-| `provider`    | String    | Provider name (e.g., `github`, `google`) |
-| `accessToken` | String    | AES-256-GCM encrypted OAuth access token                   |
-| `refreshToken` | String?   | Encrypted optional refresh token                   |
-| `expiresAt`   | DateTime? | Token expiration timestamp               |
+| Field         | Type      | Description                                                       |
+| ------------- | --------- | ----------------------------------------------------------------- |
+| `providerId`  | String    | `credential` (email/password) or `github`                         |
+| `accountId`   | String    | The GitHub user id, or the user id for `credential`               |
+| `password`    | String?   | Password hash (scrypt), `credential` only                         |
+| `accessToken`, `refreshToken`, `idToken` | String? | GitHub tokens, encrypted (AES-256-GCM)  |
+| `accessTokenExpiresAt`, `refreshTokenExpiresAt`, `scope` | | Token metadata            |
 
-**Relations:**
+`(providerId, accountId)` is unique: a GitHub account belongs to one Dashboard account.
 
-- `user`: Belongs to `User`. Cascades on delete.
+**Session**: `token` (unique, the value of the session cookie), `expiresAt`, `ipAddress`,
+`userAgent`, `impersonatedBy` (admin plugin), `userId`.
+
+**Verification**: short-lived values (`identifier`, `value`, `expiresAt`), such as OAuth
+states.
 
 ---
 
@@ -122,3 +125,6 @@ Schema changes are versioned with Prisma Migrate. Each folder in
 - `20261004000000_init` is the baseline matching the schema when migrations were
   introduced. Databases created earlier with `prisma db push` mark it as applied with
   `npx prisma migrate resolve --applied 20261004000000_init` (from `backend/`).
+- `20261005125900_better_auth` moves authentication to Better Auth's tables. It removes the
+  accounts created before it (their passwords and GitHub tokens used other formats) with
+  their widgets and connections; run `npx prisma db seed` for the test accounts again.

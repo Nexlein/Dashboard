@@ -30,7 +30,7 @@ afterEach(() => {
 describe('App routing', () => {
     it('sends visitors without a session to the login page', async () => {
         mockApi({
-            'GET /auth/me': { status: 401, body: { error: 'Missing authentication token' } },
+            'GET /api/auth/get-session': { body: null },
         });
         renderAppAt('/');
         expect(await screen.findByRole('button', { name: 'Se connecter' })).toBeInTheDocument();
@@ -39,7 +39,9 @@ describe('App routing', () => {
 
     it('shows the dashboard to a signed-in user', async () => {
         mockApi({
-            'GET /auth/me': { body: { id: 1, email: 'ada@example.com', displayName: 'Ada' } },
+            'GET /api/auth/get-session': {
+                body: { user: { id: '1', email: 'ada@example.com', name: 'Ada' }, session: {} },
+            },
             'GET /widgets': { body: [] },
         });
         renderAppAt('/');
@@ -49,7 +51,7 @@ describe('App routing', () => {
 
     it('sends a visitor with an expired session to the login page', async () => {
         mockApi({
-            'GET /auth/me': { status: 401, body: { error: 'Invalid token' } },
+            'GET /api/auth/get-session': { body: null },
             'GET /widgets': { status: 401, body: { error: 'Invalid token' } },
         });
         renderAppAt('/services');

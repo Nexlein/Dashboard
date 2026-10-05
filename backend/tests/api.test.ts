@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { signToken } from './helpers.ts';
+import { FRONTEND, signedInAs } from './helpers.ts';
 import request from 'supertest';
 import app from '../src/app.ts';
 import weatherService from '../src/services/weather.ts';
@@ -25,27 +25,23 @@ const prisma = vi.hoisted(() => ({
         upsert: vi.fn(),
         deleteMany: vi.fn(),
     },
-    oAuthToken: {
+    account: {
         findMany: vi.fn(),
-        findUnique: vi.fn(),
-        upsert: vi.fn(),
-        deleteMany: vi.fn(),
+        findFirst: vi.fn(),
     },
     $transaction: vi.fn(),
     $queryRaw: vi.fn(),
 }));
 vi.mock('../src/utils/prisma.ts', () => ({ default: prisma }));
 
+import { auth } from '../src/auth.ts';
 import { encryptJson } from '../src/utils/encryption.ts';
 import chatbotService from '../src/services/chatbot.ts';
-// Runs before the imports below: the app reads these when it loads.
-vi.hoisted(() => {
-    process.env.JWT_SECRET = 'api-test-secret-that-is-long-enough-for-authentication-tests';
-});
 
 describe('API Endpoints', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        vi.mocked(auth.api.getSession).mockResolvedValue(null);
     });
 
     describe('GET /health', () => {
@@ -116,124 +112,12 @@ describe('API Endpoints', () => {
         });
     });
 
-    describe('POST /auth/register', () => {
-        it('should require email and password', async () => {
-            const res = await request(app).post('/auth/register').send({ email: 'test@test.com' });
-            expect(res.statusCode).toBe(400);
-            expect(res.statusCode).toBe(400);
-        });
-
-        it('should require CGU acceptance', async () => {
-            const res = await request(app)
-                .post('/auth/register')
-                .send({ email: 'test@test.com', password: 'password123' });
-            expect(res.statusCode).toBe(400);
-            expect(res.statusCode).toBe(400);
-        });
-
-        it('should reject invalid email addresses', async () => {
-            const res = await request(app).post('/auth/register').send({
-                email: 'not-an-email',
-                password: 'password123',
-                cguAccepted: true,
-                is16OrOlder: true,
-            });
-
-            expect(res.statusCode).toBe(400);
-            expect(res.statusCode).toBe(400);
-        });
-
-        it('should require a password between 8 and 72 characters', async () => {
-            const res = await request(app).post('/auth/register').send({
-                email: 'test@test.com',
-                password: 'short',
-                cguAccepted: true,
-                is16OrOlder: true,
-            });
-
-            expect(res.statusCode).toBe(400);
-            expect(res.statusCode).toBe(400);
-        });
-
-        it('should register a new user successfully', async () => {
-            prisma.user.findUnique.mockResolvedValue(null);
-            prisma.user.create.mockResolvedValue({
-                id: 1,
-                email: 'test@test.com',
-                displayName: 'Test User',
-            });
-
-            const res = await request(app).post('/auth/register').send({
-                email: ' Test@TEST.com ',
-                password: 'password123',
-                displayName: '  Test User  ',
-                cguAccepted: true,
-                is16OrOlder: true,
-            });
-
-            expect(res.statusCode).toBe(201);
-            expect(res.body.message).toBe('User registered successfully');
-            expect(res.body.userId).toBe(1);
-            expect(prisma.user.create).toHaveBeenCalledWith({
-                data: expect.objectContaining({
-                    email: 'test@test.com',
-                    displayName: 'Test User',
-                }),
-            });
-        });
-
-        it('should reject a display name longer than 50 characters', async () => {
-            const res = await request(app)
-                .post('/auth/register')
-                .send({
-                    email: 'test@test.com',
-                    password: 'password123',
-                    displayName: 'a'.repeat(51),
-                    cguAccepted: true,
-                    is16OrOlder: true,
-                });
-
-            expect(res.statusCode).toBe(400);
-            expect(res.statusCode).toBe(400);
-            expect(prisma.user.create).not.toHaveBeenCalled();
-        });
-
-        it('should allow registration without a display name', async () => {
-            prisma.user.findUnique.mockResolvedValue(null);
-            prisma.user.create.mockResolvedValue({ id: 2, email: 'anonymous@test.com' });
-
-            const res = await request(app).post('/auth/register').send({
-                email: 'anonymous@test.com',
-                password: 'password123',
-                cguAccepted: true,
-                is16OrOlder: true,
-            });
-
-            expect(res.statusCode).toBe(201);
-            expect(prisma.user.create).toHaveBeenCalledWith({
-                data: expect.objectContaining({ displayName: null }),
-            });
-        });
-
-        it('should return error if email already in use', async () => {
-            prisma.user.findUnique.mockResolvedValue({ id: 1, email: 'test@test.com' });
-
-            const res = await request(app).post('/auth/register').send({
-                email: 'test@test.com',
-                password: 'password123',
-                cguAccepted: true,
-                is16OrOlder: true,
-            });
-
-            expect(res.statusCode).toBe(409);
-            expect(res.body.error).toBe('Email already in use');
-        });
-
-        it('should rate limit repeated authentication attempts', async () => {
+    describe('sign-in rate limit', () => {
+        it('limits repeated attempts before they reach Better Auth', async () => {
             for (let attempt = 0; attempt < 20; attempt += 1) {
-                await request(app).post('/auth/login').send({});
+                await request(app).post('/api/auth/sign-in/email').send({});
             }
-            const response = await request(app).post('/auth/login').send({});
+            const response = await request(app).post('/api/auth/sign-in/email').send({});
 
             expect(response.statusCode).toBe(429);
             expect(response.body.error).toBe(
@@ -242,38 +126,8 @@ describe('API Endpoints', () => {
         });
     });
 
-    describe('GET /auth/me', () => {
-        it('returns the authenticated user profile', async () => {
-            const token = signToken({ userId: 7, isAdmin: false });
-            prisma.user.findUnique.mockResolvedValue({
-                id: 7,
-                email: 'user@example.com',
-                displayName: 'Test User',
-            });
-
-            const res = await request(app).get('/auth/me').set('Authorization', `Bearer ${token}`);
-
-            expect(res.statusCode).toBe(200);
-            expect(res.body).toEqual({
-                id: 7,
-                email: 'user@example.com',
-                displayName: 'Test User',
-            });
-            expect(prisma.user.findUnique).toHaveBeenCalledWith({
-                where: { id: 7 },
-                select: { id: true, email: true, displayName: true },
-            });
-        });
-
-        it('rejects unauthenticated profile requests', async () => {
-            const res = await request(app).get('/auth/me');
-
-            expect(res.statusCode).toBe(401);
-        });
-    });
-
     describe('Widget CRUD API', () => {
-        const token = signToken({ userId: 1, isAdmin: false });
+        beforeEach(() => signedInAs(1));
         const mockWidget = {
             id: 1,
             userId: 1,
@@ -285,6 +139,7 @@ describe('API Endpoints', () => {
         };
 
         it('should require authentication', async () => {
+            vi.mocked(auth.api.getSession).mockResolvedValueOnce(null);
             const res = await request(app).get('/widgets');
 
             expect(res.statusCode).toBe(401);
@@ -300,7 +155,7 @@ describe('API Endpoints', () => {
 
             const res = await request(app)
                 .post('/widgets')
-                .set('Authorization', `Bearer ${token}`)
+                .set('Origin', FRONTEND)
                 .send({
                     serviceName: 'weather',
                     widgetName: 'current_weather',
@@ -327,7 +182,7 @@ describe('API Endpoints', () => {
         it('should reject a refresh rate below 60 seconds', async () => {
             const res = await request(app)
                 .post('/widgets')
-                .set('Authorization', `Bearer ${token}`)
+                .set('Origin', FRONTEND)
                 .send({
                     serviceName: 'weather',
                     widgetName: 'current_weather',
@@ -346,7 +201,7 @@ describe('API Endpoints', () => {
 
             const res = await request(app)
                 .put('/widgets/layout')
-                .set('Authorization', `Bearer ${token}`)
+                .set('Origin', FRONTEND)
                 .send({
                     layouts: [
                         { id: 1, layout: { x: 0, y: 0, w: 4, h: 4 } },
@@ -371,9 +226,7 @@ describe('API Endpoints', () => {
                 temperature: 19,
             });
 
-            const res = await request(app)
-                .get('/widgets/1/data')
-                .set('Authorization', `Bearer ${token}`);
+            const res = await request(app).get('/widgets/1/data').set('Origin', FRONTEND);
 
             expect(res.statusCode).toBe(200);
             expect(res.body.temperature).toBe(19);
@@ -398,9 +251,7 @@ describe('API Endpoints', () => {
                 params: {},
             });
 
-            const res = await request(app)
-                .get('/widgets/1/data')
-                .set('Authorization', `Bearer ${token}`);
+            const res = await request(app).get('/widgets/1/data').set('Origin', FRONTEND);
 
             expect(res.statusCode).toBe(501);
             expect(res.body.error).toBe('Widget data is not available for this service');
@@ -411,7 +262,7 @@ describe('API Endpoints', () => {
 
             const res = await request(app)
                 .post('/widgets')
-                .set('Authorization', `Bearer ${token}`)
+                .set('Origin', FRONTEND)
                 .send({
                     serviceName: 'weather',
                     widgetName: 'current_weather',
@@ -433,10 +284,7 @@ describe('API Endpoints', () => {
             ['delete', '/widgets/0'],
             ['put', '/widgets/1.5'],
         ] as const)('rejects an invalid widget id on %s %s', async (method, url) => {
-            const res = await request(app)
-                [method](url)
-                .set('Authorization', `Bearer ${token}`)
-                .send({});
+            const res = await request(app)[method](url).set('Origin', FRONTEND).send({});
 
             expect(res.statusCode).toBe(400);
             expect(res.body.error).toBe('Invalid widget id');
@@ -449,10 +297,7 @@ describe('API Endpoints', () => {
             [{ params: 'city=Paris' }],
             [{ layout: { x: 'left', y: 0, w: 2, h: 2 } }],
         ])('rejects an invalid widget update %j', async (body) => {
-            const res = await request(app)
-                .put('/widgets/1')
-                .set('Authorization', `Bearer ${token}`)
-                .send(body);
+            const res = await request(app).put('/widgets/1').set('Origin', FRONTEND).send(body);
 
             expect(res.statusCode).toBe(400);
             expect(prisma.widgetConfig.update).not.toHaveBeenCalled();
@@ -466,7 +311,7 @@ describe('API Endpoints', () => {
 
             const res = await request(app)
                 .put('/widgets/1')
-                .set('Authorization', `Bearer ${token}`)
+                .set('Origin', FRONTEND)
                 .send({ params: { city: 'Lyon' }, refreshRate: 120 });
 
             expect(res.statusCode).toBe(200);
@@ -477,9 +322,7 @@ describe('API Endpoints', () => {
         it("refuses to delete another user's widget", async () => {
             prisma.widgetConfig.findUnique.mockResolvedValue({ ...mockWidget, userId: 2 });
 
-            const res = await request(app)
-                .delete('/widgets/1')
-                .set('Authorization', `Bearer ${token}`);
+            const res = await request(app).delete('/widgets/1').set('Origin', FRONTEND);
 
             expect(res.statusCode).toBe(403);
             expect(prisma.widgetConfig.delete).not.toHaveBeenCalled();
@@ -502,7 +345,7 @@ describe('API Endpoints', () => {
 
                 const res = await request(app)
                     .post('/widgets/1/chat')
-                    .set('Authorization', `Bearer ${token}`)
+                    .set('Origin', FRONTEND)
                     .send({ messages });
 
                 expect(res.statusCode).toBe(200);
@@ -524,7 +367,7 @@ describe('API Endpoints', () => {
 
                 const res = await request(app)
                     .post('/widgets/1/chat')
-                    .set('Authorization', `Bearer ${token}`)
+                    .set('Origin', FRONTEND)
                     .send({ messages });
 
                 expect(res.statusCode).toBe(404);
@@ -540,7 +383,7 @@ describe('API Endpoints', () => {
             ])('rejects an invalid chat payload %j', async (body) => {
                 const res = await request(app)
                     .post('/widgets/1/chat')
-                    .set('Authorization', `Bearer ${token}`)
+                    .set('Origin', FRONTEND)
                     .send(body);
 
                 expect(res.statusCode).toBe(400);
@@ -552,7 +395,7 @@ describe('API Endpoints', () => {
 
                 const res = await request(app)
                     .post('/widgets/1/chat')
-                    .set('Authorization', `Bearer ${token}`)
+                    .set('Origin', FRONTEND)
                     .send({ messages });
 
                 expect(res.statusCode).toBe(400);
@@ -561,7 +404,7 @@ describe('API Endpoints', () => {
     });
 
     describe('Service connections API', () => {
-        const token = signToken({ userId: 1, isAdmin: false });
+        beforeEach(() => signedInAs(1));
         const verifiedAt = new Date('2026-09-21T12:00:00.000Z');
         const connection = {
             id: 9,
@@ -574,9 +417,9 @@ describe('API Endpoints', () => {
 
         it('lists services without exposing credentials', async () => {
             prisma.serviceConnection.findMany.mockResolvedValue([connection]);
-            prisma.oAuthToken.findMany.mockResolvedValue([]);
+            prisma.account.findMany.mockResolvedValue([]);
 
-            const res = await request(app).get('/services').set('Authorization', `Bearer ${token}`);
+            const res = await request(app).get('/services').set('Origin', FRONTEND);
 
             expect(res.statusCode).toBe(200);
             const weather = res.body.find(
@@ -601,7 +444,7 @@ describe('API Endpoints', () => {
 
                 const res = await request(app)
                     .put('/services/weather/connection')
-                    .set('Authorization', `Bearer ${token}`)
+                    .set('Origin', FRONTEND)
                     .send(body);
 
                 expect(res.statusCode).toBe(400);
@@ -616,7 +459,7 @@ describe('API Endpoints', () => {
 
             const res = await request(app)
                 .put('/services/weather/connection')
-                .set('Authorization', `Bearer ${token}`)
+                .set('Origin', FRONTEND)
                 .send({ apiKey: 'test-api-key' });
 
             expect(res.statusCode).toBe(200);
@@ -639,7 +482,7 @@ describe('API Endpoints', () => {
 
             const res = await request(app)
                 .delete('/services/weather/connection')
-                .set('Authorization', `Bearer ${token}`);
+                .set('Origin', FRONTEND);
 
             expect(res.statusCode).toBe(204);
             expect(prisma.serviceConnection.deleteMany).toHaveBeenCalledWith({

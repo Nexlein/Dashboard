@@ -63,7 +63,7 @@ jobs:
             - name: Run backend tests
               env:
                   DATABASE_URL: postgresql://postgres:postgres@localhost:5432/dashboard_gdpr_test
-                  JWT_SECRET: dummy_jwt_secret_with_at_least_32_characters
+                  BETTER_AUTH_SECRET: dummy_better_auth_secret_with_32_characters
                   ENCRYPTION_KEY: dummy_encryption_key_with_at_least_32_chars
               run: npm test -w backend -- --coverage
             - name: Apply migrations and check they match the schema
@@ -74,12 +74,12 @@ jobs:
               run: |
                   npx prisma migrate deploy
                   npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code
-            - name: Verify GDPR flows
+            - name: Authentication and GDPR flows against PostgreSQL
               working-directory: backend
               env:
                   DATABASE_URL: postgresql://postgres:postgres@localhost:5432/dashboard_gdpr_test
                   TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/dashboard_gdpr_test
-              run: npm run test:gdpr-integration
+              run: npm run test:integration
 
     test-frontend:
         runs-on: ubuntu-latest

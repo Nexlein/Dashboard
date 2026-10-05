@@ -78,11 +78,11 @@ describe('ServiceCard with an OAuth service', () => {
 
     it('redirects to the authorization URL returned by the API', async () => {
         const fetchMock = mockApi({
-            'GET /auth/github': {
-                body: { authorizationUrl: 'https://github.com/login/oauth/authorize?x=1' },
+            'POST /api/auth/link-social': {
+                body: { url: 'https://github.com/login/oauth/authorize?x=1', redirect: false },
             },
         });
-        const location = { href: 'http://localhost/services' };
+        const location = { href: 'http://localhost/services', origin: 'http://localhost' };
         vi.stubGlobal('location', location);
         renderCard(github);
 
@@ -91,11 +91,17 @@ describe('ServiceCard with an OAuth service', () => {
         await waitFor(() =>
             expect(location.href).toBe('https://github.com/login/oauth/authorize?x=1'),
         );
-        expect(String(fetchMock.mock.calls[0][0])).toContain('/auth/github?format=json');
+        expect(String(fetchMock.mock.calls[0][0])).toContain('/api/auth/link-social');
+        expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toMatchObject({
+            provider: 'github',
+            callbackURL: 'http://localhost/services?linked=github',
+        });
     });
 
     it('reports an error when the linking flow cannot start', async () => {
-        mockApi({ 'GET /auth/github': { status: 401, body: { error: 'Unauthorized' } } });
+        mockApi({
+            'POST /api/auth/link-social': { status: 401, body: { message: 'Unauthorized' } },
+        });
         const { setError } = renderCard(github);
         fireEvent.click(screen.getByRole('button', { name: /Lier mon compte GitHub/ }));
         await waitFor(() => expect(setError).toHaveBeenCalledWith('Unauthorized'));

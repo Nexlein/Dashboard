@@ -42,7 +42,6 @@
         "prettier": "^3.9.9"
     },
     "allowScripts": {
-        "bcrypt": true,
         "prisma": true,
         "@prisma/client": true,
         "@prisma/engines": true,

@@ -36,17 +36,28 @@ first; when running a single workspace, run `npm run db:generate -w backend` onc
 ## Structure
 
 All backend tests are located in `backend/tests/` and are type-checked with the sources
-(`npm run typecheck -w backend`). Prisma is mocked with `vi.mock('../src/utils/prisma.ts')` returning
-a hoisted object of `vi.fn()` stubs; `helpers.ts` provides `stubFetch`, `signToken`/`verifyToken`
-and `setCookies`.
+(`npm run typecheck -w backend`). There are two suites:
 
-- `api.test.ts`: Core tests for endpoints (`/health`, `/about.json`, `/auth/*`, `/widgets/*`
-  including id validation, update payloads, ownership and chat forwarding).
+- **Unit tests** (`npm test -w backend`, no database). Prisma is mocked with
+  `vi.mock('../src/utils/prisma.ts')` returning a hoisted object of `vi.fn()` stubs, and Better
+  Auth with a stand-in (`tests/setup.ts`): `signedInAs(userId)` from `helpers.ts` chooses who is
+  signed in. `helpers.ts` also provides `stubFetch`.
+- **Integration tests** (`tests/integration/`, `npm run test:integration -w backend`): the real
+  app, Better Auth and Prisma against a disposable PostgreSQL database; only GitHub is faked
+  (`fakeGitHub` in `tests/integration/helpers.ts`). They cover every authentication rule:
+  sign-up declarations and the shared schema, cookie attributes, the token kept out of JSON
+  responses, sign-out and expiry revoking sessions, CSRF, GitHub sign-up/sign-in/linking
+  (browser binding, state replay, refusals, unverified emails, no takeover of email accounts,
+  encrypted tokens used by the widgets), GDPR export and deletion, and the admin plugin.
+
+Unit test files:
+
+- `api.test.ts`: Core tests for endpoints (`/health`, `/about.json`, `/widgets/*` including id
+  validation, update payloads, ownership and chat forwarding, `/services`) and the sign-in
+  rate limit.
+- `account.test.ts`: `/account/*`, the session and Origin checks of the API routes, GitHub as a
+  service (linked or not, unlinking).
 - `env.test.ts`: environment validation (defaults, empty values, invalid input).
-- `contract/api.contract.test.ts`: the API rejects payloads the shared Zod schemas reject.
-- `oauth.test.ts`: GitHub redirects, browser cookie binding, state expiration and
-  replay protection, token persistence and error handling. GitHub and Prisma are
-  mocked; these tests require no real credentials or running database.
 - `crypto.test.ts`: CoinGecko credential verification, normalized price and
   historical responses, caching, multi-asset limits, supported periods, provider
   errors, and legacy full-history fallback. All CoinGecko calls are mocked.
@@ -85,18 +96,20 @@ The frontend uses **Vitest** and **React Testing Library**.
 
 ## GDPR regression coverage
 
-- `gdpr.test.ts`: profile validation, OAuth email editing and stable GitHub login identity, readable exports
-  without credentials, failed exports, account deletion errors, and age/terms
-  checks on password and GitHub registration (including callback tampering).
-- `encryption.test.ts`: key derivation from `ENCRYPTION_KEY` / `JWT_SECRET`, JSON and
-  string round trips, tamper and wrong-key rejection, and ciphertexts written by the
-  previous implementation that must stay readable.
+- `tests/integration/account.test.ts`: readable exports without passwords, tokens or API keys,
+  profile edits, account deletion (cascades, recent sign-in or password, CSRF).
+- `tests/integration/auth.test.ts` and `github.test.ts`: CGU and age declarations on email and
+  GitHub registration, including declarations missing from the OAuth state.
+- `account.test.ts`: failed exports when stored data cannot be decrypted, profile validation.
+- `encryption.test.ts`: key derivation from `ENCRYPTION_KEY` / `BETTER_AUTH_SECRET`, JSON
+  round trips, tamper and wrong-key rejection, and ciphertexts written by the previous
+  implementation that must stay readable.
 - `PrivacyActions.test.tsx` and `AuthPage.test.tsx`: successful/failed downloads and
   deletions, cancellation, editable OAuth profiles and both registration checkboxes.
 
 Run frontend tests with Node 24 (the frontend dependency versions require it).
 CI runs the frontend tests, type-check/build and lint, the backend unit tests,
-and the GDPR integration check against a disposable PostgreSQL service.
+and the integration tests against a disposable PostgreSQL service.
 
 For real PostgreSQL validation, prepare an **isolated, disposable** database:
 
@@ -104,15 +117,11 @@ For real PostgreSQL validation, prepare an **isolated, disposable** database:
 cd backend
 # Set TEST_DATABASE_URL to that disposable database only.
 DATABASE_URL="$TEST_DATABASE_URL" npx prisma migrate deploy
-npm run test:gdpr-integration
+npm run test:integration
 ```
 
-The integration check creates temporary users, starts a backend on a temporary
-port, verifies encrypted token storage, exports, OAuth email editing and
-foreign-key cascades, then removes its fixtures and stops the server. It also tests
-GitHub account creation, the age gate, an email change and subsequent login using
-real PostgreSQL and simulated GitHub responses. It writes and deletes users, so never
-target a real database.
+The integration tests create users with random emails and never send requests to GitHub.
+They write and delete users, so never target a real database.
 The test does not contact GitHub: a subprocess-only fixture supplies provider
 responses. Unit tests additionally cover provider and database failures.
 

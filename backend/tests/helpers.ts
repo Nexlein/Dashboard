@@ -1,6 +1,8 @@
-import jwt, { type JwtPayload, type SignOptions } from 'jsonwebtoken';
-import type { Response } from 'supertest';
 import { vi } from 'vitest';
+import { auth } from '../src/auth.ts';
+
+/** An origin allowed by CORS_ORIGINS' default: state-changing requests must send it. */
+export const FRONTEND = 'http://localhost:5173';
 
 /** Replaces global fetch with a plain stub; vitest.config.ts restores it after each test. */
 export function stubFetch() {
@@ -9,23 +11,10 @@ export function stubFetch() {
     return fetchMock;
 }
 
-function jwtSecret(): string {
-    const secret = process.env.JWT_SECRET;
-    if (!secret) throw new Error('JWT_SECRET must be set before signing test tokens');
-    return secret;
-}
-
-/** Signs a token with the secret the app under test uses. */
-export function signToken(payload: object, options?: SignOptions): string {
-    return jwt.sign(payload, jwtSecret(), options);
-}
-
-export function verifyToken(token: string): JwtPayload {
-    return jwt.verify(token, jwtSecret()) as JwtPayload;
-}
-
-/** The Set-Cookie headers of a supertest response. */
-export function setCookies(res: Response): string[] {
-    const header: unknown = res.headers['set-cookie'];
-    return Array.isArray(header) ? header : [];
+/** Makes the (mocked) Better Auth session belong to this user for the next requests. */
+export function signedInAs(userId: number) {
+    vi.mocked(auth.api.getSession).mockResolvedValue({
+        user: { id: String(userId) },
+        session: { userId: String(userId) },
+    } as never);
 }

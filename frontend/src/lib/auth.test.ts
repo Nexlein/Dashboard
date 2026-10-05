@@ -1,16 +1,29 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mockApi } from '@/test/fixtures';
-import { getCurrentUser, login, logout, startGitHubLogin } from './auth';
+import {
+    deleteMyAccount,
+    getCurrentUser,
+    getOAuthLinkUrl,
+    login,
+    logout,
+    register,
+    startGitHubLogin,
+} from './auth';
 
 afterEach(() => {
     localStorage.clear();
     vi.unstubAllGlobals();
 });
 
+const SESSION = {
+    user: { id: '1', email: 'ada@example.com', name: 'Ada' },
+    session: { id: '9', userId: '1' },
+};
+
 describe('login', () => {
     it('posts the credentials with cookies enabled and keeps nothing in storage', async () => {
         const fetchMock = mockApi({
-            'POST /auth/login': { body: { message: 'Login successful' } },
+            'POST /api/auth/sign-in/email': { body: { redirect: false, user: SESSION.user } },
         });
 
         await login({ email: 'ada@example.com', password: 'password1234' });
@@ -25,33 +38,59 @@ describe('login', () => {
     });
 
     it('surfaces the API error on bad credentials', async () => {
-        mockApi({ 'POST /auth/login': { status: 401, body: { error: 'Invalid credentials' } } });
+        mockApi({
+            'POST /api/auth/sign-in/email': {
+                status: 401,
+                body: { code: 'INVALID_EMAIL_OR_PASSWORD', message: 'Invalid email or password' },
+            },
+        });
         await expect(login({ email: 'ada@example.com', password: 'nope' })).rejects.toThrow(
-            'Invalid credentials',
+            'Invalid email or password',
         );
     });
 });
 
-describe('session', () => {
-    it('reads the current user from the API, sending the session cookie', async () => {
+describe('register', () => {
+    it('sends the declarations the API requires', async () => {
         const fetchMock = mockApi({
-            'GET /auth/me': { body: { id: 1, email: 'ada@example.com', displayName: null } },
+            'POST /api/auth/sign-up/email': { body: { user: SESSION.user } },
         });
 
-        await expect(getCurrentUser()).resolves.toMatchObject({ id: 1 });
+        await register({
+            email: 'ada@example.com',
+            password: 'password1234',
+            name: 'Ada',
+            cguAccepted: true,
+            is16OrOlder: true,
+        });
+
+        expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toMatchObject({
+            name: 'Ada',
+            cguAccepted: true,
+            is16OrOlder: true,
+        });
+    });
+});
+
+describe('session', () => {
+    it('reads the current user from the session, sending the cookie', async () => {
+        const fetchMock = mockApi({ 'GET /api/auth/get-session': { body: SESSION } });
+
+        await expect(getCurrentUser()).resolves.toEqual({
+            id: 1,
+            email: 'ada@example.com',
+            name: 'Ada',
+        });
         expect(fetchMock.mock.calls[0][1]?.credentials).toBe('include');
-        expect(fetchMock.mock.calls[0][1]?.headers).not.toHaveProperty('Authorization');
     });
 
     it('reports a missing session as an error', async () => {
-        mockApi({
-            'GET /auth/me': { status: 401, body: { error: 'Missing authentication token' } },
-        });
-        await expect(getCurrentUser()).rejects.toThrow('Missing authentication token');
+        mockApi({ 'GET /api/auth/get-session': { body: null } });
+        await expect(getCurrentUser()).rejects.toThrow();
     });
 
-    it('asks the API to clear the session cookie on logout', async () => {
-        const fetchMock = mockApi({ 'POST /auth/logout': { status: 204 } });
+    it('asks the API to revoke the session on logout', async () => {
+        const fetchMock = mockApi({ 'POST /api/auth/sign-out': { body: { success: true } } });
         await logout();
         expect(fetchMock).toHaveBeenCalledOnce();
     });
@@ -59,22 +98,64 @@ describe('session', () => {
     it('removes chat histories from this browser on logout, even if the API fails', async () => {
         localStorage.setItem('dashboard-chat-3', '[{"role":"user","content":"secret"}]');
         localStorage.setItem('cookie-consent', 'declined');
-        mockApi({ 'POST /auth/logout': { status: 500, body: { error: 'down' } } });
+        mockApi({ 'POST /api/auth/sign-out': { status: 500, body: { message: 'down' } } });
 
         await expect(logout()).rejects.toThrow('down');
 
         expect(localStorage.getItem('dashboard-chat-3')).toBeNull();
         expect(localStorage.getItem('cookie-consent')).toBe('declined');
     });
+
+    it('reports a stale session when deleting the account', async () => {
+        mockApi({
+            'POST /api/auth/delete-user': {
+                status: 400,
+                body: { code: 'SESSION_EXPIRED', message: 'Session expired' },
+            },
+        });
+        await expect(deleteMyAccount()).rejects.toMatchObject({ code: 'SESSION_EXPIRED' });
+    });
 });
 
-describe('startGitHubLogin', () => {
-    it('forwards the registration declarations to the backend', () => {
+describe('GitHub', () => {
+    it('asks for an account creation only with the registration declarations', async () => {
         const assign = vi.fn();
-        vi.stubGlobal('location', { assign });
-        startGitHubLogin({ cguAccepted: true, is16OrOlder: true });
-        expect(assign).toHaveBeenCalledWith(
-            expect.stringMatching(/\/auth\/github\/login\?cguAccepted=true&is16OrOlder=true$/),
+        vi.stubGlobal('location', { assign, origin: 'http://localhost:5173' });
+        const fetchMock = mockApi({
+            'POST /api/auth/sign-in/social': {
+                body: { url: 'https://github.com/login', redirect: false },
+            },
+        });
+
+        await startGitHubLogin({ cguAccepted: true, is16OrOlder: true });
+        await startGitHubLogin();
+
+        const [register, signIn] = fetchMock.mock.calls.map(([, init]) =>
+            JSON.parse(String(init?.body)),
         );
+        expect(register).toMatchObject({
+            provider: 'github',
+            requestSignUp: true,
+            additionalData: { cguAccepted: true, is16OrOlder: true },
+            errorCallbackURL: 'http://localhost:5173/register',
+        });
+        expect(signIn).not.toHaveProperty('requestSignUp');
+        expect(signIn.errorCallbackURL).toBe('http://localhost:5173/login');
+        expect(assign).toHaveBeenCalledWith('https://github.com/login');
+    });
+
+    it('links GitHub back to the services page', async () => {
+        vi.stubGlobal('location', { origin: 'http://localhost:5173' });
+        const fetchMock = mockApi({
+            'POST /api/auth/link-social': {
+                body: { url: 'https://github.com/link', redirect: false },
+            },
+        });
+
+        await expect(getOAuthLinkUrl('github')).resolves.toBe('https://github.com/link');
+        expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toMatchObject({
+            provider: 'github',
+            callbackURL: 'http://localhost:5173/services?linked=github',
+        });
     });
 });

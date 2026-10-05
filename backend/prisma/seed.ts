@@ -1,81 +1,56 @@
-import { PrismaPg } from '@prisma/adapter-pg';
-import bcrypt from 'bcrypt';
-import path from 'node:path';
-
-import dotenv from 'dotenv';
-
-// Load backend/.env for JWT_SECRET / ENCRYPTION_KEY when seeding.
-dotenv.config({ path: path.join(import.meta.dirname, '../.env'), quiet: true });
-
-import { PrismaClient } from '../src/generated/prisma/client.ts';
+// First import: loads backend/.env and validates it, like the server (src/utils/env.ts).
+import '../src/utils/env.ts';
+import { auth } from '../src/auth.ts';
+import prisma from '../src/utils/prisma.ts';
 import { encryptJson } from '../src/utils/encryption.ts';
 
-const prisma = new PrismaClient({
-    adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
-});
+// Test accounts, created through Better Auth's own sign-up (same hashing and checks as the
+// registration page). Re-running the seed recreates them and their widgets.
+const ACCOUNTS = [
+    { email: 'admin@dashboard.local', password: 'admin1234', name: 'Admin Master', role: 'admin' },
+    { email: 'user@dashboard.local', password: 'user1234', name: 'John Doe', role: 'user' },
+];
 
 async function main() {
     console.log('Seeding database...');
 
-    // 1. Create Admin User
-    const adminHash = await bcrypt.hash('admin', 10);
-    const admin = await prisma.user.upsert({
-        where: { email: 'admin@dashboard.local' },
-        update: { isAdmin: true, password: adminHash },
-        create: {
-            email: 'admin@dashboard.local',
-            displayName: 'Admin Master',
-            password: adminHash,
-            isAdmin: true,
-            cguAcceptedAt: new Date(),
-        },
-    });
-    console.log(`✅ Admin created: ${admin.email} / admin`);
+    await prisma.user.deleteMany({ where: { email: { in: ACCOUNTS.map((a) => a.email) } } });
 
-    // 2. Create Regular User
-    const userHash = await bcrypt.hash('user', 10);
-    const user = await prisma.user.upsert({
-        where: { email: 'user@dashboard.local' },
-        update: { password: userHash },
-        create: {
-            email: 'user@dashboard.local',
-            displayName: 'John Doe',
-            password: userHash,
-            isAdmin: false,
-            cguAcceptedAt: new Date(),
-        },
-    });
-    console.log(`✅ User created: ${user.email} / user`);
+    const ids: Record<string, number> = {};
+    for (const { email, password, name, role } of ACCOUNTS) {
+        // The declarations are checked by the sign-up hook (src/auth.ts), outside Better Auth's
+        // own body type: pass them through a variable.
+        const body = { email, password, name, cguAccepted: true, is16OrOlder: true };
+        const { user } = await auth.api.signUpEmail({ body });
+        ids[email] = Number(user.id);
+        await prisma.user.update({ where: { id: ids[email] }, data: { role } });
+        // Sign-up also signed the account in; nobody holds that session.
+        await prisma.session.deleteMany({ where: { userId: ids[email] } });
+        console.log(`✅ ${role === 'admin' ? 'Admin' : 'User'} created: ${email} / ${password}`);
+    }
 
-    // 3. Clear existing widgets for the regular user to prevent duplicates on re-seed
-    await prisma.widgetConfig.deleteMany({
-        where: { userId: user.id },
+    const userId = ids['user@dashboard.local'];
+    await prisma.widgetConfig.createMany({
+        data: [
+            {
+                userId,
+                serviceName: 'weather',
+                widgetName: 'current_weather',
+                params: encryptJson({ city: 'Paris' }),
+                refreshRate: 300,
+                layout: { x: 0, y: 0, w: 4, h: 2 },
+            },
+            {
+                userId,
+                serviceName: 'github',
+                widgetName: 'repo_stats',
+                params: encryptJson({ owner: 'facebook', repo: 'react' }),
+                refreshRate: 3600,
+                layout: { x: 4, y: 0, w: 4, h: 2 },
+            },
+        ],
     });
-
-    // 4. Create Fake Widgets for Regular User
-    await prisma.widgetConfig.create({
-        data: {
-            userId: user.id,
-            serviceName: 'weather',
-            widgetName: 'current_weather',
-            params: encryptJson({ city: 'Paris' }),
-            refreshRate: 300, // 5 minutes
-            layout: { x: 0, y: 0, w: 4, h: 2 },
-        },
-    });
-
-    await prisma.widgetConfig.create({
-        data: {
-            userId: user.id,
-            serviceName: 'github',
-            widgetName: 'github-repo',
-            params: encryptJson({ repo: 'facebook/react' }),
-            refreshRate: 3600, // 1 hour
-            layout: { x: 4, y: 0, w: 4, h: 2 },
-        },
-    });
-
-    console.log(`✅ Widgets added for ${user.email}`);
+    console.log('✅ Widgets added for user@dashboard.local');
     console.log('Database seeding complete!');
 }
 

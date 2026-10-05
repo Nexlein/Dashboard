@@ -6,7 +6,7 @@ A customizable web dashboard that allows authenticated users to monitor digital 
 
 ## Key Features
 
-- **User Authentication**: Register and login with bcrypt-hashed passwords or GitHub; the session is a JWT in an httpOnly cookie, with CSRF protection.
+- **User Authentication**: [Better Auth](https://www.better-auth.com): email/password or GitHub sign-in, revocable sessions in an httpOnly cookie, CSRF protection, and an admin API.
 - **Service Integration**: Supports OAuth 2.0 linking for 3rd-party platforms.
 - **Dynamic Widgets**:
   - Each widget has configurable parameters.
@@ -68,13 +68,14 @@ Requirements: Node.js 24 (see `.nvmrc`, `nvm use`) and Docker with Docker Compos
    cp -n backend/.env.example backend/.env
    ```
 
-   Set `JWT_SECRET` in `backend/.env` to a long random value. You can generate one
-   with `openssl rand -hex 32`. Fill in `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`
-   and `GITHUB_CALLBACK_URL` to enable GitHub linking. Register this callback in
-   your GitHub OAuth App: `http://localhost:8080/auth/github/callback`.
+   Set `BETTER_AUTH_SECRET` in `backend/.env` to a long random value. You can generate
+   one with `openssl rand -hex 32`. `BETTER_AUTH_URL` is the API's public URL
+   (`http://localhost:8080` by default). Fill in `GITHUB_CLIENT_ID` and
+   `GITHUB_CLIENT_SECRET` to enable GitHub sign-in and linking, and register this
+   callback in your GitHub OAuth App: `http://localhost:8080/api/auth/callback/github`.
    `CORS_ORIGINS` lists the frontend origins allowed to call the API; the example
    includes Vite on ports 5173/5174 and the Docker frontend on port 8081.
-   `AUTH_RATE_LIMIT_MAX` caps login/register attempts per IP every 15 minutes
+   `AUTH_RATE_LIMIT_MAX` caps sign-in/sign-up attempts per IP every 15 minutes
    (default 20) and `GLOBAL_RATE_LIMIT_MAX` all requests per IP (default 1000); with
    Redis the counters are shared by every backend replica. The backend validates these variables at startup and exits with
    an explicit message when one is invalid; empty values count as unset.
@@ -98,8 +99,8 @@ Requirements: Node.js 24 (see `.nvmrc`, `nvm use`) and Docker with Docker Compos
    ```
 
    **Available Test Accounts:**
-   - **Admin:** `admin@dashboard.local` / `admin`
-   - **User:** `user@dashboard.local` / `user` (comes pre-configured with a Weather and GitHub widget)
+   - **Admin:** `admin@dashboard.local` / `admin1234`
+   - **User:** `user@dashboard.local` / `user1234` (comes pre-configured with a Weather and GitHub widget)
 
 4. **Access the Application**
    - Frontend: [http://localhost:8081](http://localhost:8081)
@@ -161,9 +162,10 @@ oxlint and Prettier on staged files. See [Tooling](docs/tooling.md).
 
 ### Encryption at rest
 
-OAuth tokens, widget parameters and service API keys are encrypted with AES-256-GCM
+Widget parameters and service API keys are encrypted with AES-256-GCM
 (`backend/src/utils/encryption.ts`). The key is derived with scrypt from `ENCRYPTION_KEY`,
-or from `JWT_SECRET` when `ENCRYPTION_KEY` is empty. Use a long random value such as
+or from `BETTER_AUTH_SECRET` when `ENCRYPTION_KEY` is empty. GitHub tokens are encrypted by
+Better Auth with a key derived from `BETTER_AUTH_SECRET`. Use a long random value such as
 the output of `openssl rand -hex 32`.
 
 Keep the secret stable across restarts and identical across replicas: changing it

@@ -21,7 +21,7 @@ export function makeWidget(overrides: Partial<ApiWidget> = {}): DashboardWidget 
 }
 
 export function makeUser(overrides: Partial<User> = {}): User {
-    return { id: 42, email: 'user@example.com', displayName: null, ...overrides };
+    return { id: 42, email: 'user@example.com', name: '', ...overrides };
 }
 
 export function makeService(overrides: Partial<ServiceConnection> = {}): ServiceConnection {

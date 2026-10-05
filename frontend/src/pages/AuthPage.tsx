@@ -13,6 +13,17 @@ import { cn } from '@/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
 import { CURRENT_USER_KEY } from '@/features/auth/hooks/useCurrentUser';
 
+/** Messages for the `error` codes GitHub sign-in sends back (see backend/src/auth.ts). */
+const GITHUB_ERRORS: Record<string, string> = {
+    REGISTRATION_REQUIREMENTS:
+        'Pour créer un compte avec GitHub, acceptez les conditions et confirmez avoir 16 ans ou plus, puis cliquez sur « Continuer avec GitHub ».',
+    signup_disabled:
+        'Aucun compte n’est lié à ce compte GitHub. Créez-en un depuis l’onglet Inscription.',
+    account_not_linked:
+        'Un compte existe déjà avec cet email. Connectez-vous avec votre mot de passe, puis liez GitHub depuis la page Services.',
+    EMAIL_NOT_VERIFIED: 'Votre compte GitHub doit avoir une adresse email vérifiée.',
+};
+
 export default function AuthPage() {
     const location = useLocation();
     const navigate = useNavigate();
@@ -23,8 +34,7 @@ export default function AuthPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [cguAccepted, setCguAccepted] = useState(false);
     const [is16OrOlder, setIs16OrOlder] = useState(false);
-    const registrationRequired =
-        new URLSearchParams(location.search).get('error') === 'github_registration_requirements';
+    const githubError = new URLSearchParams(location.search).get('error');
 
     async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
         event.preventDefault();
@@ -37,22 +47,18 @@ export default function AuthPage() {
 
         try {
             if (isRegister) {
+                // Registering also signs in.
                 await register({
-                    displayName: String(formData.get('displayName') ?? '').trim(),
+                    name: String(formData.get('displayName') ?? '').trim(),
                     email,
                     password,
                     cguAccepted: cguAccepted as true,
                     is16OrOlder: is16OrOlder as true,
                 });
-                navigate('/login', {
-                    replace: true,
-                    state: { registered: true, email },
-                });
-                return;
+            } else {
+                await login({ email, password });
             }
-
-            await login({ email, password });
-            // A previous visit may have cached the signed-out answer of /auth/me.
+            // A previous visit may have cached the signed-out session.
             queryClient.removeQueries({ queryKey: CURRENT_USER_KEY });
             navigate('/', { replace: true });
         } catch (requestError) {
@@ -111,15 +117,10 @@ export default function AuthPage() {
                         </Link>
                     </div>
 
-                    {registrationRequired && (
+                    {githubError && (
                         <p className="mb-4 text-sm text-destructive" role="alert">
-                            Pour créer un compte avec GitHub, acceptez les conditions et confirmez
-                            avoir 16 ans ou plus, puis cliquez sur « Continuer avec GitHub ».
-                        </p>
-                    )}
-                    {location.state?.registered && (
-                        <p className="mb-4 rounded-md bg-muted px-3 py-2 text-sm" role="status">
-                            Compte créé. Vous pouvez maintenant vous connecter.
+                            {GITHUB_ERRORS[githubError] ??
+                                'La connexion avec GitHub a échoué. Réessayez.'}
                         </p>
                     )}
 
@@ -134,7 +135,16 @@ export default function AuthPage() {
                                 );
                                 return;
                             }
-                            startGitHubLogin(isRegister ? { cguAccepted, is16OrOlder } : undefined);
+                            setError('');
+                            startGitHubLogin(
+                                isRegister ? { cguAccepted, is16OrOlder } : undefined,
+                            ).catch((githubStartError: unknown) =>
+                                setError(
+                                    githubStartError instanceof Error
+                                        ? githubStartError.message
+                                        : 'La connexion avec GitHub a échoué. Réessayez.',
+                                ),
+                            );
                         }}
                     >
                         <Github className="mr-2 size-4" />

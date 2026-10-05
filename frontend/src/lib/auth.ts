@@ -1,39 +1,60 @@
+import { createAuthClient } from 'better-auth/client';
 import { fetchClient, API_URL } from './apiClient';
 import type { RegisterFormData, LoginFormData, UpdateMeFormData, User } from 'shared';
 
 export { API_URL };
 
-type AuthResponse = { message: string; userId?: number };
+/**
+ * Better Auth's client for /api/auth/* on the API. The session lives in an httpOnly cookie:
+ * the client sends it (credentials: include) but page scripts can never read it.
+ */
+const authClient = createAuthClient({
+    baseURL: API_URL,
+    // Look fetch up on each call rather than once at import, like apiClient (tests stub it).
+    fetchOptions: { customFetchImpl: (input, init) => fetch(input, init) },
+});
 
-export async function register(payload: RegisterFormData) {
-    return fetchClient<AuthResponse>('/auth/register', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-    });
+type AuthResult<T> = { data: T | null; error: { message?: string; code?: string } | null };
+
+/** The data of a Better Auth call, or an Error carrying its message and code. */
+function unwrap<T>({ data, error }: AuthResult<T>): T {
+    if (error || data === null) {
+        throw Object.assign(new Error(error?.message || 'Une erreur est survenue.'), {
+            code: error?.code,
+        });
+    }
+    return data;
 }
 
-/** Signs in; the API answers with an httpOnly session cookie. */
+/** Registers and signs in (the API checks the CGU and age declarations). */
+export async function register(payload: RegisterFormData) {
+    // cguAccepted and is16OrOlder are checked by the API's sign-up hook, outside Better Auth's
+    // own body type: pass them through a variable.
+    const body = { ...payload, name: payload.name ?? '' };
+    unwrap(await authClient.signUp.email(body));
+}
+
 export async function login(payload: LoginFormData) {
-    await fetchClient<AuthResponse>('/auth/login', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-    });
+    unwrap(await authClient.signIn.email(payload));
 }
 
 export async function getCurrentUser(): Promise<User> {
-    return fetchClient<User>('/auth/me');
+    const session = unwrap(await authClient.getSession());
+    if (!session) throw new Error('Not signed in');
+    const { id, email, name } = session.user;
+    return { id: Number(id), email, name };
 }
 
 /** Prefix of the chat histories kept in localStorage by the chatbot widget. */
 export const CHAT_HISTORY_PREFIX = 'dashboard-chat-';
 
 /**
- * Ends the session: the API clears the httpOnly cookie (scripts cannot), and the chat
- * histories kept in this browser are removed so the next person cannot read them.
+ * Ends the session (the API revokes it and clears the cookie), and removes the chat histories
+ * kept in this browser so the next person cannot read them.
  */
 export async function logout() {
     try {
-        await fetchClient('/auth/logout', { method: 'POST' });
+        unwrap(await authClient.signOut());
     } finally {
         Object.keys(localStorage)
             .filter((key) => key.startsWith(CHAT_HISTORY_PREFIX))
@@ -42,23 +63,53 @@ export async function logout() {
 }
 
 export async function updateProfile(payload: UpdateMeFormData): Promise<User> {
-    return fetchClient('/auth/me', { method: 'PUT', body: JSON.stringify(payload) });
+    return fetchClient('/account/profile', { method: 'PUT', body: JSON.stringify(payload) });
 }
 
 /** GDPR export of everything stored about the current user. */
 export async function exportMyData(): Promise<unknown> {
-    return fetchClient('/auth/download-data');
+    return fetchClient('/account/export');
 }
 
+/**
+ * Deletes the account. Fails with code SESSION_EXPIRED when the last sign-in is more than a
+ * day old: the user must sign in again first.
+ */
 export async function deleteMyAccount() {
-    await fetchClient('/auth/delete-account', { method: 'DELETE' });
+    unwrap(await authClient.deleteUser({}));
 }
 
-export function startGitHubLogin(registration?: { cguAccepted: boolean; is16OrOlder: boolean }) {
-    const params = new URLSearchParams();
-    if (registration) {
-        params.set('cguAccepted', String(registration.cguAccepted));
-        params.set('is16OrOlder', String(registration.is16OrOlder));
-    }
-    window.location.assign(`${API_URL}/auth/github/login?${params}`);
+/**
+ * Starts GitHub sign-in. Only the registration page passes the declarations: without them the
+ * API refuses to create an account.
+ */
+export async function startGitHubLogin(registration?: {
+    cguAccepted: boolean;
+    is16OrOlder: boolean;
+}) {
+    const origin = window.location.origin;
+    const { url } = unwrap(
+        await authClient.signIn.social({
+            provider: 'github',
+            callbackURL: `${origin}/`,
+            errorCallbackURL: `${origin}${registration ? '/register' : '/login'}`,
+            disableRedirect: true,
+            ...(registration && { requestSignUp: true, additionalData: registration }),
+        }),
+    );
+    if (url) window.location.assign(url);
+}
+
+/** Links an OAuth provider (e.g. GitHub) to the signed-in account; returns where to go. */
+export async function getOAuthLinkUrl(provider: string): Promise<string> {
+    const origin = window.location.origin;
+    const { url } = unwrap(
+        await authClient.linkSocial({
+            provider,
+            callbackURL: `${origin}/services?linked=${provider}`,
+            errorCallbackURL: `${origin}/services`,
+            disableRedirect: true,
+        }),
+    );
+    return url;
 }
