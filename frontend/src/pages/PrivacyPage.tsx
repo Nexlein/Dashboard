@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -7,16 +7,16 @@ export default function PrivacyPage() {
     const navigate = useNavigate();
 
     return (
-        <div className="min-h-screen bg-background text-foreground p-8">
+        <main className="min-h-screen bg-background text-foreground p-8">
             <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4">
                 <ArrowLeft className="mr-2 h-4 w-4" /> Back
             </Button>
             <div className="max-w-4xl mx-auto space-y-8">
                 <Card>
                     <CardHeader>
-                        <CardTitle className="text-3xl font-bold">
+                        <h1 className="text-3xl font-bold leading-none tracking-tight">
                             Privacy Policy (RGPD / GDPR)
-                        </CardTitle>
+                        </h1>
                     </CardHeader>
                     <CardContent className="prose dark:prose-invert max-w-none space-y-6">
                         <section>
@@ -88,6 +88,6 @@ export default function PrivacyPage() {
                     </CardContent>
                 </Card>
             </div>
-        </div>
+        </main>
     );
 }
