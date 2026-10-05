@@ -45,6 +45,16 @@ Returns the application's supported services and widgets in the format required 
 
 ## Authentication
 
+Login (password or GitHub) sets an **httpOnly session cookie**, `dashboard_session`
+(`SameSite=Lax`, `Secure` in production, expiring with the session). Page scripts cannot
+read it; browsers send it automatically when the request uses `credentials: 'include'`.
+Endpoints marked "authenticated" accept that cookie, or an `Authorization: Bearer <JWT>`
+header for API clients and tests.
+
+State-changing requests (`POST`, `PUT`, `DELETE`) authenticated by the cookie must carry an
+`Origin` listed in `CORS_ORIGINS`; otherwise they get `403 Request origin not allowed`
+(CSRF protection). Bearer requests are not subject to this check.
+
 ### `POST /auth/register`
 
 Register a new user account.
@@ -92,18 +102,23 @@ Authenticate an existing user.
 
 ```json
 {
-    "message": "Login successful",
-    "token": "eyJhbGciOiJIUzI1NiIsInR..."
+    "message": "Login successful"
 }
 ```
+
+The session is returned as the `dashboard_session` cookie, never in the response body.
+
+### `POST /auth/logout`
+
+Clears the session cookie. Returns `204 No Content`, signed in or not.
 
 Registration and login share a limit of 20 attempts per IP address every 15
 minutes. Further requests return `429 Too Many Requests`.
 
 ### `GET /auth/me`
 
-Returns the authenticated user's public profile. Requires the
-`Authorization: Bearer <token>` header. Password hashes are never returned.
+Returns the authenticated user's public profile. Authenticated. Password hashes are never
+returned; `401` means there is no valid session.
 
 ```json
 {
@@ -148,7 +163,7 @@ HTTP/network failure. It does not delete data held by external providers or back
 
 ## Administration
 
-All `/admin` endpoints require the `Authorization: Bearer <token>` header. The
+All `/admin` endpoints are authenticated (session cookie or Bearer token, see [Authentication](#authentication)). The
 authenticated user must currently have `isAdmin` set to `true` in the database.
 Missing or invalid authentication returns `401 Unauthorized`; an authenticated
 non-admin user receives `403 Forbidden`.
@@ -188,7 +203,7 @@ database cascade. An administrator cannot delete their own account.
 
 ## Widgets
 
-All `/widgets` endpoints require the `Authorization: Bearer <token>` header.
+All `/widgets` endpoints are authenticated (session cookie or Bearer token, see [Authentication](#authentication)).
 
 ### `GET /widgets`
 
@@ -334,7 +349,7 @@ of `{ role, content }` objects with `role` among `system`, `user`, `assistant`.
 
 ## Service connections
 
-All `/services` endpoints require the `Authorization: Bearer <token>` header.
+All `/services` endpoints are authenticated (session cookie or Bearer token, see [Authentication](#authentication)).
 
 ### `GET /services`
 
@@ -384,23 +399,27 @@ The same callback handles login and service linking. For a new user without both
 registration declarations, it redirects to `/register?error=github_registration_requirements`
 on the configured frontend without creating a user or saving tokens. After the user
 accepts both checkboxes, they can restart GitHub registration. Successful login
-redirects to `/login/oauth#token=...` (the JWT is in the URL fragment, which browsers never send to servers, so it stays out of logs and `Referer` headers). Linking retains its authenticated flow.
+sets the session cookie and redirects to the frontend dashboard (`/`); no token appears in
+any URL. Linking retains its authenticated flow.
 
 ### Manual browser flow
 
-Obtain a Dashboard JWT from `POST /auth/login`. Open
-`http://localhost:8080/about.json`, then open the browser's developer console.
-Run the following snippet and paste the Dashboard JWT into the prompt. The
-browser starts the request, receives its cookie and navigates to GitHub.
+Open `http://localhost:8080/about.json`, then the browser's developer console. Run the
+following snippet with the account's credentials: it signs in (the API sets the session
+cookie), starts the linking request and navigates to GitHub.
 
 ```js
 (async () => {
-    const token = prompt('Dashboard token');
-    if (!token) return;
-    const response = await fetch('/auth/github?format=json', {
-        headers: { Authorization: `Bearer ${token.trim()}` },
+    const email = prompt('Dashboard email');
+    const password = prompt('Dashboard password');
+    const login = await fetch('/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
+        body: JSON.stringify({ email, password }),
     });
+    if (!login.ok) throw new Error((await login.json()).error);
+    const response = await fetch('/auth/github?format=json', { credentials: 'same-origin' });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error);
     window.location.assign(data.authorizationUrl);
@@ -417,7 +436,7 @@ return to the host that started linking. For local development, use
 
 ### `GET /auth/github`
 
-Requires `Authorization: Bearer <Dashboard JWT>`. Returns a `302` redirect to
+Authenticated. Returns a `302` redirect to
 GitHub. For a browser frontend, use `/auth/github?format=json` to receive
 `{ "authorizationUrl": "https://github.com/login/oauth/authorize?..." }`, then
 navigate to that URL. The manual console example uses same-origin requests.

@@ -7,7 +7,7 @@ We store the following user data:
 - OAuth tokens (encrypted at rest, for connected services like GitHub)
 - Widget configurations (parameters and layouts)
 
-Browser `localStorage` stores the authentication session (JWT), dashboard preferences and the cookie-banner choice. These are used for application functionality, not tracking.
+The authentication session (JWT) is kept in an httpOnly cookie that page scripts cannot read. Browser `localStorage` stores dashboard preferences, chatbot histories (removed on logout) and the cookie-banner choice. These are used for application functionality, not tracking.
 
 ## Data Usage
 - User data is used strictly to provide the dashboard features and widget functionalities.

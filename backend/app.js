@@ -60,9 +60,11 @@ const swaggerOptions = {
         components: {
             securitySchemes: {
                 bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
+                cookieAuth: { type: 'apiKey', in: 'cookie', name: 'dashboard_session' },
             },
         },
-        security: [{ bearerAuth: [] }],
+        // Either scheme authenticates: the session cookie (browsers) or a Bearer token.
+        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
     },
     apis: ['./routes/*.js', './swagger-docs.js'],
 };

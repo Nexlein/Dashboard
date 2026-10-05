@@ -6,7 +6,7 @@ A customizable web dashboard that allows authenticated users to monitor digital 
 
 ## Key Features
 
-- **User Authentication**: Secure register and login via JWT & bcrypt.
+- **User Authentication**: Register and login with bcrypt-hashed passwords or GitHub; the session is a JWT in an httpOnly cookie, with CSRF protection.
 - **Service Integration**: Supports OAuth 2.0 linking for 3rd-party platforms.
 - **Dynamic Widgets**:
   - Each widget has configurable parameters.

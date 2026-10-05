@@ -22,7 +22,7 @@ flowchart TB
     end
 
     User(["User (Browser)"]) -->|"Interacts with"| UI
-    UI -->|"REST requests (JWT)"| LB
+    UI -->|"REST requests (session cookie)"| LB
     LB -->|"Round-robin"| API
     API -->|"Read/Write (Prisma ORM)"| DB
     API -->|"Check Data / Rate Limit"| Cache
@@ -38,7 +38,8 @@ flowchart TB
 - **Role**: Renders the drag-and-drop grid (`react-grid-layout`) and handles user interactions.
 - **State**: Manages widget configurations, OAuth states, and user sessions.
 - **Widgets**: `WidgetRenderer` fetches each widget's data with TanStack Query; `refetchInterval` follows the widget's `refreshRate`, so widgets refresh independently. Crypto comparison widgets render normalized SVG curves without a charting dependency.
-- **API access**: All requests go through `src/lib/apiClient.ts`, which attaches the JWT and turns error responses into exceptions.
+- **API access**: All requests go through `src/lib/apiClient.ts`, which sends credentials and turns error responses into exceptions.
+- **Session**: The JWT lives in an httpOnly cookie that page scripts cannot read. `useCurrentUser` (`GET /auth/me`) tells whether the visitor is signed in, and protected routes wait for it. Writes authenticated by the cookie must come from an allowed origin (CSRF check in `middleware/auth.js`).
 - **Source layout** (`frontend/src/`):
     - `pages/`: one component per route.
     - `features/<feature>/`: code owned by one feature, split into `components/`, `hooks/` and `lib/`. `features/widgets/catalog/` holds the per-service widget UIs referenced by `lib/registry.tsx`; each declares the response type of its backend service, and `lib/types.ts` types the registry.
