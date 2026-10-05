@@ -83,9 +83,10 @@ function PageFallback() {
     );
 }
 
-export default function App() {
+/** All routes; wrapped in a router by App (BrowserRouter) or by tests (MemoryRouter). */
+export function AppRoutes() {
     return (
-        <Router>
+        <>
             <Suspense fallback={<PageFallback />}>
                 <Routes>
                     <Route
@@ -112,6 +113,14 @@ export default function App() {
                 </Routes>
             </Suspense>
             <CookieBanner />
+        </>
+    );
+}
+
+export default function App() {
+    return (
+        <Router>
+            <AppRoutes />
         </Router>
     );
 }
