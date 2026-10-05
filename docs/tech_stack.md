@@ -27,6 +27,7 @@
 ## ORM: Prisma
 
 - **Type Safety**: Auto-generates client. Catch DB errors at compile time.
+- **Prisma 7**: the TypeScript client is generated into `backend/src/generated` and talks to PostgreSQL through the `pg` driver adapter (no Rust query engine).
 - **Migrations**: Prisma Migrate keeps a versioned SQL history in `backend/prisma/migrations/`, applied automatically when the server starts.
 - **Connection**: Bridges Node.js Express backend directly to PostgreSQL container.
 

@@ -19,7 +19,7 @@ Build a web dashboard (React/Express/PostgreSQL) allowing users to configure and
 ## Agent Rules & Guidelines
 
 1. **Tests**: Whenever adding or modifying an API route, you MUST update/add Vitest tests in `backend/tests/`. Read `docs/testing.md`.
-2. **Database**: Schema changes go through Prisma Migrate. Edit `backend/prisma/schema.prisma`, run `npm run db:migrate -w backend -- --name <change>`, and commit the migration folder with the schema. Never edit a merged migration. Read `docs/db_schema.md`.
+2. **Database**: Schema changes go through Prisma Migrate. Edit `backend/prisma/schema.prisma`, run `npm run db:migrate -w backend -- --name <change>` then `npm run db:generate -w backend`, and commit the migration folder with the schema. Never edit a merged migration. Read `docs/db_schema.md`.
 3. **Docs**: Keep `docs/api.md` and `docs/requirements.md` up to date when delivering epics.
 4. **Constraints**: Follow all requirements strictly (e.g., `about.json`, port 8080, Docker compatibility).
 5. **Checks**: Before committing, `npm test`, `npm run lint` and `npm run typecheck -w backend` must pass; user-facing flows are covered by Playwright in `e2e/`. Commit messages follow Conventional Commits.

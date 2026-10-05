@@ -36,7 +36,7 @@ first; when running a single workspace, run `npm run db:generate -w backend` onc
 ## Structure
 
 All backend tests are located in `backend/tests/` and are type-checked with the sources
-(`npm run typecheck -w backend`). Prisma is mocked with `vi.mock('@prisma/client')` returning
+(`npm run typecheck -w backend`). Prisma is mocked with `vi.mock('../src/utils/prisma.ts')` returning
 a hoisted object of `vi.fn()` stubs; `helpers.ts` provides `stubFetch`, `signToken`/`verifyToken`
 and `setCookies`.
 

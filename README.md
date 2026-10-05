@@ -150,6 +150,7 @@ disagree):
 
 ```bash
 npm run db:migrate -w backend -- --name add_widget_color
+npm run db:generate -w backend   # Prisma 7 no longer regenerates the client on migrate
 ```
 
 See [Database Schema](docs/db_schema.md#migrations) for the full workflow.
