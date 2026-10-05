@@ -48,3 +48,21 @@ test('shows an error for wrong credentials', async ({ page, request }) => {
     await expect(page.getByRole('alert')).toBeVisible();
     await expect(page).toHaveURL(/\/login$/);
 });
+
+test('keeps the session token out of reach of page scripts', async ({ page }) => {
+    const email = uniqueEmail('cookie');
+    const password = 'password1234';
+    await registerUser(page.request, email, password);
+
+    await page.goto('/login');
+    await page.getByLabel('Adresse e-mail').fill(email);
+    await page.getByLabel('Mot de passe').fill(password);
+    await page.getByRole('button', { name: 'Se connecter' }).click();
+    await expect(page.getByRole('button', { name: 'Add Widget' })).toBeVisible();
+
+    const session = (await page.context().cookies()).find((c) => c.name === 'dashboard_session');
+    expect(session?.httpOnly).toBe(true);
+    expect(await page.evaluate(() => document.cookie)).not.toContain('dashboard_session');
+    const stored = await page.evaluate(() => JSON.stringify({ ...localStorage }));
+    expect(stored).not.toMatch(/eyJ/); // no JWT in localStorage
+});

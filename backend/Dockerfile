@@ -28,10 +28,11 @@ RUN npm pkg delete scripts.prepare \
     && npm ci -w backend --omit=dev \
     && npm cache clean --force
 COPY --from=builder /app/shared/dist ./shared/dist
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY backend ./backend
+COPY --from=builder /app/backend/src/generated ./backend/src/generated
 WORKDIR /app/backend
 EXPOSE 8080
+# Node runs the TypeScript sources directly (type stripping; CI type-checks them).
 # Apply pending migrations, then start. Prisma holds an advisory lock, so replicas
 # starting together apply each migration once.
-CMD ["sh", "-c", "npx prisma migrate deploy && exec node server.js"]
+CMD ["sh", "-c", "npx prisma migrate deploy && exec node src/server.ts"]

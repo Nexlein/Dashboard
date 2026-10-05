@@ -10,10 +10,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { login, register, startGitHubLogin } from '@/lib/auth';
 import { cn } from '@/lib/utils';
+import { useQueryClient } from '@tanstack/react-query';
+import { CURRENT_USER_KEY } from '@/features/auth/hooks/useCurrentUser';
 
 export default function AuthPage() {
     const location = useLocation();
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
     const { pathname } = location;
     const isRegister = pathname === '/register';
     const [error, setError] = useState('');
@@ -49,6 +52,8 @@ export default function AuthPage() {
             }
 
             await login({ email, password });
+            // A previous visit may have cached the signed-out answer of /auth/me.
+            queryClient.removeQueries({ queryKey: CURRENT_USER_KEY });
             navigate('/', { replace: true });
         } catch (requestError) {
             setError(
@@ -87,7 +92,7 @@ export default function AuthPage() {
                             className={cn(
                                 'rounded-md px-3 py-2 text-center font-medium transition-colors',
                                 !isRegister
-                                    ? 'bg-background text-foreground shadow-sm'
+                                    ? 'bg-background text-foreground shadow-xs'
                                     : 'text-muted-foreground hover:text-foreground',
                             )}
                         >
@@ -98,7 +103,7 @@ export default function AuthPage() {
                             className={cn(
                                 'rounded-md px-3 py-2 text-center font-medium transition-colors',
                                 isRegister
-                                    ? 'bg-background text-foreground shadow-sm'
+                                    ? 'bg-background text-foreground shadow-xs'
                                     : 'text-muted-foreground hover:text-foreground',
                             )}
                         >

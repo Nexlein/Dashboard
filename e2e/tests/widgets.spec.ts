@@ -1,13 +1,11 @@
 import { test, expect } from '@playwright/test';
-import { API_URL, signInFreshUser } from './helpers';
+import { API_URL, FRONTEND_ORIGIN, signInFreshUser } from './helpers';
 
 const MODEL = 'llama3.2:1b';
 
 test.describe('Dashboard widgets', () => {
-    let token: string;
-
-    test.beforeEach(async ({ page, request }) => {
-        ({ token } = await signInFreshUser(page, request));
+    test.beforeEach(async ({ page }) => {
+        await signInFreshUser(page);
         // Ollama is external infrastructure that is not available in CI: stub only
         // the model listing. Widget creation and rendering go through the real API.
         await page.route(`${API_URL}/chatbot/models`, (route) =>
@@ -32,9 +30,10 @@ test.describe('Dashboard widgets', () => {
         await expect(page.getByText(`Ollama - ${MODEL}`)).toBeVisible();
     });
 
-    test('deletes a widget', async ({ page, request }) => {
-        const res = await request.post(`${API_URL}/widgets`, {
-            headers: { Authorization: `Bearer ${token}` },
+    test('deletes a widget', async ({ page }) => {
+        // Cookie-authenticated writes must come from the frontend origin (CSRF check).
+        const res = await page.request.post(`${API_URL}/widgets`, {
+            headers: { Origin: FRONTEND_ORIGIN },
             data: {
                 serviceName: 'chatbot',
                 widgetName: 'ai_chat',

@@ -1,7 +1,13 @@
 {
     "$schema": "./node_modules/oxlint/configuration_schema.json",
     "plugins": ["typescript", "oxc", "react"],
-    "ignorePatterns": ["**/dist", "**/coverage", "**/playwright-report", "**/test-results"],
+    "ignorePatterns": [
+        "**/dist",
+        "**/coverage",
+        "**/playwright-report",
+        "**/test-results",
+        "backend/src/generated"
+    ],
     "env": {
         "es2024": true
     },
@@ -68,12 +74,6 @@
             "files": ["backend/**/*.js"],
             "rules": {
                 "no-undef": "error"
-            }
-        },
-        {
-            "files": ["backend/tests/**", "backend/__mocks__/**", "backend/jest.setup.js"],
-            "env": {
-                "jest": true
             }
         }
     ],

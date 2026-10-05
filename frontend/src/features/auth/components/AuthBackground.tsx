@@ -10,10 +10,10 @@ export function AuthBackground() {
             <div className="auth-glow auth-glow-primary absolute -left-24 -top-28 size-[28rem] rounded-full bg-sky-300/25 blur-3xl" />
             <div className="auth-glow auth-glow-secondary absolute -bottom-40 -right-20 size-[32rem] rounded-full bg-violet-300/20 blur-3xl" />
 
-            <div className="auth-dashboard-scene absolute left-1/2 top-1/2 h-[760px] w-[1180px] -translate-x-1/2 -translate-y-1/2 rotate-[-3deg] overflow-hidden rounded-[2rem] border border-white/90 bg-white/75 shadow-[0_40px_120px_-30px_rgba(15,23,42,0.3)] backdrop-blur-sm">
+            <div className="auth-dashboard-scene absolute left-1/2 top-1/2 h-[760px] w-[1180px] -translate-x-1/2 -translate-y-1/2 rotate-[-3deg] overflow-hidden rounded-[2rem] border border-white/90 bg-white/75 shadow-[0_40px_120px_-30px_rgba(15,23,42,0.3)] backdrop-blur-xs">
                 <div className="flex h-[76px] items-center border-b border-slate-200/80 bg-white/85 px-8">
                     <div className="flex items-center gap-3 text-lg font-semibold text-slate-800">
-                        <span className="flex size-9 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm">
+                        <span className="flex size-9 items-center justify-center rounded-xl bg-slate-900 text-white shadow-xs">
                             <LayoutDashboard className="size-4" />
                         </span>
                         Dashboard
@@ -33,7 +33,7 @@ export function AuthBackground() {
                 </div>
 
                 <div className="grid grid-cols-12 gap-5 p-8">
-                    <div className="col-span-7 h-64 rounded-2xl border border-slate-200/80 bg-white/90 p-6 shadow-sm">
+                    <div className="col-span-7 h-64 rounded-2xl border border-slate-200/80 bg-white/90 p-6 shadow-xs">
                         <div className="flex items-start justify-between">
                             <div>
                                 <p className="text-sm font-medium text-slate-500">Vue d’ensemble</p>
@@ -59,7 +59,7 @@ export function AuthBackground() {
                         </div>
                     </div>
 
-                    <div className="col-span-5 h-64 rounded-2xl border border-slate-200/80 bg-white/90 p-6 shadow-sm">
+                    <div className="col-span-5 h-64 rounded-2xl border border-slate-200/80 bg-white/90 p-6 shadow-xs">
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-slate-500">Météo</p>
@@ -80,7 +80,7 @@ export function AuthBackground() {
                         </div>
                     </div>
 
-                    <div className="col-span-4 h-48 rounded-2xl border border-slate-200/80 bg-white/90 p-6 shadow-sm">
+                    <div className="col-span-4 h-48 rounded-2xl border border-slate-200/80 bg-white/90 p-6 shadow-xs">
                         <div className="flex items-center gap-3">
                             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
                                 <Github className="size-5" />
@@ -102,7 +102,7 @@ export function AuthBackground() {
                         </div>
                     </div>
 
-                    <div className="col-span-4 h-48 rounded-2xl border border-slate-200/80 bg-white/90 p-6 shadow-sm">
+                    <div className="col-span-4 h-48 rounded-2xl border border-slate-200/80 bg-white/90 p-6 shadow-xs">
                         <div className="flex items-center gap-3">
                             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
                                 <Activity className="size-5" />
@@ -119,7 +119,7 @@ export function AuthBackground() {
                         <p className="mt-2 text-xs font-medium text-green-600">-12ms depuis hier</p>
                     </div>
 
-                    <div className="col-span-4 h-48 rounded-2xl border border-slate-200/80 bg-white/90 p-6 shadow-sm">
+                    <div className="col-span-4 h-48 rounded-2xl border border-slate-200/80 bg-white/90 p-6 shadow-xs">
                         <div className="flex h-full flex-col justify-center">
                             <div className="flex items-center gap-2">
                                 <span className="relative flex size-3">

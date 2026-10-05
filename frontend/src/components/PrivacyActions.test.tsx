@@ -24,7 +24,6 @@ afterEach(() => {
 });
 
 function openAccount(onLogout = vi.fn()) {
-    localStorage.setItem('dashboard-auth-token', 'test-token');
     customRender(
         <MemoryRouter>
             <Navbar user={makeUser()} onLogout={onLogout} />
@@ -48,7 +47,6 @@ it.each([401, 500])(
             'La suppression n’a pas pu être confirmée',
         );
         expect(onLogout).not.toHaveBeenCalled();
-        expect(localStorage.getItem('dashboard-auth-token')).toBe('test-token');
     },
 );
 
@@ -78,7 +76,7 @@ it('logs out only after a successful deletion', async () => {
         expect.stringContaining('/auth/delete-account'),
         expect.objectContaining({
             method: 'DELETE',
-            headers: expect.objectContaining({ Authorization: 'Bearer test-token' }),
+            credentials: 'include',
         }),
     );
     expect(screen.queryByRole('alert')).toBeNull();

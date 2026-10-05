@@ -1,9 +1,9 @@
-import { fetchClient, API_URL, AUTH_TOKEN_KEY } from './apiClient';
+import { fetchClient, API_URL } from './apiClient';
 import type { RegisterFormData, LoginFormData, UpdateMeFormData, User } from 'shared';
 
 export { API_URL };
 
-type AuthResponse = { message: string; token?: string; userId?: number };
+type AuthResponse = { message: string; userId?: number };
 
 export async function register(payload: RegisterFormData) {
     return fetchClient<AuthResponse>('/auth/register', {
@@ -12,18 +12,33 @@ export async function register(payload: RegisterFormData) {
     });
 }
 
+/** Signs in; the API answers with an httpOnly session cookie. */
 export async function login(payload: LoginFormData) {
-    const response = await fetchClient<AuthResponse>('/auth/login', {
+    await fetchClient<AuthResponse>('/auth/login', {
         method: 'POST',
         body: JSON.stringify(payload),
     });
-    if (!response.token) throw new Error('Le serveur n’a pas retourné de jeton de connexion.');
-    localStorage.setItem(AUTH_TOKEN_KEY, response.token);
 }
 
 export async function getCurrentUser(): Promise<User> {
-    if (!hasValidAuthToken()) throw new Error('Missing authentication token');
     return fetchClient<User>('/auth/me');
+}
+
+/** Prefix of the chat histories kept in localStorage by the chatbot widget. */
+export const CHAT_HISTORY_PREFIX = 'dashboard-chat-';
+
+/**
+ * Ends the session: the API clears the httpOnly cookie (scripts cannot), and the chat
+ * histories kept in this browser are removed so the next person cannot read them.
+ */
+export async function logout() {
+    try {
+        await fetchClient('/auth/logout', { method: 'POST' });
+    } finally {
+        Object.keys(localStorage)
+            .filter((key) => key.startsWith(CHAT_HISTORY_PREFIX))
+            .forEach((key) => localStorage.removeItem(key));
+    }
 }
 
 export async function updateProfile(payload: UpdateMeFormData): Promise<User> {
@@ -37,29 +52,6 @@ export async function exportMyData(): Promise<unknown> {
 
 export async function deleteMyAccount() {
     await fetchClient('/auth/delete-account', { method: 'DELETE' });
-}
-
-export function hasValidAuthToken() {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
-    if (!token) return false;
-    try {
-        // JWT segments are base64url: map back to base64 before decoding.
-        const segment = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
-        const payload = JSON.parse(atob(segment));
-        return typeof payload.exp !== 'number' || payload.exp * 1000 > Date.now();
-    } catch {
-        localStorage.removeItem(AUTH_TOKEN_KEY);
-        return false;
-    }
-}
-
-/** Stores the JWT handed back by the GitHub OAuth redirect. */
-export function storeAuthToken(token: string) {
-    localStorage.setItem(AUTH_TOKEN_KEY, token);
-}
-
-export function logout() {
-    localStorage.removeItem(AUTH_TOKEN_KEY);
 }
 
 export function startGitHubLogin(registration?: { cguAccepted: boolean; is16OrOlder: boolean }) {

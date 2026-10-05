@@ -92,6 +92,14 @@ Stores one user-owned credential set for a configurable external service.
 `userId` and `serviceName` are unique together. Deleting the user deletes all
 their service connections.
 
+## Prisma setup
+
+- `backend/prisma.config.ts` gives the CLI the database URL (`DATABASE_URL`, read from
+  `backend/.env` when present), the migrations folder and the seed command.
+- `prisma generate` writes the client to `backend/src/generated/prisma` (gitignored). Import
+  models and types from there; the app uses the single instance in `src/utils/prisma.ts`,
+  which connects through the `pg` driver adapter (`@prisma/adapter-pg`).
+
 ## Migrations
 
 Schema changes are versioned with Prisma Migrate. Each folder in
@@ -102,7 +110,10 @@ Schema changes are versioned with Prisma Migrate. Each folder in
 | `npm run db:migrate -w backend -- --name <change>`  | After editing `schema.prisma`: create and apply a migration |
 | `npm run db:deploy -w backend`                      | Apply pending migrations (CI, local setup)                 |
 | `npm run db:reset -w backend`                       | Drop the development database and replay every migration   |
+| `npm run db:generate -w backend`                    | Regenerate the Prisma Client after a schema change         |
 
+- Since Prisma 7, migrate commands neither regenerate the client nor seed: run
+  `db:generate` after a schema change, and `npx prisma db seed` (from `backend/`) for test data.
 - Commit the generated migration folder together with the schema change. CI fails
   when `schema.prisma` differs from the migrated database.
 - Never edit a migration that has been merged; add a new one instead.

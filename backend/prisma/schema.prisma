@@ -1,10 +1,15 @@
+// Generated into src/generated (gitignored) by `prisma generate`. The files import each
+// other with .ts extensions so Node can run them directly, like the rest of src/.
 generator client {
-  provider = "prisma-client-js"
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "ts"
 }
 
+// The connection URL comes from prisma.config.ts (CLI) and utils/prisma.ts (app).
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model User {

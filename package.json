@@ -7,7 +7,7 @@
         "doc": "docs"
     },
     "engines": {
-        "node": ">=22.12"
+        "node": ">=22.18"
     },
     "workspaces": [
         "shared",
@@ -49,5 +49,9 @@
         "@scarf/scarf": false,
         "@parcel/watcher": false,
         "unrs-resolver": false
+    },
+    "overrides": {
+        "mysql2": "^3.24.5",
+        "deepmerge-ts": "^8.0.2"
     }
 }

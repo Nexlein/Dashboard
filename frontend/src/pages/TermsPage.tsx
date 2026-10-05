@@ -82,7 +82,7 @@ export default function TermsPage() {
                     </p>
                 </section>
 
-                <Card className="shadow-sm">
+                <Card className="shadow-xs">
                     <CardContent className="divide-y p-5 sm:p-8">
                         <section className="pb-7">
                             <h2 className="text-xl font-semibold">Acceptation</h2>

@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { beforeEach, it, expect, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AuthPage from './AuthPage';
 import { register, startGitHubLogin } from '@/lib/auth';
 
@@ -8,9 +9,11 @@ vi.mock('@/lib/auth', () => ({ register: vi.fn(), login: vi.fn(), startGitHubLog
 beforeEach(() => vi.clearAllMocks());
 function renderPage(path = '/register') {
     return render(
-        <MemoryRouter initialEntries={[path]}>
-            <AuthPage />
-        </MemoryRouter>,
+        <QueryClientProvider client={new QueryClient()}>
+            <MemoryRouter initialEntries={[path]}>
+                <AuthPage />
+            </MemoryRouter>
+        </QueryClientProvider>,
     );
 }
 function confirmRegistration() {
