@@ -9,7 +9,7 @@
 
 - [ ] **User Management**: Unauthenticated users can register. Administration section useful. (Registration frontend/backend connected; administration API from Better Auth's admin plugin, administration frontend missing)
 - [x] **Identity & Permissions**:
-    - [x] Authentication (credentials or OIDC) to bind data to account. (GitHub OIDC & credentials implemented)
+    - [x] Authentication (credentials or OIDC) to bind data to account. (GitHub OIDC & credentials implemented; emails verified by code before the first sign-in; forgotten password reset by code)
     - [x] Authorization (OAuth 2.0) to access external APIs. Link third-party to platform user (GitHub).
 - [x] **Service Subscriptions**:
     - [x] Authenticated users select services to subscribe to.

@@ -6,7 +6,7 @@ A customizable web dashboard that allows authenticated users to monitor digital 
 
 ## Key Features
 
-- **User Authentication**: [Better Auth](https://www.better-auth.com): email/password or GitHub sign-in, revocable sessions in an httpOnly cookie, CSRF protection, and an admin API.
+- **User Authentication**: [Better Auth](https://www.better-auth.com): email/password with an emailed verification code, forgotten-password reset by code, or GitHub sign-in; revocable sessions in an httpOnly cookie, CSRF protection, and an admin API.
 - **Service Integration**: Supports OAuth 2.0 linking for 3rd-party platforms.
 - **Dynamic Widgets**:
   - Each widget has configurable parameters.
@@ -75,7 +75,11 @@ Requirements: Node.js 24 (see `.nvmrc`, `nvm use`) and Docker with Docker Compos
    callback in your GitHub OAuth App: `http://localhost:8080/api/auth/callback/github`.
    `CORS_ORIGINS` lists the frontend origins allowed to call the API; the example
    includes Vite on ports 5173/5174 and the Docker frontend on port 8081.
-   `AUTH_RATE_LIMIT_MAX` caps sign-in/sign-up attempts per IP every 15 minutes
+   `SMTP_*` and `MAIL_FROM` configure the emails (verification and reset codes) for any
+   SMTP provider. In development they point to Mailpit, which catches every email: open
+   [http://localhost:8025](http://localhost:8025) to read the codes. Production refuses to
+   start without `SMTP_HOST`.
+   `AUTH_RATE_LIMIT_MAX` caps sign-in, sign-up and code requests per IP every 15 minutes
    (default 20) and `GLOBAL_RATE_LIMIT_MAX` all requests per IP (default 1000); with
    Redis the counters are shared by every backend replica. The backend validates these variables at startup and exits with
    an explicit message when one is invalid; empty values count as unset.
@@ -88,7 +92,8 @@ Requirements: Node.js 24 (see `.nvmrc`, `nvm use`) and Docker with Docker Compos
    ```
 
    The server waits for PostgreSQL to be healthy and applies pending database
-   migrations before accepting requests.
+   migrations before accepting requests. Emails go to Mailpit unless `SMTP_HOST` and
+   `SMTP_PORT` are set in your shell or a root `.env` (Compose sets them for the server).
 
 3. **Database Seeding (Test Data)**
 
@@ -102,10 +107,14 @@ Requirements: Node.js 24 (see `.nvmrc`, `nvm use`) and Docker with Docker Compos
    - **Admin:** `admin@dashboard.local` / `admin1234`
    - **User:** `user@dashboard.local` / `user1234` (comes pre-configured with a Weather and GitHub widget)
 
+   Both are already verified. A new account signs in after entering the code emailed at
+   registration (read it in Mailpit).
+
 4. **Access the Application**
    - Frontend: [http://localhost:8081](http://localhost:8081)
    - Backend API: [http://localhost:8080](http://localhost:8080)
    - `about.json`: [http://localhost:8080/about.json](http://localhost:8080/about.json)
+   - Emails (Mailpit): [http://localhost:8025](http://localhost:8025)
 
 *Database migrations run automatically before the API accepts requests.*
 
@@ -116,7 +125,7 @@ After configuring `backend/.env` as above, keep `localhost:5433` in its
 itself runs inside Docker.
 
 ```bash
-docker compose up -d db redis
+docker compose up -d db redis mailpit
 npm ci                          # from the repository root: installs every workspace
 npm run build -w shared
 npm run db:deploy -w backend    # apply database migrations

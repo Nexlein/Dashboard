@@ -6,6 +6,9 @@ We store the following user data:
 - Password hashes (scrypt, through Better Auth; none for GitHub-only accounts)
 - OAuth tokens (encrypted at rest, for connected services like GitHub)
 - Sessions: creation and expiry dates, IP address and user agent
+- Short-lived verification codes (stored hashed, expire after 5 minutes)
+
+Emails (verification and password-reset codes) are sent through the SMTP provider configured by the operator, which processes the recipient address and the message.
 - Widget configurations (parameters and layouts)
 
 The session is kept in an httpOnly cookie that page scripts cannot read; its record (creation date, IP address, user agent) is stored in the `Session` table and deleted on sign-out or account deletion. Browser `localStorage` stores dashboard preferences, chatbot histories (removed on logout) and the cookie-banner choice. These are used for application functionality, not tracking.

@@ -44,8 +44,10 @@ All backend tests are located in `backend/tests/` and are type-checked with the 
   signed in. `helpers.ts` also provides `stubFetch`.
 - **Integration tests** (`tests/integration/`, `npm run test:integration -w backend`): the real
   app, Better Auth and Prisma against a disposable PostgreSQL database; only GitHub is faked
-  (`fakeGitHub` in `tests/integration/helpers.ts`). They cover every authentication rule:
-  sign-up declarations and the shared schema, cookie attributes, the token kept out of JSON
+  (`fakeGitHub` in `tests/integration/helpers.ts`) and emails are captured (`lastCode` reads
+  the codes). They cover every authentication rule: sign-up declarations and the shared
+  schema, email verification codes (wrong, expired, attempts, hashed storage), password
+  reset, email change, cookie attributes, the token kept out of JSON
   responses, sign-out and expiry revoking sessions, CSRF, GitHub sign-up/sign-in/linking
   (browser binding, state replay, refusals, unverified emails, no takeover of email accounts,
   encrypted tokens used by the widgets), GDPR export and deletion, and the admin plugin.
@@ -57,7 +59,9 @@ Unit test files:
   rate limit.
 - `account.test.ts`: `/account/*`, the session and Origin checks of the API routes, GitHub as a
   service (linked or not, unlinking).
-- `env.test.ts`: environment validation (defaults, empty values, invalid input).
+- `env.test.ts`: environment validation (defaults, empty values, invalid input, SMTP
+  required in production).
+- `mailer.test.ts`: SMTP sending, the development fallback and the code emails.
 - `crypto.test.ts`: CoinGecko credential verification, normalized price and
   historical responses, caching, multi-asset limits, supported periods, provider
   errors, and legacy full-history fallback. All CoinGecko calls are mocked.
@@ -129,17 +133,19 @@ responses. Unit tests additionally cover provider and database failures.
 
 Playwright tests in `e2e/tests/` drive the real frontend and backend:
 
-- `auth.spec.ts`: redirect of anonymous visitors, register / sign in / sign out
-  through the UI, wrong-password error.
+- `auth.spec.ts`: redirect of anonymous visitors, register (with the emailed code) /
+  sign in / sign out through the UI, wrong-password error, forgotten password reset, and
+  the session token kept from page scripts. Codes are read from Mailpit's API.
 - `widgets.spec.ts`: add a widget through the configurator and delete one, both
   checked after a reload. Only the Ollama model listing is stubbed.
 - `a11y.spec.ts`: axe scans of `/login`, `/register` and the dashboard with every
   rule enabled, and the light theme on public pages under a dark OS scheme.
 
-Run them with the database up and `backend/.env` configured:
+Run them with the database and Mailpit up, and `backend/.env` configured (its SMTP settings
+must point to Mailpit: `SMTP_HOST=localhost`, `SMTP_PORT=1025`, as in the example):
 
 ```bash
-docker compose up -d db redis
+docker compose up -d db redis mailpit
 npm run db:deploy -w backend
 npm exec -w e2e -- playwright install chromium   # first time only
 npm run test:e2e

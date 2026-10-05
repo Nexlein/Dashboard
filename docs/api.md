@@ -61,13 +61,18 @@ JSON responses of `get-session`, `sign-in/email` and `sign-up/email`.
 need an allowed `Origin` (or the API's own, for Swagger UI), otherwise `403 Request origin
 not allowed`.
 
-**Rate limit.** `POST /api/auth/sign-in/*` and `/api/auth/sign-up/*` share a limit of
-`AUTH_RATE_LIMIT_MAX` attempts per IP every 15 minutes (`429`), counted in Redis by every
-replica.
+**Rate limit.** `/api/auth/sign-in/*`, `/api/auth/sign-up/*`, `/api/auth/email-otp/*` and
+`/api/auth/forget-password/*` share a limit of `AUTH_RATE_LIMIT_MAX` requests per IP every
+15 minutes (`429`), counted in Redis by every replica.
+
+**Emailed codes.** Email verification, password reset and email change use 6-digit codes
+(Better Auth's emailOTP plugin), sent by SMTP (`SMTP_*` variables). A code expires after
+5 minutes, allows 3 attempts and is stored hashed. Sign-in by code is not offered.
 
 ### `POST /api/auth/sign-up/email`
 
-Creates an account and signs it in.
+Creates an account and emails it a verification code. The account cannot sign in until
+the code is entered (`POST /api/auth/email-otp/verify-email`), which signs it in.
 
 ```json
 {
@@ -83,12 +88,29 @@ The project checks the body with the shared `registerSchema` first: `cguAccepted
 `is16OrOlder` must both be `true` (a self-declaration of the 16+ threshold, not identity
 verification), `name` is at most 50 characters (may be empty), the email is trimmed and
 lowercased, passwords have 8 to 128 characters. Failures return `400` with the schema's
-message; an email already registered returns `422`. The acceptance date is stored in
+message. An email already registered gets the same `200` answer and nothing changes, so
+sign-up cannot be used to find out who has an account. The acceptance date is stored in
 `cguAcceptedAt`. `role` and `cguAcceptedAt` cannot be set by the client.
+
+### `POST /api/auth/email-otp/verify-email`
+
+`{ "email", "otp" }`. Verifies the address and signs in (session cookie). `400` for a wrong
+or expired code; after 3 wrong attempts the code is invalidated and a new one is needed:
+`POST /api/auth/email-otp/send-verification-otp` with
+`{ "email", "type": "email-verification" }`.
 
 ### `POST /api/auth/sign-in/email`
 
-`{ "email", "password" }`. `401` on wrong credentials, `403` for a banned account.
+`{ "email", "password" }`. `401` on wrong credentials. `403 EMAIL_NOT_VERIFIED` while the
+email is not verified (a new code is emailed), `403` for a banned account.
+
+### Forgotten password
+
+1. `POST /api/auth/email-otp/request-password-reset` with `{ "email" }` emails a code. The
+   answer is `200` whether or not the address has an account.
+2. `POST /api/auth/email-otp/reset-password` with `{ "email", "otp", "password" }` sets the
+   new password, signs every session out, and marks the email verified (whoever receives the
+   codes owns the address).
 
 ### `POST /api/auth/sign-out`
 
@@ -107,7 +129,8 @@ otherwise `400 SESSION_EXPIRED`, and the user signs in again.
 
 ## Account
 
-The signed-in user's own data. Authenticated by the session cookie.
+The signed-in user's own data. `/account/*` is authenticated by the session cookie; the
+profile endpoints are Better Auth's.
 
 ### `GET /account/export`
 
@@ -116,15 +139,14 @@ methods (`credential`, `github`) and sessions (dates, IP, user agent). Never inc
 passwords, tokens or API keys. `Cache-Control: no-store`. Returns `500` if stored widget
 parameters cannot be decrypted, `404` if the account no longer exists.
 
-### `PUT /account/profile`
+### Profile
 
-Optional `name` (at most 50 characters) and `email` (trimmed, lowercased). A changed email is
-marked unverified. GitHub sign-in is bound to the GitHub account id, not to the email, so it
-keeps working after the change. `409 Email already taken` if another account uses the email.
-
-```json
-{ "id": 1, "email": "new@example.com", "name": "John" }
-```
+- Display name: `POST /api/auth/update-user` with `{ "name" }` (trimmed, at most 50
+  characters, shared `profileSchema`). The email and the role cannot be changed there.
+- Email: `POST /api/auth/email-otp/request-email-change` with `{ "newEmail" }` emails a code
+  to the new address (nothing is sent, with the same answer, if another account uses it);
+  `POST /api/auth/email-otp/change-email` with `{ "newEmail", "otp" }` applies it, verified.
+  GitHub sign-in is bound to the GitHub account id, not to the email, so it keeps working.
 
 ## Administration
 
