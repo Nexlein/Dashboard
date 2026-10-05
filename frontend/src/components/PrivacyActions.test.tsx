@@ -4,7 +4,7 @@ import { it, expect, vi, afterEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import Navbar from './Navbar';
 import { ProfileSettingsModal } from './ProfileSettingsModal';
-import { makeUser } from '../test/fixtures';
+import { makeUser, mockApi } from '../test/fixtures';
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 const customRender = (ui: React.ReactElement) => {
@@ -132,9 +132,20 @@ it('downloads a successful export as JSON', async () => {
     await waitFor(() => expect(revokeObjectURL).toHaveBeenCalledWith('blob:export'));
 });
 
-it('allows both display name and email changes for an OAuth profile', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { name: 'New name' }));
-    vi.stubGlobal('fetch', fetchMock);
+it('saves the display name, and changes the email only once its code is entered', async () => {
+    const session = (email: string) => ({
+        body: { user: { id: '42', email, name: 'New name' }, session: {} },
+    });
+    let currentEmail = 'github@example.com';
+    const fetchMock = mockApi({
+        'POST /api/auth/update-user': { body: { status: true } },
+        'GET /api/auth/get-session': () => session(currentEmail).body,
+        'POST /api/auth/email-otp/request-email-change': { body: { success: true } },
+        'POST /api/auth/email-otp/change-email': () => {
+            currentEmail = 'new@example.com';
+            return { success: true };
+        },
+    });
     const onUserUpdated = vi.fn();
     customRender(
         <ProfileSettingsModal
@@ -144,17 +155,32 @@ it('allows both display name and email changes for an OAuth profile', async () =
             onUserUpdated={onUserUpdated}
         />,
     );
-    expect(screen.getByLabelText('Email Address')).toBeEnabled();
     fireEvent.change(screen.getByLabelText('Email Address'), {
         target: { value: 'new@example.com' },
     });
     fireEvent.change(screen.getByLabelText('Display Name'), { target: { value: 'New name' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
-    await waitFor(() => expect(onUserUpdated).toHaveBeenCalledOnce());
-    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual({
-        name: 'New name',
-        email: 'new@example.com',
-    });
+
+    // The name is saved at once; the email waits for its code.
+    const codeInput = await screen.findByLabelText('Verification code');
+    expect(onUserUpdated).toHaveBeenLastCalledWith(
+        expect.objectContaining({ name: 'New name', email: 'github@example.com' }),
+    );
+    const bodyOf = (path: string) =>
+        JSON.parse(
+            String(fetchMock.mock.calls.find(([url]) => String(url).endsWith(path))![1]?.body),
+        );
+    expect(bodyOf('/update-user')).toEqual({ name: 'New name' });
+    expect(bodyOf('/request-email-change')).toEqual({ newEmail: 'new@example.com' });
+
+    fireEvent.change(codeInput, { target: { value: '123456' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm Email' }));
+    await waitFor(() =>
+        expect(onUserUpdated).toHaveBeenLastCalledWith(
+            expect.objectContaining({ email: 'new@example.com' }),
+        ),
+    );
+    expect(bodyOf('/change-email')).toEqual({ newEmail: 'new@example.com', otp: '123456' });
 });
 
 it('discards unsaved profile edits when the dialog is reopened', () => {

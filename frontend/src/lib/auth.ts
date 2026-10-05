@@ -1,6 +1,7 @@
 import { createAuthClient } from 'better-auth/client';
+import { emailOTPClient } from 'better-auth/client/plugins';
 import { fetchClient, API_URL } from './apiClient';
-import type { RegisterFormData, LoginFormData, UpdateMeFormData, User } from 'shared';
+import type { RegisterFormData, LoginFormData, ProfileFormData, User } from 'shared';
 
 export { API_URL };
 
@@ -10,6 +11,7 @@ export { API_URL };
  */
 const authClient = createAuthClient({
     baseURL: API_URL,
+    plugins: [emailOTPClient()],
     // Look fetch up on each call rather than once at import, like apiClient (tests stub it).
     fetchOptions: { customFetchImpl: (input, init) => fetch(input, init) },
 });
@@ -26,7 +28,10 @@ function unwrap<T>({ data, error }: AuthResult<T>): T {
     return data;
 }
 
-/** Registers and signs in (the API checks the CGU and age declarations). */
+/**
+ * Registers (the API checks the CGU and age declarations) and emails a code: the account
+ * signs in once verifyEmailCode accepts it.
+ */
 export async function register(payload: RegisterFormData) {
     // cguAccepted and is16OrOlder are checked by the API's sign-up hook, outside Better Auth's
     // own body type: pass them through a variable.
@@ -34,8 +39,28 @@ export async function register(payload: RegisterFormData) {
     unwrap(await authClient.signUp.email(body));
 }
 
+/** Signs in. Fails with code EMAIL_NOT_VERIFIED (and a new code is emailed) until verified. */
 export async function login(payload: LoginFormData) {
     unwrap(await authClient.signIn.email(payload));
+}
+
+/** Enters the emailed code: verifies the address and signs in. */
+export async function verifyEmailCode(email: string, otp: string) {
+    unwrap(await authClient.emailOtp.verifyEmail({ email, otp }));
+}
+
+export async function resendVerificationCode(email: string) {
+    unwrap(await authClient.emailOtp.sendVerificationOtp({ email, type: 'email-verification' }));
+}
+
+/** Forgotten password, step 1: emails a code (same answer for unknown addresses). */
+export async function requestPasswordReset(email: string) {
+    unwrap(await authClient.emailOtp.requestPasswordReset({ email }));
+}
+
+/** Forgotten password, step 2: sets the new password and signs every session out. */
+export async function resetPassword(email: string, otp: string, password: string) {
+    unwrap(await authClient.emailOtp.resetPassword({ email, otp, password }));
 }
 
 export async function getCurrentUser(): Promise<User> {
@@ -62,8 +87,20 @@ export async function logout() {
     }
 }
 
-export async function updateProfile(payload: UpdateMeFormData): Promise<User> {
-    return fetchClient('/account/profile', { method: 'PUT', body: JSON.stringify(payload) });
+export async function updateProfile(payload: ProfileFormData): Promise<User> {
+    unwrap(await authClient.updateUser(payload));
+    return getCurrentUser();
+}
+
+/** Email change, step 1: emails a code to the new address. */
+export async function requestEmailChange(newEmail: string) {
+    unwrap(await authClient.emailOtp.requestEmailChange({ newEmail }));
+}
+
+/** Email change, step 2: applies the new address with its code. */
+export async function changeEmail(newEmail: string, otp: string): Promise<User> {
+    unwrap(await authClient.emailOtp.changeEmail({ newEmail, otp }));
+    return getCurrentUser();
 }
 
 /** GDPR export of everything stored about the current user. */
