@@ -38,11 +38,15 @@ export type ServiceDefinition = {
         provider?: string;
     };
     widgets: WidgetSpec[];
+    /** Local validation without consuming provider credits. */
+    validateParams?(widgetName: string, params: WidgetParams): void;
     execute?(widgetName: string, params: WidgetParams, context: ServiceContext): Promise<unknown>;
     /** OAuth: who a connected account is, shown in Services (e.g. the GitHub login). */
     describeAccount?(credentials: ServiceCredentials): Promise<ConnectedAccountInfo>;
     /** Throws when the credentials are rejected by the provider. */
     verifyCredentials?(credentials: ServiceCredentials): Promise<unknown>;
+    search?(query: string, context: ServiceContext): Promise<unknown>;
+    clearCache?(): Promise<unknown>;
     chat?(
         params: WidgetParams,
         context: ServiceContext,

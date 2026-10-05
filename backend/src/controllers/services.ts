@@ -3,7 +3,7 @@ import { fromNodeHeaders } from 'better-auth/node';
 import { auth } from '../auth.ts';
 import registry from '../services/registry.ts';
 import type { ServiceDefinition } from '../services/types.ts';
-import { encryptJson } from '../utils/encryption.ts';
+import { decryptJson, encryptJson } from '../utils/encryption.ts';
 import asyncHandler from '../utils/asyncHandler.ts';
 import { accountAccessToken, linkedAccounts } from '../utils/oauthAccounts.ts';
 import prisma from '../utils/prisma.ts';
@@ -61,11 +61,12 @@ export const getServices = asyncHandler(async (req, res) => {
                 displayName,
                 description,
                 connected: isConnected,
-                configurable: service.configurable !== false,
-                connectionType: service.connection?.type || 'apikey',
+                configurable: Boolean(service.connection),
+                connectionType: service.connection?.type || null,
                 credentialLabel: service.connection?.label ?? null,
-                documentationUrl: service.connection?.documentationUrl,
-                keyHint: connection?.keyHint,
+                documentationUrl: service.connection?.documentationUrl ?? null,
+                keyHint: connection?.keyHint ?? null,
+                verifiedAt: connection?.verifiedAt ?? null,
                 ...(service.connection?.type === 'oauth' && {
                     provider: service.connection.provider,
                     accounts,
@@ -78,40 +79,40 @@ export const getServices = asyncHandler(async (req, res) => {
 });
 
 export const connectService = asyncHandler(async (req, res) => {
-    const serviceName = String(req.params.serviceName);
-    const { apiKey } = req.body as { apiKey?: unknown };
-
-    if (typeof apiKey !== 'string' || !apiKey.trim())
-        return res.status(400).json({ error: 'API key is required' });
-
-    const service = registry.getService(serviceName);
+    const service = registry.getService(String(req.params.serviceName));
     if (!service) return res.status(404).json({ error: 'Service not found' });
-    if (service.configurable === false)
-        return res.status(400).json({ error: 'Service is not configurable' });
-    if (service.connection?.type === 'oauth')
+    if (!service.connection) return res.status(400).json({ error: 'Service is not configurable' });
+    if (service.connection.type === 'oauth')
         return res.status(400).json({ error: 'Use OAuth flow for this service' });
     if (!service.verifyCredentials)
         return res.status(400).json({ error: 'Service does not accept an API key' });
 
-    await service.verifyCredentials({ apiKey }); // Throws error if invalid
+    const { apiKey } = req.body as { apiKey?: unknown };
+    if (typeof apiKey !== 'string' || !apiKey.trim())
+        return res.status(400).json({ error: 'API key is required' });
+    const normalizedApiKey = apiKey.trim();
+    if (normalizedApiKey.length > 256)
+        return res.status(400).json({ error: 'API key is too long' });
 
+    await service.verifyCredentials({ apiKey: normalizedApiKey });
     const verifiedAt = new Date();
     const connection = await prisma.serviceConnection.upsert({
         where: { userId_serviceName: { userId: authUser(req).userId, serviceName: service.name } },
         create: {
             userId: authUser(req).userId,
             serviceName: service.name,
-            encryptedCredentials: encryptJson({ apiKey }),
-            keyHint: apiKey.slice(-4),
+            encryptedCredentials: encryptJson({ apiKey: normalizedApiKey }),
+            keyHint: normalizedApiKey.slice(-4),
             verifiedAt,
         },
         update: {
-            encryptedCredentials: encryptJson({ apiKey }),
-            keyHint: apiKey.slice(-4),
+            encryptedCredentials: encryptJson({ apiKey: normalizedApiKey }),
+            keyHint: normalizedApiKey.slice(-4),
             verifiedAt,
         },
     });
 
+    await service.clearCache?.();
     res.json({ success: true, verifiedAt: connection.verifiedAt, keyHint: connection.keyHint });
 });
 
@@ -146,6 +147,7 @@ export const disconnectService = asyncHandler(async (req, res) => {
         });
     }
 
+    await service.clearCache?.();
     res.status(204).send();
 });
 
@@ -161,5 +163,35 @@ export const disconnectAccount = asyncHandler(async (req, res) => {
         return res.status(404).json({ error: 'Account not found' });
 
     await unlinkAccounts(req, [accountId]);
+    await service.clearCache?.();
     res.status(204).send();
+});
+
+export const searchService = asyncHandler(async (req, res) => {
+    const service = registry.getService(String(req.params.serviceName));
+    if (!service) return res.status(404).json({ error: 'Service not found' });
+    if (typeof service.search !== 'function')
+        return res.status(400).json({ error: 'Service does not support search' });
+
+    const connection = await prisma.serviceConnection.findUnique({
+        where: {
+            userId_serviceName: {
+                userId: authUser(req).userId,
+                serviceName: service.name,
+            },
+        },
+    });
+    if (!connection)
+        return res
+            .status(409)
+            .json({ error: `${service.displayName || service.name} is not connected` });
+
+    const results = await service.search(String(req.query.q || ''), {
+        credentials: decryptJson(
+            connection.encryptedCredentials,
+        ) as import('../services/types.ts').ServiceCredentials,
+        cacheScope: `${authUser(req).userId}:${connection.id}`,
+        userId: authUser(req).userId,
+    });
+    res.json(results);
 });

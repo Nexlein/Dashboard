@@ -37,7 +37,7 @@ flowchart TB
 - **Framework**: React via Vite.
 - **Role**: Renders the drag-and-drop grid (`react-grid-layout`) and handles user interactions.
 - **State**: Manages widget configurations, OAuth states, and user sessions.
-- **Widgets**: `WidgetRenderer` fetches each widget's data with TanStack Query; `refetchInterval` follows the widget's `refreshRate`, so widgets refresh independently. Crypto comparison widgets render normalized SVG curves without a charting dependency.
+- **Widgets**: `WidgetRenderer` fetches each widget's data with TanStack Query; `refetchInterval` follows the widget's `refreshRate`, so widgets refresh independently. Market comparison widgets render normalized SVG curves without a charting dependency.
 - **API access**: Requests to the project's routes go through `src/lib/apiClient.ts`, which sends credentials and turns error responses into exceptions; authentication goes through Better Auth's client (`src/lib/auth.ts`).
 - **Session**: Better Auth keeps the session in an httpOnly cookie that page scripts cannot read, backed by a revocable row in PostgreSQL. `useCurrentUser` (`GET /api/auth/get-session`) tells whether the visitor is signed in, and protected routes wait for it. Writes authenticated by the cookie must come from an allowed origin (Better Auth on `/api/auth/*`, `middleware/auth.ts` on the other routes).
 - **Source layout** (`frontend/src/`):
@@ -58,7 +58,7 @@ flowchart TB
     - `routes/`: Express routers; they only map paths and middleware to controllers.
     - `auth.ts`: the Better Auth configuration and the project's sign-up rules.
     - `controllers/`: request handlers (`account` for GDPR export and profile, `widgets`, `services`, `chatbot`, `health`), wrapped in `asyncHandler` so errors reach `middleware/errorHandler.ts`.
-    - `services/`: one module per external provider (weather, crypto, github, youtube, chatbot) and the `registry` behind `/about.json`.
+    - `services/`: one module per external provider (weather, crypto, stocks, github, youtube, chatbot) and the `registry` behind `/about.json`.
     - `middleware/`: session check (`requireAuth`, through Better Auth) and error handler.
     - `utils/`: the shared `PrismaClient` (`prisma.ts`), environment validation (`env.ts`), encryption at rest of widget params and API keys (`encryption.ts`), linked OAuth tokens (`oauthAccounts.ts`) and the Redis cache.
 

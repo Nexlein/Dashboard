@@ -15,12 +15,17 @@
     - [x] Authenticated users select services to subscribe to.
     - [x] OpenWeather subscription requires a verified, user-owned API key.
     - [x] CoinGecko subscription requires a verified, user-owned API key.
+    - [x] Twelve Data subscription requires a verified, user-owned API key.
     - [x] Add OAuth linking for every remaining account-based service (GitHub done).
 - [ ] **Dashboard & Widgets**:
     - [ ] Connect `about.json` dynamically to the frontend Configurator. (The configurator uses a frontend copy of the registry, `features/widgets/lib/registry.tsx`.)
     - [x] Sync Dashboard Grid layout with Postgres Database via PUT/POST routes. (`PUT /widgets/layout`, debounced from the grid)
     - [x] Add widget (select type, configure, set refresh rate).
     - [x] Reconfigure, move, delete widgets.
+    - [x] Stock Market widget with searchable multi-symbol comparison, toggleable curves, and visible 1W/1M/1Y/5Y/ALL period choices.
+    - [x] Single-company Stock Profile with an on-demand logo, latest price, daily change, and historical price chart.
+    - [x] Quota-aware progressive stock loading, automatic retries, and retention of previously loaded charts.
+    - [x] On-demand company logos in the multi-symbol stock comparison, shared with Stock Profile.
     - [x] **Crucial**: Widget _must_ have configurable parameters.
     - [x] **Crucial**: Two instances of same widget with different configs display distinct info.
 - [ ] **Accessibility (a11y)**: (axe reports no violation on login, register and dashboard in the e2e suite; not audited manually)

@@ -207,13 +207,15 @@ Weather responses are cached for at most the configured refresh interval, so the
 refresh can request fresh provider data.
 Creating a weather widget returns `409 Conflict` until the authenticated user has connected
 OpenWeather through `/services/weather/connection`.
-Creating a crypto widget similarly requires a verified CoinGecko connection.
+Creating a crypto widget similarly requires a verified CoinGecko connection. A stock widget requires a verified Twelve Data connection.
 
 CoinGecko widgets use the following parameters:
 
 - `crypto_price`: `coin` (CoinGecko asset ID) and `currency`.
 - `crypto_chart`: `coins` (comma-separated CoinGecko asset IDs), `currency`,
   and `days` (`7`, `30`, `90`, or `365`). The comparison accepts one to eight assets.
+
+Twelve Data uses `stock_market` with `symbols` (one to eight comma-separated stock tickers) and `period` (`1W`, `1M`, `1Y`, `5Y`, or `ALL`).
 
 ### `PUT /widgets/:id`
 
@@ -256,8 +258,7 @@ Delete a widget.
 ### `GET /widgets/:id/data`
 
 Executes a saved widget and returns its normalized service data. The widget must
-belong to the authenticated user. Weather and CoinGecko responses are cached in memory per
-user connection and never beyond the widget refresh interval. Provider credentials
+belong to the authenticated user. Weather, CoinGecko and Twelve Data responses are cached per user connection. Twelve Data quotes are cached for at least five minutes to leave credits available for new history periods, while histories and logos use longer period-aware caches to protect provider quotas. Provider credentials
 are decrypted only for the outgoing request and are never exposed to the client.
 
 Current weather widgets return the resolved location, temperature, perceived
@@ -269,6 +270,10 @@ volume, 24-hour change, and provider update time. `crypto_chart` returns
 historical price series, current prices, period changes, symbols, and secure
 CoinGecko logo URLs. The frontend normalizes each curve to percentage change so
 assets with different price scales can be compared.
+
+`stock_profile` accepts the same period choices and exactly one ticker in `symbols`. It returns a single-company price series and fetches its optional logo on demand, cached for seven days (missing logos are cached for one hour). Both stock widgets share the same per-company logo cache and use visible period buttons in their configuration. Logo requests only cover selected tickers, happen after prices are fetched, and cannot prevent prices from being displayed when branding is unavailable. A shared provider session across API replicas reads the provider credit headers and defers work that exceeds the remaining budget. A `429` data response includes `retryAfter` in seconds and a `Retry-After` header; the frontend automatically retries and retains any previously loaded chart with its actual period identified. Stock creation validates the configuration locally and loads data afterwards, avoiding a duplicate initial provider request. A rejected individual symbol does not hide the other companies: the response includes an optional `unavailable` array of `{ symbol, message }` entries, displayed separately above the comparison.
+
+`stock_market` returns current prices, daily percentage changes, company names, logos, and historical series for every selected ticker. The frontend compares normalized performance and lets each curve be toggled independently.
 
 - `400 Bad Request` for an invalid id or unsupported widget.
 - `403 Forbidden` when the widget belongs to another user.
@@ -328,9 +333,13 @@ Verifies and creates or replaces the authenticated user's provider credentials.
 
 For `weather`, the key is checked against OpenWeather before it is encrypted and stored.
 For `crypto`, a CoinGecko Demo API key is checked with a simple Bitcoin price
-request before it is encrypted and stored. API keys belong to the authenticated
+request before it is encrypted and stored. For `stocks`, a Twelve Data key is checked with an AAPL price request. API keys belong to the authenticated
 user and are never read from the project `.env`.
 Invalid or inactive keys return `400 Bad Request` and are not saved.
+
+### `GET /services/:serviceName/search?q=query`
+
+Searches provider instruments with the authenticated user's encrypted connection. Currently supported by `stocks`; returns up to eight common-stock symbols from Twelve Data. Returns `409` when Twelve Data is not connected.
 
 ### `DELETE /services/:serviceName/connection`
 

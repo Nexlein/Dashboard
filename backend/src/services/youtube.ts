@@ -2,6 +2,7 @@ import type { ServiceDefinition } from './types.ts';
 
 export default {
     name: 'youtube',
+    configurable: false,
     widgets: [
         {
             name: 'channel_stats',

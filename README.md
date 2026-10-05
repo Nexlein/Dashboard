@@ -18,13 +18,16 @@ A customizable web dashboard that allows authenticated users to monitor digital 
 1. **Weather**: Current Temperature, 5-Day Forecast.
 2. **GitHub**: Repository Stats, Latest Commits, User Profile. (Also supports GitHub Login / Account Creation)
 3. **CoinGecko**: Cryptocurrency Price & Market Stats, Crypto Market Comparison Chart.
+4. **Twelve Data**: Stock comparison and single-company profiles with searchable symbols and historical periods.
 
-CoinGecko and OpenWeather use a personal API key entered by each authenticated
+Twelve Data, CoinGecko and OpenWeather use a personal API key entered by each authenticated
 user from the **Services** page. These keys are verified before storage,
 encrypted in PostgreSQL, and never exposed to the frontend after connection.
 
 The Crypto Market widget supports one to eight CoinGecko assets, EUR/USD/GBP,
 individually toggleable normalized curves, and 1W, 1M, 3M, and 1Y periods.
+The Stock Market widget searches Twelve Data symbols, compares up to eight stocks
+with individually toggleable normalized curves, and supports 1W, 1M, 1Y, 5Y, and ALL.
 
 ## Tech Stack
 
@@ -156,8 +159,7 @@ npm run build      # shared package and frontend production build
 npm run test:e2e   # Playwright; needs the database and backend/.env (starts both dev servers)
 ```
 
-Provider tests mock remote APIs and do not require real OpenWeather, GitHub, or
-CoinGecko credentials. See [Testing Guidelines](docs/testing.md) for details.
+Provider tests mock remote APIs and do not require real OpenWeather, GitHub, CoinGecko, or Twelve Data credentials. See [Testing Guidelines](docs/testing.md) for details.
 
 To change the database, edit `backend/prisma/schema.prisma`, then create and apply a
 migration and commit the generated folder (CI fails when the schema and the migrations

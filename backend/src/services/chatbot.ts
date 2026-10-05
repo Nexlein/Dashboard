@@ -3,6 +3,7 @@ import type { ChatMessage, ServiceDefinition, WidgetParams } from './types.ts';
 
 export default {
     name: 'chatbot',
+    configurable: false,
     widgets: [
         {
             name: 'ai_chat',
