@@ -29,7 +29,7 @@ individually toggleable normalized curves, and 1W, 1M, 3M, and 1Y periods.
 ## Tech Stack
 
 - **Frontend**: React, Vite, TypeScript, TailwindCSS, shadcn/ui, React-Grid-Layout, TanStack Query
-- **Backend**: Node.js, Express, Zod
+- **Backend**: Node.js, Express, TypeScript, Zod
 - **Database**: PostgreSQL with Prisma ORM
 - **Infrastructure**: Docker & Docker Compose, Nginx (Load Balancer), Redis (Shared Cache), Ollama (local LLM)
 - **Tooling**: npm workspaces, Vitest, Jest, Playwright, oxlint, Prettier, Husky
@@ -161,7 +161,7 @@ oxlint and Prettier on staged files. See [Tooling](docs/tooling.md).
 ### Encryption at rest
 
 OAuth tokens, widget parameters and service API keys are encrypted with AES-256-GCM
-(`backend/utils/encryption.js`). The key is derived with scrypt from `ENCRYPTION_KEY`,
+(`backend/src/utils/encryption.ts`). The key is derived with scrypt from `ENCRYPTION_KEY`,
 or from `JWT_SECRET` when `ENCRYPTION_KEY` is empty. Use a long random value such as
 the output of `openssl rand -hex 32`.
 

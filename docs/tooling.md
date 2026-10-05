@@ -3,7 +3,7 @@
 ## 1. Workspaces & Node version
 
 - **npm workspaces**: `shared`, `backend`, `frontend` and `e2e` install together from the root with one `package-lock.json`. Run `npm ci` at the root, never inside a package.
-- **Node.js 24**: pinned in `.nvmrc` and used by CI and the Docker images (`engines` accepts >= 22.12).
+- **Node.js 24**: pinned in `.nvmrc` and used by CI and the Docker images (`engines` accepts >= 22.18, the first release that runs TypeScript without a flag).
 - **Install scripts**: `allowScripts` in the root `package.json` approves the packages that must run install scripts (bcrypt, Prisma).
 
 ## 2. Git Hooks (Husky, lint-staged & commitlint)
@@ -41,7 +41,9 @@
 
 - **Vitest & React Testing Library**: Frontend unit and component testing.
 
-- **Jest & Supertest**: Used for backend API integration tests (`backend/tests/`). Ensures routes like `/auth/login` and `/about.json` function correctly.
+- **Vitest & Supertest**: Backend unit and API tests (`backend/tests/`). Ensures routes like `/auth/login` and `/about.json` function correctly.
+
+- **TypeScript**: the backend is written in TypeScript and Node runs the `.ts` sources directly (type stripping), in development and in the Docker image. `tsc` only type-checks (`npm run typecheck -w backend`, run by CI); see `backend/tsconfig.json` for the syntax limits this implies.
 
 - **Playwright & axe-core**: End-to-end and accessibility tests (`e2e/`).
 

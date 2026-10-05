@@ -5,7 +5,7 @@
 | Layer    | Tools                          | Location                         |
 | -------- | ------------------------------ | -------------------------------- |
 | Shared   | Vitest                         | `shared/tests/`                  |
-| Backend  | Jest, Supertest                | `backend/tests/`                 |
+| Backend  | Vitest, Supertest              | `backend/tests/`                 |
 | Frontend | Vitest, React Testing Library  | next to components (`*.test.tsx`)|
 | E2E      | Playwright, axe-core           | `e2e/tests/`                     |
 | Load     | k6                             | `backend/tests/k6/`              |
@@ -35,19 +35,22 @@ first; when running a single workspace, run `npm run db:generate -w backend` onc
 
 ## Structure
 
-All backend tests are located in `backend/tests/`.
+All backend tests are located in `backend/tests/` and are type-checked with the sources
+(`npm run typecheck -w backend`). Prisma is mocked with `vi.mock('@prisma/client')` returning
+a hoisted object of `vi.fn()` stubs; `helpers.ts` provides `stubFetch`, `signToken`/`verifyToken`
+and `setCookies`.
 
-- `api.test.js`: Core tests for endpoints (`/health`, `/about.json`, `/auth/*`, `/widgets/*`
+- `api.test.ts`: Core tests for endpoints (`/health`, `/about.json`, `/auth/*`, `/widgets/*`
   including id validation, update payloads, ownership and chat forwarding).
-- `env.test.js`: environment validation (defaults, empty values, invalid input).
-- `contract/api.contract.test.js`: the API rejects payloads the shared Zod schemas reject.
-- `oauth.test.js`: GitHub redirects, browser cookie binding, state expiration and
+- `env.test.ts`: environment validation (defaults, empty values, invalid input).
+- `contract/api.contract.test.ts`: the API rejects payloads the shared Zod schemas reject.
+- `oauth.test.ts`: GitHub redirects, browser cookie binding, state expiration and
   replay protection, token persistence and error handling. GitHub and Prisma are
   mocked; these tests require no real credentials or running database.
-- `crypto.test.js`: CoinGecko credential verification, normalized price and
+- `crypto.test.ts`: CoinGecko credential verification, normalized price and
   historical responses, caching, multi-asset limits, supported periods, provider
   errors, and legacy full-history fallback. All CoinGecko calls are mocked.
-- `redisCache.test.js`: Validates graceful fallback to local memory maps when Redis is unavailable.
+- `redisCache.test.ts`: Validates graceful fallback to local memory maps when Redis is unavailable.
 
 *Note: For tests requiring the database, ensure you mock Prisma or use a separate test database.*
 
@@ -82,10 +85,10 @@ The frontend uses **Vitest** and **React Testing Library**.
 
 ## GDPR regression coverage
 
-- `gdpr.test.js`: profile validation, OAuth email editing and stable GitHub login identity, readable exports
+- `gdpr.test.ts`: profile validation, OAuth email editing and stable GitHub login identity, readable exports
   without credentials, failed exports, account deletion errors, and age/terms
   checks on password and GitHub registration (including callback tampering).
-- `encryption.test.js`: key derivation from `ENCRYPTION_KEY` / `JWT_SECRET`, JSON and
+- `encryption.test.ts`: key derivation from `ENCRYPTION_KEY` / `JWT_SECRET`, JSON and
   string round trips, tamper and wrong-key rejection, and ciphertexts written by the
   previous implementation that must stay readable.
 - `PrivacyActions.test.tsx` and `AuthPage.test.tsx`: successful/failed downloads and

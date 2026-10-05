@@ -39,7 +39,7 @@ flowchart TB
 - **State**: Manages widget configurations, OAuth states, and user sessions.
 - **Widgets**: `WidgetRenderer` fetches each widget's data with TanStack Query; `refetchInterval` follows the widget's `refreshRate`, so widgets refresh independently. Crypto comparison widgets render normalized SVG curves without a charting dependency.
 - **API access**: All requests go through `src/lib/apiClient.ts`, which sends credentials and turns error responses into exceptions.
-- **Session**: The JWT lives in an httpOnly cookie that page scripts cannot read. `useCurrentUser` (`GET /auth/me`) tells whether the visitor is signed in, and protected routes wait for it. Writes authenticated by the cookie must come from an allowed origin (CSRF check in `middleware/auth.js`).
+- **Session**: The JWT lives in an httpOnly cookie that page scripts cannot read. `useCurrentUser` (`GET /auth/me`) tells whether the visitor is signed in, and protected routes wait for it. Writes authenticated by the cookie must come from an allowed origin (CSRF check in `middleware/auth.ts`).
 - **Source layout** (`frontend/src/`):
     - `pages/`: one component per route.
     - `features/<feature>/`: code owned by one feature, split into `components/`, `hooks/` and `lib/`. `features/widgets/catalog/` holds the per-service widget UIs referenced by `lib/registry.tsx`; each declares the response type of its backend service, and `lib/types.ts` types the registry.
@@ -48,23 +48,23 @@ flowchart TB
 
 ### 2. Backend (Server)
 
-- **Framework**: Node.js with Express.
+- **Framework**: Node.js with Express, written in TypeScript. Node runs the `.ts` sources directly; `tsc` type-checks them in CI.
 - **Role**: Acts as the central orchestrator running as 3 scaled replicas.
     - Handles Authentication (`/auth/login`, `/auth/register`).
     - Stores and verifies user-owned service connections (`/services`).
     - Serves the dynamic Service Registry (`/about.json`).
     - Proxies widget requests to external APIs.
-- **Source layout** (`backend/`):
+- **Source layout** (`backend/src/`):
     - `routes/`: Express routers; they only map paths and middleware to controllers.
-    - `controllers/`: request handlers (`auth`, `githubAuth`, `account` for GDPR, `widgets`, `services`, `admin`, `chatbot`, `health`), wrapped in `asyncHandler` so errors reach `middleware/errorHandler.js`.
+    - `controllers/`: request handlers (`auth`, `githubAuth`, `account` for GDPR, `widgets`, `services`, `admin`, `chatbot`, `health`), wrapped in `asyncHandler` so errors reach `middleware/errorHandler.ts`.
     - `services/`: one module per external provider (weather, crypto, github, youtube, chatbot), `githubIdentity` for GitHub login, and the `registry` behind `/about.json`.
     - `middleware/`: authentication, admin check, error handler.
-    - `utils/`: the shared `PrismaClient` (`prisma.js`), environment validation (`env.js`), JWT helpers (`authToken.js`), encryption at rest (`encryption.js`: objects in JSON columns, OAuth tokens in text columns) and the Redis cache.
+    - `utils/`: the shared `PrismaClient` (`prisma.ts`), environment validation (`env.ts`), JWT helpers (`authToken.ts`), encryption at rest (`encryption.ts`: objects in JSON columns, OAuth tokens in text columns) and the Redis cache.
 
 ### 3. Caching & Load Balancing
 
 - **Load Balancer**: Nginx routes incoming API requests across the 3 backend replicas using dynamic Docker DNS resolution.
-- **Redis Cache**: A centralized Redis container manages widget data caching, the rate limit counters (global and authentication, shared by all replicas through `utils/rateLimit.js`), and transient OAuth states. If Redis is unreachable, the cache falls back to memory and rate limiting is skipped rather than blocking requests. Cache entries expire according to the widget refresh interval, capped at five minutes.
+- **Redis Cache**: A centralized Redis container manages widget data caching, the rate limit counters (global and authentication, shared by all replicas through `utils/rateLimit.ts`), and transient OAuth states. If Redis is unreachable, the cache falls back to memory and rate limiting is skipped rather than blocking requests. Cache entries expire according to the widget refresh interval, capped at five minutes.
 
 ### 4. Shared Package
 

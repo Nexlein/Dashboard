@@ -10,8 +10,9 @@
 - **Vite**: Fast dev server and builds, with route-level code splitting (`React.lazy`).
 - **Tailwind CSS**: Rapid UI development and native Dark/Light mode support.
 
-## Backend: Node.js (Express)
+## Backend: Node.js (Express, TypeScript)
 
+- **TypeScript without a build step**: Node 24 runs the `.ts` sources directly (type stripping), so development, tests and the Docker image execute the same files. `tsc` type-checks in CI; Prisma generates the database types.
 - **Security & Caching**: `helmet` headers, `express-rate-limit` (global and authentication limits backed by Redis so they hold across replicas), and Redis to cache external API responses.
 - **Validation**: Zod validates request bodies and the environment at boot. Auth schemas live in the `shared` workspace so backend and frontend agree on them.
 - **OAuth2 Support**: A dedicated GitHub OAuth flow (state cookie binding, encrypted token storage) without an extra auth framework.
