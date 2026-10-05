@@ -20,7 +20,11 @@ const optional = <T extends z.ZodType>(schema: T) =>
 const envSchema = z.object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
     PORT: z.string().default('8080'),
-    DATABASE_URL: z.string().url('DATABASE_URL must be a valid URL'),
+    DATABASE_URL: z
+        .string()
+        .url('DATABASE_URL must be a valid URL')
+        // .env files are read as-is: `${POSTGRES_DB}` would become part of the database name.
+        .refine((url) => !url.includes('${'), 'DATABASE_URL must not reference other variables'),
     JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters long'),
     JWT_EXPIRES_IN: z.string().default('24h'),
     SALT_ROUNDS: z.coerce.number().int().min(1).default(10),

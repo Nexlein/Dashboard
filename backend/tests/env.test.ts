@@ -56,6 +56,8 @@ describe('environment validation', () => {
         ['JWT_SECRET', 'too-short'],
         ['ENCRYPTION_KEY', 'too-short'],
         ['DATABASE_URL', 'not a url'],
+        // Not expanded by dotenv: the database name would be `${POSTGRES_DB}`.
+        ['DATABASE_URL', 'postgresql://user:password@localhost:5432/${POSTGRES_DB}'],
         ['FRONTEND_URL', 'not a url'],
     ])('exits when %s is invalid', (key, value) => {
         const { status, stderr } = loadEnv({ [key]: value });
