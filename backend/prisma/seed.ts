@@ -23,7 +23,11 @@ async function main() {
         const body = { email, password, name, cguAccepted: true, is16OrOlder: true };
         const { user } = await auth.api.signUpEmail({ body });
         ids[email] = Number(user.id);
-        await prisma.user.update({ where: { id: ids[email] }, data: { role } });
+        // Test accounts skip the emailed code.
+        await prisma.user.update({
+            where: { id: ids[email] },
+            data: { role, emailVerified: true },
+        });
         // Sign-up also signed the account in; nobody holds that session.
         await prisma.session.deleteMany({ where: { userId: ids[email] } });
         console.log(`✅ ${role === 'admin' ? 'Admin' : 'User'} created: ${email} / ${password}`);

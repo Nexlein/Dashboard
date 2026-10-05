@@ -1,3 +1,5 @@
+import { vi } from 'vitest';
+
 // Runs before every integration test file, so before the app reads its environment.
 if (!process.env.TEST_DATABASE_URL) {
     throw new Error('TEST_DATABASE_URL must point to an isolated, disposable test database');
@@ -13,3 +15,6 @@ process.env.GITHUB_CLIENT_SECRET = 'integration-client-secret';
 // Every test signs in: keep the sign-in limiter out of the way (unit tests cover it).
 process.env.AUTH_RATE_LIMIT_MAX = '100000';
 delete process.env.REDIS_URL;
+
+// Emails are captured instead of sent: tests read the codes from sendMail's calls.
+vi.mock('../../src/utils/mailer.ts', () => ({ sendMail: vi.fn(async () => {}) }));

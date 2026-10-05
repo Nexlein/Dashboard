@@ -56,6 +56,16 @@ describe('environment validation', () => {
         expect(env.REDIS_URL).toBeUndefined();
     });
 
+    it('requires SMTP in production, where users must receive their codes', () => {
+        const without = loadEnv({ NODE_ENV: 'production' });
+        expect(without.status).toBe(1);
+        expect(without.stderr).toContain('SMTP_HOST');
+
+        const withSmtp = loadEnv({ NODE_ENV: 'production', SMTP_HOST: 'smtp.example.com' });
+        expect(withSmtp.status).toBe(0);
+        expect(withSmtp.env).toMatchObject({ SMTP_PORT: 587, SMTP_SECURE: false });
+    });
+
     it.each([
         ['BETTER_AUTH_SECRET', 'too-short'],
         ['ENCRYPTION_KEY', 'too-short'],

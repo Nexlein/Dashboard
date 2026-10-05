@@ -4,10 +4,10 @@ import { APIError } from 'better-auth/api';
 import { FRONTEND, signedInAs } from './helpers.ts';
 
 const prisma = vi.hoisted(() => ({
-    user: { findUnique: vi.fn(), update: vi.fn() },
+    user: { findUnique: vi.fn() },
     account: { findFirst: vi.fn(), findMany: vi.fn() },
     serviceConnection: { findMany: vi.fn(), findUnique: vi.fn(), deleteMany: vi.fn() },
-    widgetConfig: { findUnique: vi.fn() },
+    widgetConfig: { findUnique: vi.fn(), findMany: vi.fn().mockResolvedValue([]) },
 }));
 vi.mock('../src/utils/prisma.ts', () => ({ default: prisma }));
 
@@ -27,18 +27,18 @@ describe('session check on the API routes', () => {
 
     it('requires an allowed Origin on writes (CSRF), not on reads', async () => {
         signedInAs(1);
-        prisma.user.findUnique.mockResolvedValue({ email: 'a@example.com' });
-        prisma.user.update.mockResolvedValue({ id: 1, email: 'a@example.com', name: 'A' });
+        prisma.serviceConnection.deleteMany.mockResolvedValue({ count: 0 });
 
         const write = (origin?: string) => {
-            const req = request(app).put('/account/profile');
-            return (origin ? req.set('Origin', origin) : req).send({ name: 'A' });
+            const req = request(app).delete('/services/weather/connection');
+            return origin ? req.set('Origin', origin) : req;
         };
         expect((await write()).status).toBe(403);
         expect((await write('https://evil.example')).status).toBe(403);
-        expect((await write(FRONTEND)).status).toBe(200);
+        expect((await write(FRONTEND)).status).toBe(204);
         // Swagger UI, served by the API itself.
-        expect((await write('http://localhost:8080')).status).toBe(200);
+        expect((await write('http://localhost:8080')).status).toBe(204);
+        expect((await request(app).get('/widgets')).status).not.toBe(403);
     });
 });
 
@@ -78,52 +78,6 @@ describe('GET /account/export', () => {
         expect(select.accounts.select).not.toHaveProperty('accessToken');
         expect(select.sessions.select).not.toHaveProperty('token');
         expect(select.serviceConnections.select).not.toHaveProperty('encryptedCredentials');
-    });
-});
-
-describe('PUT /account/profile', () => {
-    beforeEach(() => signedInAs(7));
-    const put = (body: object) =>
-        request(app).put('/account/profile').set('Origin', FRONTEND).send(body);
-
-    it.each([
-        [{ name: 'a'.repeat(51) }, 'Display name must be 50 characters or fewer'],
-        [{ email: 'not-an-email' }, 'Invalid email address'],
-    ])('validates %o', async (body, message) => {
-        const res = await put(body);
-
-        expect(res.status).toBe(400);
-        expect(res.body.error).toBe(message);
-        expect(prisma.user.update).not.toHaveBeenCalled();
-    });
-
-    it('reports an email used by another account', async () => {
-        prisma.user.findUnique.mockResolvedValue({ email: 'ada@example.com' });
-        prisma.user.update.mockRejectedValue(
-            Object.assign(new Error('Unique constraint'), { code: 'P2002' }),
-        );
-
-        const res = await put({ email: 'grace@example.com' });
-
-        expect(res.status).toBe(409);
-        expect(res.body.error).toBe('Email already taken');
-    });
-
-    it('returns 404 for a deleted account', async () => {
-        prisma.user.findUnique.mockResolvedValue(null);
-
-        expect((await put({ name: 'Ada' })).status).toBe(404);
-    });
-
-    it('keeps emailVerified when the email does not change', async () => {
-        prisma.user.findUnique.mockResolvedValue({ email: 'ada@example.com' });
-        prisma.user.update.mockResolvedValue({ id: 7, email: 'ada@example.com', name: 'Ada' });
-
-        await put({ name: 'Ada', email: 'ADA@example.com' });
-
-        expect(prisma.user.update).toHaveBeenCalledWith(
-            expect.objectContaining({ data: { name: 'Ada' } }),
-        );
     });
 });
 

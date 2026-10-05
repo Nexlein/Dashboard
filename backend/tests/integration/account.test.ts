@@ -10,17 +10,16 @@ import {
     fakeGitHub,
     githubFlow,
     githubProfile,
+    registerVerified,
     sessionCookie,
     signIn,
-    signUp,
     uniqueEmail,
     userByEmail,
 } from './helpers.ts';
 
 async function signedIn() {
     const agent = browser();
-    const email = uniqueEmail();
-    await signUp(agent, { email });
+    const email = await registerVerified(browser());
     const res = await signIn(agent, email);
     const user = await userByEmail(email);
     return { agent, email, user: user!, cookie: sessionCookie(res)!.split(';')[0] };
@@ -73,30 +72,37 @@ describe('GDPR export', () => {
 });
 
 describe('profile', () => {
-    it('updates the name and the email, which then needs verifying again', async () => {
+    it('updates the display name (trimmed, 50 characters at most)', async () => {
         const { agent, user } = await signedIn();
-        const email = uniqueEmail();
 
-        const res = await agent
-            .put('/account/profile')
+        const ok = await agent
+            .post('/api/auth/update-user')
             .set('Origin', FRONTEND)
-            .send({ name: '  Grace ', email: ` ${email.toUpperCase()}` });
+            .send({ name: '  Grace ' });
+        expect(ok.status).toBe(200);
+        expect((await prisma.user.findUnique({ where: { id: user.id } }))!.name).toBe('Grace');
 
-        expect(res.status).toBe(200);
-        expect(res.body).toEqual({ id: user.id, email, name: 'Grace' });
-        expect((await userByEmail(email))!.emailVerified).toBe(false);
+        const tooLong = await agent
+            .post('/api/auth/update-user')
+            .set('Origin', FRONTEND)
+            .send({ name: 'a'.repeat(51) });
+        expect(tooLong.status).toBe(400);
+        expect(tooLong.body.message).toBe('Display name must be 50 characters or fewer');
     });
 
-    it('refuses an email used by another account', async () => {
-        const { agent } = await signedIn();
-        const other = await signedIn();
+    it('cannot change the email or the role through update-user', async () => {
+        const { agent, user, email } = await signedIn();
 
         const res = await agent
-            .put('/account/profile')
+            .post('/api/auth/update-user')
             .set('Origin', FRONTEND)
-            .send({ email: other.email });
+            .send({ email: uniqueEmail(), role: 'admin' });
 
-        expect(res.status).toBe(409);
+        expect(res.status).toBe(400);
+        expect(await prisma.user.findUnique({ where: { id: user.id } })).toMatchObject({
+            email,
+            role: 'user',
+        });
     });
 });
 

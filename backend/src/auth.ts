@@ -1,19 +1,26 @@
 import { betterAuth } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { APIError, createAuthMiddleware, getOAuthState } from 'better-auth/api';
-import { admin } from 'better-auth/plugins';
-import { registerSchema } from 'shared';
+import { admin, emailOTP } from 'better-auth/plugins';
+import { profileSchema, registerSchema } from 'shared';
 import env from './utils/env.ts';
 import prisma from './utils/prisma.ts';
 import { allowedOrigins } from './utils/origins.ts';
+import { sendOtpEmail } from './utils/otpEmails.ts';
 
-// Authentication is Better Auth: email/password, GitHub sign-in and account linking, database
-// sessions, and the admin plugin. It serves /api/auth/* (mounted in app.ts). This file only
-// adds the project's own rules: CGU and age declarations at sign-up, and session tokens kept
-// out of JSON responses.
+// Authentication is Better Auth: email/password with emailed one-time codes (email verification,
+// password reset, email change), GitHub sign-in and account linking, database sessions, and the
+// admin plugin. It serves /api/auth/* (mounted in app.ts). This file only adds the project's own
+// rules: CGU and age declarations at sign-up, profile limits, and session tokens kept out of
+// JSON responses.
 
 /** Responses that would otherwise expose the session token to page scripts. */
-const TOKEN_RESPONSES = new Set(['/get-session', '/sign-in/email', '/sign-up/email']);
+const TOKEN_RESPONSES = new Set([
+    '/get-session',
+    '/sign-in/email',
+    '/sign-up/email',
+    '/email-otp/verify-email',
+]);
 
 const REGISTRATION_REQUIREMENTS = {
     code: 'REGISTRATION_REQUIREMENTS',
@@ -40,6 +47,15 @@ export const auth = betterAuth({
         enabled: true,
         minPasswordLength: 8,
         maxPasswordLength: 128,
+        // Sign-in waits for the emailed code: no account with a fake or mistyped address.
+        requireEmailVerification: true,
+        // A password reset signs every session out.
+        revokeSessionsOnPasswordReset: true,
+    },
+    emailVerification: {
+        // An unverified sign-in attempt sends a new code.
+        sendOnSignIn: true,
+        autoSignInAfterVerification: true,
     },
     socialProviders:
         env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET
@@ -78,6 +94,9 @@ export const auth = betterAuth({
         '/get-access-token',
         '/refresh-token',
         '/list-sessions',
+        // Sign-in by code is not offered (one way to sign in with an email: the password).
+        '/sign-in/email-otp',
+        '/forget-password/email-otp',
         // Admin plugin routes the project does not use. Administrators keep list-users,
         // get-user, remove-user, ban-user, unban-user, set-role and revoke-user-sessions.
         '/admin/impersonate-user', // act as a user
@@ -98,19 +117,38 @@ export const auth = betterAuth({
     },
     hooks: {
         before: createAuthMiddleware(async (ctx) => {
-            if (ctx.path !== '/sign-up/email') return;
             const body = (ctx.body ?? {}) as Record<string, unknown>;
-            const parsed = registerSchema.safeParse(body);
-            if (!parsed.success) {
+            if (ctx.path === '/sign-up/email') {
+                const parsed = registerSchema.safeParse(body);
+                if (!parsed.success) {
+                    throw APIError.from('BAD_REQUEST', {
+                        code: 'INVALID_REGISTRATION',
+                        message: parsed.error.issues[0].message,
+                    });
+                }
+                // Store the trimmed values the schema produced.
+                return {
+                    context: {
+                        body: { ...body, email: parsed.data.email, name: parsed.data.name },
+                    },
+                };
+            }
+            if (ctx.path === '/update-user' && 'name' in body) {
+                const parsed = profileSchema.safeParse(body);
+                if (!parsed.success) {
+                    throw APIError.from('BAD_REQUEST', {
+                        code: 'INVALID_PROFILE',
+                        message: parsed.error.issues[0].message,
+                    });
+                }
+                return { context: { body: { ...body, name: parsed.data.name } } };
+            }
+            if (ctx.path === '/email-otp/send-verification-otp' && body.type === 'sign-in') {
                 throw APIError.from('BAD_REQUEST', {
-                    code: 'INVALID_REGISTRATION',
-                    message: parsed.error.issues[0].message,
+                    code: 'OTP_SIGN_IN_DISABLED',
+                    message: 'Sign-in by code is not available.',
                 });
             }
-            // Store the trimmed values the schema produced.
-            return {
-                context: { body: { ...body, email: parsed.data.email, name: parsed.data.name } },
-            };
         }),
         after: createAuthMiddleware(async (ctx) => {
             if (!TOKEN_RESPONSES.has(ctx.path)) return;
@@ -154,5 +192,23 @@ export const auth = betterAuth({
             },
         },
     },
-    plugins: [admin()],
+    plugins: [
+        admin(),
+        emailOTP({
+            // Codes replace Better Auth's verification links.
+            overrideDefaultEmailVerification: true,
+            sendVerificationOnSignUp: true,
+            // 6 digits, valid 5 minutes, 3 attempts, stored hashed (Better Auth defaults, except
+            // the hashing).
+            storeOTP: 'hashed',
+            changeEmail: { enabled: true },
+            sendVerificationOTP: async ({ email, otp, type }) => {
+                // Not awaited: response times must not tell whether an address has an account.
+                if (type === 'sign-in') return;
+                void sendOtpEmail(email, otp, type).catch((error: unknown) =>
+                    console.error('Failed to send a verification code:', error),
+                );
+            },
+        }),
+    ],
 });

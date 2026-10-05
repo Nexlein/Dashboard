@@ -1,7 +1,8 @@
 import { randomInt, randomUUID } from 'node:crypto';
 import request, { type Response } from 'supertest';
-import { vi } from 'vitest';
+import { expect, vi } from 'vitest';
 import app from '../../src/app.ts';
+import { sendMail } from '../../src/utils/mailer.ts';
 import prisma from '../../src/utils/prisma.ts';
 
 export const FRONTEND = 'http://localhost:5173';
@@ -27,6 +28,37 @@ export function signUp(agent: Browser, body: Record<string, unknown> = {}) {
             is16OrOlder: true,
             ...body,
         });
+}
+
+/** The emails captured for `to` (tests/integration/setup.ts mocks the mailer). */
+export function mailsTo(to: string) {
+    return vi
+        .mocked(sendMail)
+        .mock.calls.map(([mail]) => mail)
+        .filter((mail) => mail.to === to.toLowerCase());
+}
+
+/** The one-time code of the last email sent to `to`. */
+export function lastCode(to: string): string {
+    const code = /\b(\d{6})\b/.exec(mailsTo(to).at(-1)?.text ?? '')?.[1];
+    if (!code) throw new Error(`No code was emailed to ${to}`);
+    return code;
+}
+
+export function verifyEmail(agent: Browser, email: string, otp = lastCode(email)) {
+    return agent
+        .post('/api/auth/email-otp/verify-email')
+        .set('Origin', FRONTEND)
+        .send({ email, otp });
+}
+
+/** Registers, enters the emailed code (which signs in) and returns the email. */
+export async function registerVerified(agent: Browser, body: Record<string, unknown> = {}) {
+    const email = String(body.email ?? uniqueEmail());
+    expect((await signUp(agent, { ...body, email })).status).toBe(200);
+    const res = await verifyEmail(agent, email);
+    expect(res.status, res.text).toBe(200);
+    return email;
 }
 
 export function signIn(agent: Browser, email: string, password = PASSWORD) {

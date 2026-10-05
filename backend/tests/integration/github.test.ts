@@ -4,11 +4,12 @@ import { encryptJson } from '../../src/utils/encryption.ts';
 import {
     FRONTEND,
     browser,
+    lastCode,
     fakeGitHub,
     githubFlow,
     githubProfile,
+    registerVerified,
     sessionCookie,
-    signIn,
     signUp,
     uniqueEmail,
     userByEmail,
@@ -175,11 +176,15 @@ describe('GitHub sign-in', () => {
         await githubFlow(first, { path: '/api/auth/sign-in/social', body: REGISTRATION });
         const user = await userByEmail(profile.email);
         const newEmail = uniqueEmail();
-        const update = await first
-            .put('/account/profile')
+        await first
+            .post('/api/auth/email-otp/request-email-change')
             .set('Origin', FRONTEND)
-            .send({ email: newEmail });
-        expect(update.status).toBe(200);
+            .send({ newEmail });
+        const change = await first
+            .post('/api/auth/email-otp/change-email')
+            .set('Origin', FRONTEND)
+            .send({ newEmail, otp: lastCode(newEmail) });
+        expect(change.status).toBe(200);
 
         const again = browser();
         const { location } = await githubFlow(again, { path: '/api/auth/sign-in/social' });
@@ -187,6 +192,19 @@ describe('GitHub sign-in', () => {
         expect(location).toBe(`${FRONTEND}/`);
         expect((await again.get('/api/auth/get-session')).body.user.id).toBe(String(user!.id));
         expect(await userByEmail(profile.email)).toBeNull();
+    });
+
+    it('signs a verified email account in when GitHub verified the same email', async () => {
+        const email = await registerVerified(browser());
+        fakeGitHub(githubProfile({ email }));
+        const agent = browser();
+
+        const { location } = await githubFlow(agent, { path: '/api/auth/sign-in/social' });
+
+        expect(location).toBe(`${FRONTEND}/`);
+        const user = await userByEmail(email);
+        expect(user!.accounts.map((a) => a.providerId).sort()).toEqual(['credential', 'github']);
+        expect(await prisma.user.count({ where: { email } })).toBe(1);
     });
 
     it('does not sign in to an email account that was never verified, even with a matching GitHub email', async () => {
@@ -204,8 +222,7 @@ describe('GitHub sign-in', () => {
     });
 
     it('does not take over an email account when GitHub did not verify that email', async () => {
-        const email = uniqueEmail();
-        await signUp(browser(), { email });
+        const email = await registerVerified(browser());
         fakeGitHub(githubProfile({ email, verified: false }));
 
         const { location } = await githubFlow(browser(), { path: '/api/auth/sign-in/social' });
@@ -219,9 +236,7 @@ describe('GitHub sign-in', () => {
 describe('GitHub as a service', () => {
     async function emailAccount() {
         const agent = browser();
-        const email = uniqueEmail();
-        await signUp(agent, { email });
-        await signIn(agent, email);
+        const email = await registerVerified(agent);
         return { agent, email };
     }
 
@@ -310,9 +325,7 @@ describe('GitHub as a service', () => {
 describe('tokens out of reach of page scripts', () => {
     it('no Better Auth endpoint returns the session token or the GitHub token', async () => {
         const agent = browser();
-        const email = uniqueEmail();
-        await signUp(agent, { email });
-        await signIn(agent, email);
+        const email = await registerVerified(agent);
         const github = fakeGitHub(githubProfile());
         await githubFlow(agent, { path: '/api/auth/link-social' });
         const user = await userByEmail(email);
