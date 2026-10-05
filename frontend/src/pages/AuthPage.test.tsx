@@ -5,7 +5,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AuthPage from './AuthPage';
 import { register, startGitHubLogin } from '@/lib/auth';
 
-vi.mock('@/lib/auth', () => ({ register: vi.fn(), login: vi.fn(), startGitHubLogin: vi.fn() }));
+vi.mock('@/lib/auth', () => ({
+    register: vi.fn(async () => {}),
+    login: vi.fn(async () => {}),
+    startGitHubLogin: vi.fn(async () => {}),
+}));
 beforeEach(() => vi.clearAllMocks());
 function renderPage(path = '/register') {
     return render(
@@ -55,8 +59,27 @@ it('allows existing users to start GitHub login without registration checkboxes'
     expect(startGitHubLogin).toHaveBeenCalledWith(undefined);
 });
 
+it.each([
+    ['/login?error=signup_disabled', 'Créez-en un depuis l’onglet Inscription'],
+    ['/login?error=account_not_linked', 'liez GitHub depuis la page Services'],
+    ['/register?error=EMAIL_NOT_VERIFIED', 'adresse email vérifiée'],
+    ['/login?error=invalid_code', 'La connexion avec GitHub a échoué'],
+])('explains the GitHub error of %s', (path, message) => {
+    renderPage(path);
+    expect(screen.getByRole('alert').textContent).toContain(message);
+});
+
+it('reports a GitHub sign-in that cannot start', async () => {
+    vi.mocked(startGitHubLogin).mockRejectedValueOnce(
+        new Error('GitHub sign-in is not configured'),
+    );
+    renderPage('/login');
+    fireEvent.click(screen.getByRole('button', { name: 'Continuer avec GitHub' }));
+    expect((await screen.findByRole('alert')).textContent).toBe('GitHub sign-in is not configured');
+});
+
 it('explains why a new GitHub user was redirected to registration', () => {
-    renderPage('/register?error=github_registration_requirements');
+    renderPage('/register?error=REGISTRATION_REQUIREMENTS');
     expect(screen.getByRole('alert').textContent).toContain('Pour créer un compte avec GitHub');
     expect((screen.getByRole('checkbox', { name: /16 ans/i }) as HTMLInputElement).checked).toBe(
         false,

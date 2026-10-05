@@ -19,7 +19,7 @@ describe('Navbar Component', () => {
     });
 
     it('renders the display name when available', () => {
-        renderNavbar({ user: makeUser({ displayName: 'Test User' }) });
+        renderNavbar({ user: makeUser({ name: 'Test User' }) });
         expect(screen.getByText('Test User')).toBeInTheDocument();
     });
 

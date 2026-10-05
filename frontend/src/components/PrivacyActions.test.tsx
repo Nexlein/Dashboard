@@ -62,23 +62,38 @@ it('reports a network failure without logging out', async () => {
     expect(onLogout).not.toHaveBeenCalled();
 });
 
+it('asks for a new sign-in when the session is too old to delete the account', async () => {
+    vi.stubGlobal(
+        'confirm',
+        vi.fn(() => true),
+    );
+    vi.stubGlobal(
+        'fetch',
+        vi
+            .fn()
+            .mockResolvedValue(
+                jsonResponse(400, { code: 'SESSION_EXPIRED', message: 'Session expired' }),
+            ),
+    );
+    const onLogout = openAccount();
+    fireEvent.click(screen.getByRole('menuitem', { name: /delete my account/i }));
+    expect((await screen.findByRole('alert')).textContent).toContain('reconnectez-vous');
+    expect(onLogout).not.toHaveBeenCalled();
+});
+
 it('logs out only after a successful deletion', async () => {
     vi.stubGlobal(
         'confirm',
         vi.fn(() => true),
     );
-    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { success: true }));
     vi.stubGlobal('fetch', fetchMock);
     const onLogout = openAccount();
     fireEvent.click(screen.getByRole('menuitem', { name: /delete my account/i }));
     await waitFor(() => expect(onLogout).toHaveBeenCalledOnce());
-    expect(fetchMock).toHaveBeenCalledWith(
-        expect.stringContaining('/auth/delete-account'),
-        expect.objectContaining({
-            method: 'DELETE',
-            credentials: 'include',
-        }),
-    );
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(String(url)).toContain('/api/auth/delete-user');
+    expect(init).toMatchObject({ method: 'POST', credentials: 'include' });
     expect(screen.queryByRole('alert')).toBeNull();
 });
 
@@ -118,7 +133,7 @@ it('downloads a successful export as JSON', async () => {
 });
 
 it('allows both display name and email changes for an OAuth profile', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { displayName: 'New name' }));
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { name: 'New name' }));
     vi.stubGlobal('fetch', fetchMock);
     const onUserUpdated = vi.fn();
     customRender(
@@ -137,7 +152,7 @@ it('allows both display name and email changes for an OAuth profile', async () =
     fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
     await waitFor(() => expect(onUserUpdated).toHaveBeenCalledOnce());
     expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual({
-        displayName: 'New name',
+        name: 'New name',
         email: 'new@example.com',
     });
 });
@@ -145,7 +160,7 @@ it('allows both display name and email changes for an OAuth profile', async () =
 it('discards unsaved profile edits when the dialog is reopened', () => {
     const props = {
         onOpenChange: vi.fn(),
-        user: makeUser({ displayName: 'Ada', email: 'ada@example.com' }),
+        user: makeUser({ name: 'Ada', email: 'ada@example.com' }),
         onUserUpdated: vi.fn(),
     };
     const { rerender } = customRender(<ProfileSettingsModal open {...props} />);

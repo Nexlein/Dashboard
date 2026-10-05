@@ -42,7 +42,7 @@ export default function Navbar({
     const [profileOpen, setProfileOpen] = useState(false);
     const [privacyError, setPrivacyError] = useState('');
     const [privacyBusy, setPrivacyBusy] = useState(false);
-    const accountLabel = user?.displayName || user?.email || 'Compte';
+    const accountLabel = user?.name || user?.email || 'Compte';
     const initial = accountLabel.charAt(0).toUpperCase();
 
     useEffect(() => {
@@ -91,8 +91,12 @@ export default function Navbar({
         try {
             await deleteMyAccount();
             onLogout();
-        } catch {
-            setPrivacyError('La suppression n’a pas pu être confirmée. Veuillez réessayer.');
+        } catch (err) {
+            setPrivacyError(
+                (err as { code?: string }).code === 'SESSION_EXPIRED'
+                    ? 'Par sécurité, reconnectez-vous puis supprimez votre compte.'
+                    : 'La suppression n’a pas pu être confirmée. Veuillez réessayer.',
+            );
         } finally {
             setPrivacyBusy(false);
         }
@@ -155,7 +159,7 @@ export default function Navbar({
                                 <span className="block truncate text-sm font-medium text-foreground">
                                     {accountLabel}
                                 </span>
-                                {user?.displayName && (
+                                {user?.name && (
                                     <span className="mt-0.5 block truncate font-normal">
                                         {user.email}
                                     </span>

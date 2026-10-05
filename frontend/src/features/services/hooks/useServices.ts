@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchServices, connectService, disconnectService, getOAuthUrl } from '../lib/services';
+import { getOAuthLinkUrl } from '@/lib/auth';
+import { fetchServices, connectService, disconnectService } from '../lib/services';
 
 export function useServices() {
     return useQuery({
@@ -27,6 +28,6 @@ export function useDisconnectService() {
 
 export function useOAuthUrl() {
     return useMutation({
-        mutationFn: (serviceName: string) => getOAuthUrl(serviceName),
+        mutationFn: (serviceName: string) => getOAuthLinkUrl(serviceName),
     });
 }
