@@ -59,6 +59,7 @@ jobs:
             - run: npm ci
             - run: npm run build -w shared
             - run: cd backend && npx prisma generate
+            - run: npm run typecheck -w backend
             - name: Run backend tests
               env:
                   DATABASE_URL: postgresql://postgres:postgres@localhost:5432/dashboard_gdpr_test

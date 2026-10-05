@@ -1,6 +1,6 @@
 {
-    // Type-checks sources, tests and scripts. Node (type stripping) and Vitest run the .ts
-    // files directly; tsconfig.build.json compiles src/ to dist/ for production.
+    // Type-checks sources, tests and scripts only: Node (type stripping) and Vitest run
+    // the .ts files directly, in development and in the Docker image alike.
     "compilerOptions": {
         "target": "es2023",
         "lib": ["ES2023"],
@@ -9,9 +9,8 @@
         "types": ["node"],
         "strict": true,
         "noEmit": true,
-        // Relative imports name the .ts file; the build rewrites them to .js.
+        // Relative imports name the .ts file, as Node requires when running sources.
         "allowImportingTsExtensions": true,
-        "rewriteRelativeImportExtensions": true,
         // Node's type stripping only removes types: no enums, namespaces or parameter
         // properties, and type-only imports must say so.
         "erasableSyntaxOnly": true,

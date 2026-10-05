@@ -2,9 +2,9 @@
     "name": "backend",
     "version": "1.0.0",
     "description": "",
-    "main": "dist/server.js",
+    "main": "src/server.ts",
     "scripts": {
-        "start": "node dist/server.js",
+        "start": "node src/server.ts",
         "dev": "node --watch src/server.ts",
         "test": "vitest run",
         "test:gdpr-integration": "node tests/integration/gdpr.integration.ts",
@@ -15,8 +15,7 @@
         "db:migrate": "prisma migrate dev",
         "db:deploy": "prisma migrate deploy",
         "db:reset": "prisma migrate reset",
-        "build": "tsc -p tsconfig.build.json",
-        "typecheck": "tsc -p tsconfig.json"
+        "typecheck": "tsc"
     },
     "keywords": [],
     "author": "",
