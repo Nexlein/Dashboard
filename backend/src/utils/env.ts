@@ -21,7 +21,6 @@ const envSchema = z.object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
     PORT: z.string().default('8080'),
     DATABASE_URL: z
-        .string()
         .url('DATABASE_URL must be a valid URL')
         // .env files are read as-is: `${POSTGRES_DB}` would become part of the database name.
         .refine((url) => !url.includes('${'), 'DATABASE_URL must not reference other variables'),
@@ -35,11 +34,11 @@ const envSchema = z.object({
         z.string().min(32, 'ENCRYPTION_KEY must be at least 32 characters long'),
     ),
     CORS_ORIGINS: optional(z.string()),
-    REDIS_URL: optional(z.string().url('REDIS_URL must be a valid URL')),
-    FRONTEND_URL: optional(z.string().url('FRONTEND_URL must be a valid URL')),
+    REDIS_URL: optional(z.url('REDIS_URL must be a valid URL')),
+    FRONTEND_URL: optional(z.url('FRONTEND_URL must be a valid URL')),
     GITHUB_CLIENT_ID: optional(z.string()),
     GITHUB_CLIENT_SECRET: optional(z.string()),
-    GITHUB_CALLBACK_URL: optional(z.string().url('GITHUB_CALLBACK_URL must be a valid URL')),
+    GITHUB_CALLBACK_URL: optional(z.url('GITHUB_CALLBACK_URL must be a valid URL')),
 });
 
 const _env = envSchema.safeParse(process.env);

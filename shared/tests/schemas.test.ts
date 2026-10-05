@@ -51,6 +51,31 @@ describe('Shared Schemas', () => {
         });
     });
 
+    describe('email', () => {
+        it('trims surrounding spaces before validating', () => {
+            const result = loginSchema.safeParse({ email: '  ada@example.com ', password: 'x' });
+            expect(result.success && result.data.email).toBe('ada@example.com');
+        });
+
+        it('keeps the custom message for an invalid address', () => {
+            const result = loginSchema.safeParse({ email: 'not-an-email', password: 'x' });
+            expect(result.error?.issues[0].message).toBe('Invalid email address');
+        });
+
+        it('rejects addresses longer than 254 characters', () => {
+            const email = `${'a'.repeat(64)}@${'b'.repeat(186)}.com`;
+            expect(email.length).toBe(255);
+            expect(loginSchema.safeParse({ email, password: 'x' }).success).toBe(false);
+        });
+
+        it('stays optional on profile updates', () => {
+            expect(updateMeSchema.safeParse({}).success).toBe(true);
+            expect(updateMeSchema.safeParse({ email: ' new@example.com' }).data?.email).toBe(
+                'new@example.com',
+            );
+        });
+    });
+
     describe('updateMeSchema', () => {
         it('should validate partial updates', () => {
             const data = {

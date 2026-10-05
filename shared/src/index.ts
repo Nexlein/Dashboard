@@ -7,8 +7,11 @@ export interface User {
     displayName: string | null;
 }
 
+// Trimmed before it is validated: z.email() alone would reject surrounding spaces.
+const email = z.string().trim().pipe(z.email('Invalid email address').max(254));
+
 export const registerSchema = z.object({
-    email: z.string().trim().email('Invalid email address').max(254),
+    email,
     password: z.string().min(8, 'Password must be between 8 and 72 characters').max(72),
     displayName: z
         .string()
@@ -24,12 +27,12 @@ export const registerSchema = z.object({
 });
 
 export const loginSchema = z.object({
-    email: z.string().trim().email('Invalid email address').max(254),
+    email,
     password: z.string().min(1, 'Email and password required'),
 });
 
 export const updateMeSchema = z.object({
-    email: z.string().trim().email('Invalid email address').max(254).optional(),
+    email: email.optional(),
     displayName: z
         .string()
         .max(50, 'Display name must be 50 characters or fewer')
