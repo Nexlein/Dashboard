@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { registerUser, uniqueEmail } from './helpers';
+import { SESSION_COOKIE, registerUser, uniqueEmail } from './helpers';
 
 test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => localStorage.setItem('cookie-consent', 'declined'));
@@ -22,18 +22,19 @@ test('registers, signs in and signs out through the UI', async ({ page }) => {
     await page.getByLabel(/16 ans ou plus/).check();
     await page.getByRole('button', { name: 'Créer mon compte' }).click();
 
-    await expect(page).toHaveURL(/\/login$/);
-    await expect(page.getByLabel('Adresse e-mail')).toHaveValue(email);
-
-    await page.getByLabel('Mot de passe').fill(password);
-    await page.getByRole('button', { name: 'Se connecter' }).click();
-
+    // Registering signs in.
     await expect(page).toHaveURL(/\/$/);
     await expect(page.getByRole('button', { name: 'Add Widget' })).toBeVisible();
 
     await page.getByRole('button', { name: /Ouvrir le menu du compte/ }).click();
     await page.getByRole('menuitem', { name: 'Se déconnecter' }).click();
     await expect(page).toHaveURL(/\/login$/);
+
+    await page.getByLabel('Adresse e-mail').fill(email);
+    await page.getByLabel('Mot de passe').fill(password);
+    await page.getByRole('button', { name: 'Se connecter' }).click();
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.getByRole('button', { name: 'Add Widget' })).toBeVisible();
 });
 
 test('shows an error for wrong credentials', async ({ page, request }) => {
@@ -60,9 +61,19 @@ test('keeps the session token out of reach of page scripts', async ({ page }) =>
     await page.getByRole('button', { name: 'Se connecter' }).click();
     await expect(page.getByRole('button', { name: 'Add Widget' })).toBeVisible();
 
-    const session = (await page.context().cookies()).find((c) => c.name === 'dashboard_session');
+    const session = (await page.context().cookies()).find((c) => c.name === SESSION_COOKIE);
     expect(session?.httpOnly).toBe(true);
-    expect(await page.evaluate(() => document.cookie)).not.toContain('dashboard_session');
-    const stored = await page.evaluate(() => JSON.stringify({ ...localStorage }));
-    expect(stored).not.toMatch(/eyJ/); // no JWT in localStorage
+    expect(await page.evaluate(() => document.cookie)).not.toContain(SESSION_COOKIE);
+    // Page scripts cannot obtain the token either: not stored, not in the session response.
+    const token = session!.value.split('.')[0];
+    const stored = await page.evaluate(() =>
+        JSON.stringify({ ...localStorage, ...sessionStorage }),
+    );
+    expect(stored).not.toContain(token);
+    const sessionBody = await page.evaluate(async (api) => {
+        const res = await fetch(`${api}/api/auth/get-session`, { credentials: 'include' });
+        return res.text();
+    }, 'http://localhost:8080');
+    expect(sessionBody).toContain(email);
+    expect(sessionBody).not.toContain(token);
 });

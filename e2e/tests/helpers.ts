@@ -7,23 +7,33 @@ export function uniqueEmail(prefix: string) {
     return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.test`;
 }
 
+// Better Auth refuses requests whose Origin is not a trusted frontend.
+const FROM_FRONTEND = { Origin: FRONTEND_ORIGIN };
+export const SESSION_COOKIE = 'dashboard.session_token';
+
+/** Creates an account through the API, then signs that context out again. */
 export async function registerUser(request: APIRequestContext, email: string, password: string) {
-    const res = await request.post(`${API_URL}/auth/register`, {
-        data: { email, password, displayName: 'E2E User', cguAccepted: true, is16OrOlder: true },
+    const res = await request.post(`${API_URL}/api/auth/sign-up/email`, {
+        headers: FROM_FRONTEND,
+        data: { email, password, name: 'E2E User', cguAccepted: true, is16OrOlder: true },
     });
-    expect(res.status(), await res.text()).toBe(201);
+    expect(res.status(), await res.text()).toBe(200);
+    await request.post(`${API_URL}/api/auth/sign-out`, { headers: FROM_FRONTEND, data: {} });
 }
 
-/** Logs in through the API; the session cookie lands in the request context's cookie jar. */
+/** Signs in through the API; the session cookie lands in the request context's cookie jar. */
 export async function loginViaApi(request: APIRequestContext, email: string, password: string) {
-    const res = await request.post(`${API_URL}/auth/login`, { data: { email, password } });
+    const res = await request.post(`${API_URL}/api/auth/sign-in/email`, {
+        headers: FROM_FRONTEND,
+        data: { email, password },
+    });
     expect(res.ok(), await res.text()).toBe(true);
     expect(await res.json()).not.toHaveProperty('token');
     const session = res
         .headersArray()
         .find(
             (h) =>
-                h.name.toLowerCase() === 'set-cookie' && h.value.startsWith('dashboard_session='),
+                h.name.toLowerCase() === 'set-cookie' && h.value.startsWith(`${SESSION_COOKIE}=`),
         );
     expect(session?.value).toMatch(/HttpOnly/);
 }
