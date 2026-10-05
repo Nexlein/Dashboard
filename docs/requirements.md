@@ -7,7 +7,7 @@
 
 ## Core Features
 
-- [ ] **User Management**: Unauthenticated users can register. Administration section useful. (Registration frontend/backend connected; administration frontend missing)
+- [ ] **User Management**: Unauthenticated users can register. Administration section useful. (Registration frontend/backend connected; administration API from Better Auth's admin plugin, administration frontend missing)
 - [x] **Identity & Permissions**:
     - [x] Authentication (credentials or OIDC) to bind data to account. (GitHub OIDC & credentials implemented)
     - [x] Authorization (OAuth 2.0) to access external APIs. Link third-party to platform user (GitHub).
@@ -33,8 +33,8 @@
 - [x] **CGU (Terms of Service)**: Users must read and accept CGU during registration.
 - [x] **RGPD (GDPR)**:
     - [x] Clear privacy policy. (`/privacy`, `docs/RGPD.md`)
-    - [x] Account deletion (Right to be forgotten). (`DELETE /auth/delete-account`, cascades checked against PostgreSQL)
-    - [x] Data export (Right of access). (`GET /auth/download-data`, without secrets)
+    - [x] Account deletion (Right to be forgotten). (`POST /api/auth/delete-user`, needs a recent sign-in or the password; cascades checked against PostgreSQL)
+    - [x] Data export (Right of access). (`GET /account/export`, without secrets)
 
 ## Security & Robustness
 

@@ -45,165 +45,97 @@ Returns the application's supported services and widgets in the format required 
 
 ## Authentication
 
-Login (password or GitHub) sets an **httpOnly session cookie**, `dashboard_session`
-(`SameSite=Lax`, `Secure` when the request came over HTTPS, expiring with the session). Page scripts cannot
-read it; browsers send it automatically when the request uses `credentials: 'include'`.
-Endpoints marked "authenticated" accept that cookie, or an `Authorization: Bearer <JWT>`
-header for API clients and tests.
+Authentication is [Better Auth](https://www.better-auth.com/docs), configured in
+`backend/src/auth.ts` and served under **`/api/auth/*`**. The frontend calls it through
+Better Auth's client (`frontend/src/lib/auth.ts`). This section lists what the project uses
+and the rules it adds; Better Auth's documentation describes every endpoint.
 
-State-changing requests (`POST`, `PUT`, `DELETE`) authenticated by the cookie must carry an
-`Origin` listed in `CORS_ORIGINS`; otherwise they get `403 Request origin not allowed`
-(CSRF protection). Bearer requests are not subject to this check.
+**Session.** Signing in sets the httpOnly cookie `dashboard.session_token` (`SameSite=Lax`,
+`Secure` when `BETTER_AUTH_URL` uses https). Sessions are stored in PostgreSQL: they last
+7 days, are extended while in use, and stop working at once on sign-out, account deletion or
+ban. Page scripts cannot read the cookie, and the project removes the session token from the
+JSON responses of `get-session`, `sign-in/email` and `sign-up/email`.
 
-### `POST /auth/register`
+**CSRF.** Better Auth refuses state-changing requests whose `Origin` is not in
+`CORS_ORIGINS`. The project's own routes apply the same rule: `POST`, `PUT` and `DELETE`
+need an allowed `Origin` (or the API's own, for Swagger UI), otherwise `403 Request origin
+not allowed`.
 
-Register a new user account.
+**Rate limit.** `POST /api/auth/sign-in/*` and `/api/auth/sign-up/*` share a limit of
+`AUTH_RATE_LIMIT_MAX` attempts per IP every 15 minutes (`429`), counted in Redis by every
+replica.
 
-**Request Body:**
+### `POST /api/auth/sign-up/email`
+
+Creates an account and signs it in.
 
 ```json
 {
     "email": "user@example.com",
-    "password": "securepassword",
-    "displayName": "John Doe",
+    "password": "supersecret123",
+    "name": "John Doe",
     "cguAccepted": true,
     "is16OrOlder": true
 }
 ```
 
-`displayName` is optional and limited to 50 characters. Both `cguAccepted` and
-`is16OrOlder` must be the boolean `true` for the account to be created. Missing,
-false or string-valued declarations are rejected with `400`. Email addresses are trimmed and stored in
-lowercase. Passwords must contain between 8 and 72 characters.
+The project checks the body with the shared `registerSchema` first: `cguAccepted` and
+`is16OrOlder` must both be `true` (a self-declaration of the 16+ threshold, not identity
+verification), `name` is at most 50 characters (may be empty), the email is trimmed and
+lowercased, passwords have 8 to 128 characters. Failures return `400` with the schema's
+message; an email already registered returns `422`. The acceptance date is stored in
+`cguAcceptedAt`. `role` and `cguAcceptedAt` cannot be set by the client.
 
-**Response (201 Created):**
+### `POST /api/auth/sign-in/email`
 
-```json
-{
-    "message": "User registered successfully",
-    "userId": 1
-}
-```
+`{ "email", "password" }`. `401` on wrong credentials, `403` for a banned account.
 
-### `POST /auth/login`
+### `POST /api/auth/sign-out`
 
-Authenticate an existing user.
+Revokes the session and clears the cookie.
 
-**Request Body:**
+### `GET /api/auth/get-session`
 
-```json
-{
-    "email": "user@example.com",
-    "password": "securepassword"
-}
-```
+`{ "user": { "id", "email", "name", "role", ... }, "session": { ... } }`, or `null` when
+signed out. The frontend uses it to know who is signed in.
 
-**Response (200 OK):**
+### `POST /api/auth/delete-user`
 
-```json
-{
-    "message": "Login successful"
-}
-```
+Deletes the account and everything stored about it (widgets, service connections, sign-in
+methods, sessions). Requires a session created less than a day ago, or `{ "password" }`;
+otherwise `400 SESSION_EXPIRED`, and the user signs in again.
 
-The session is returned as the `dashboard_session` cookie, never in the response body.
+## Account
 
-### `POST /auth/logout`
+The signed-in user's own data. Authenticated by the session cookie.
 
-Clears the session cookie. Returns `204 No Content`, signed in or not.
+### `GET /account/export`
 
-Registration and login share a limit of 20 attempts per IP address every 15
-minutes. Further requests return `429 Too Many Requests`.
+GDPR export: profile, widgets with readable parameters, connected-service metadata, sign-in
+methods (`credential`, `github`) and sessions (dates, IP, user agent). Never includes
+passwords, tokens or API keys. `Cache-Control: no-store`. Returns `500` if stored widget
+parameters cannot be decrypted, `404` if the account no longer exists.
 
-### `GET /auth/me`
+### `PUT /account/profile`
 
-Returns the authenticated user's public profile. Authenticated. Password hashes are never
-returned; `401` means there is no valid session.
+Optional `name` (at most 50 characters) and `email` (trimmed, lowercased). A changed email is
+marked unverified. GitHub sign-in is bound to the GitHub account id, not to the email, so it
+keeps working after the change. `409 Email already taken` if another account uses the email.
 
 ```json
-{
-    "id": 1,
-    "email": "user@example.com",
-    "displayName": "John Doe"
-}
+{ "id": 1, "email": "new@example.com", "name": "John" }
 ```
-
-### `PUT /auth/me`
-
-Requires authentication. Accepts optional `displayName` (string, at most 50
-characters after trimming) and `email` (valid address, at most 254 characters).
-An empty name clears it. Emails are trimmed and lowercased. Returns the updated
-public profile. Both password and GitHub-only users can change their name and
-email. GitHub authentication uses a stable `githubId`, so editing the Dashboard
-email does not create a different account on the next login.
-
-For older linked accounts without a stored GitHub ID, an email change first
-verifies the existing GitHub token and binds that identity. If the token is expired
-or unavailable, the server returns `409` asking the user to sign in/reconnect GitHub
-before retrying; the old email stays intact. Returns `400` for invalid input, `404`
-for a missing user and `409` for an email/identity uniqueness conflict.
-
-### `GET /auth/download-data`
-
-Requires authentication. Returns the user's profile, preferences, timestamps,
-widgets (with **decrypted** parameters), API-service connection metadata and OAuth
-provider metadata as JSON, with `Cache-Control: no-store`. Password hashes,
-access/refresh tokens and provider API keys are deliberately excluded. Data is
-scoped to the authenticated user; there is no user ID parameter. Returns `404` for
-a missing user and `500` if any stored widget parameters cannot be decrypted,
-rather than returning a partial or unreadable export.
-
-### `DELETE /auth/delete-account`
-
-Requires authentication. Deletes the authenticated user and cascades deletion to
-widgets, OAuth tokens and service connections in PostgreSQL. Returns `200` after
-the deletion succeeds, `404` if the user no longer exists, and `500` on a database
-failure. The UI only logs out on a successful response and displays an error on
-HTTP/network failure. It does not delete data held by external providers or backups.
 
 ## Administration
 
-All `/admin` endpoints are authenticated (session cookie or Bearer token, see [Authentication](#authentication)). The
-authenticated user must currently have `isAdmin` set to `true` in the database.
-Missing or invalid authentication returns `401 Unauthorized`; an authenticated
-non-admin user receives `403 Forbidden`.
-
-### `GET /admin/users`
-
-Returns all users without exposing password hashes or OAuth tokens.
-
-**Response (200 OK):**
-
-```json
-[
-    {
-        "id": 2,
-        "email": "user@example.com",
-        "displayName": "John Doe",
-        "isAdmin": false,
-        "cguAcceptedAt": "2026-09-16T10:00:00.000Z",
-        "language": "en",
-        "theme": "system",
-        "createdAt": "2026-09-16T10:00:00.000Z",
-        "updatedAt": "2026-09-16T10:00:00.000Z"
-    }
-]
-```
-
-### `DELETE /admin/users/:id`
-
-Deletes another user. Related widgets and OAuth tokens are deleted through the
-database cascade. An administrator cannot delete their own account.
-
-**Response (204 No Content)**
-
-- `400 Bad Request` if `id` is not a positive integer.
-- `403 Forbidden` when attempting to delete the authenticated admin account.
-- `404 Not Found` if the user does not exist.
+Better Auth's admin plugin, under `/api/auth/admin/*`, for users whose `role` is `admin`
+(others get `403`). Among others: `GET list-users`, `POST remove-user`, `POST ban-user`,
+`POST set-role`. A ban revokes the user's sessions and blocks sign-in. Administrators cannot
+remove their own account this way.
 
 ## Widgets
 
-All `/widgets` endpoints are authenticated (session cookie or Bearer token, see [Authentication](#authentication)).
+All `/widgets` endpoints are authenticated (session cookie, see [Authentication](#authentication)).
 
 ### `GET /widgets`
 
@@ -349,7 +281,7 @@ of `{ role, content }` objects with `role` among `system`, `user`, `assistant`.
 
 ## Service connections
 
-All `/services` endpoints are authenticated (session cookie or Bearer token, see [Authentication](#authentication)).
+All `/services` endpoints are authenticated (session cookie, see [Authentication](#authentication)).
 
 ### `GET /services`
 
@@ -379,89 +311,37 @@ a connection-required message until the service is connected again.
 
 **Response (204 No Content)**
 
-## GitHub Authentication & Account linking
+## GitHub sign-in and account linking
 
-### `GET /auth/github/login`
+GitHub is a Better Auth social provider (`GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`). The
+GitHub OAuth App's callback URL is `<BETTER_AUTH_URL>/api/auth/callback/github`
+(`http://localhost:8080/api/auth/callback/github` locally). Better Auth binds each flow to the
+browser that started it (signed state cookie, PKCE), accepts a state only once and expires it.
 
-Starts the GitHub OAuth login flow and redirects to GitHub. Existing users are
-looked up by their stable GitHub ID first, with a verified GitHub email fallback only for legacy
-accounts that do not yet have that identity. Unverified addresses cannot bind an account. The GitHub ID is saved on successful
-login/linking and is unique per Dashboard account. Existing users can log in
-without repeating registration declarations. For a **new account**, the
-registration page must send `?cguAccepted=true&is16OrOlder=true`. These declarations
-are stored server-side with the temporary, browser-bound OAuth state; adding them
-to the callback cannot bypass the check. This is a self-declaration of the project's
-16+ threshold, not identity or birth-date verification.
+### Sign-in and sign-up: `POST /api/auth/sign-in/social`
 
-### `GET /auth/github/callback`
+`{ "provider": "github", "callbackURL", "errorCallbackURL", "disableRedirect": true }` returns
+`{ "url" }`, the GitHub page to open. `callbackURL` and `errorCallbackURL` must be on a trusted
+origin (`CORS_ORIGINS`).
 
-The same callback handles login and service linking. For a new user without both
-registration declarations, it redirects to `/register?error=github_registration_requirements`
-on the configured frontend without creating a user or saving tokens. After the user
-accepts both checkboxes, they can restart GitHub registration. Successful login
-sets the session cookie and redirects to the frontend dashboard (`/`); no token appears in
-any URL. Linking retains its authenticated flow.
+- From the sign-in page, a GitHub account with no Dashboard account is refused:
+  `errorCallbackURL?error=signup_disabled`.
+- The registration page adds `"requestSignUp": true` and
+  `"additionalData": { "cguAccepted": true, "is16OrOlder": true }`. Without both declarations:
+  `?error=REGISTRATION_REQUIREMENTS`. A GitHub account whose primary email is not verified:
+  `?error=EMAIL_NOT_VERIFIED`.
+- A GitHub email that matches an existing email/password account is not signed in
+  automatically (`?error=account_not_linked`): those emails are never verified, so the
+  account could belong to someone else. Sign in with the password, then link GitHub.
+- Success sets the session cookie and redirects to `callbackURL`; no token appears in any URL.
 
-### Manual browser flow
+### Linking: `POST /api/auth/link-social`
 
-Open `http://localhost:8080/about.json`, then the browser's developer console. Run the
-following snippet with the account's credentials: it signs in (the API sets the session
-cookie), starts the linking request and navigates to GitHub.
+Signed in. `{ "provider": "github", "callbackURL", "errorCallbackURL" }` returns `{ "url" }`.
+The GitHub account may use another email than the Dashboard account; it cannot be linked to
+two Dashboard accounts (`?error=account_already_linked_to_different_user`).
 
-```js
-(async () => {
-    const email = prompt('Dashboard email');
-    const password = prompt('Dashboard password');
-    const login = await fetch('/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
-        body: JSON.stringify({ email, password }),
-    });
-    if (!login.ok) throw new Error((await login.json()).error);
-    const response = await fetch('/auth/github?format=json', { credentials: 'same-origin' });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error);
-    window.location.assign(data.authorizationUrl);
-})();
-```
-
-Approve the requested access on GitHub. The callback returns
-`GitHub account linked` once the token has been saved in `OAuthToken`.
-
-Use the same hostname throughout: the configured `GITHUB_CALLBACK_URL` must
-return to the host that started linking. For local development, use
-`http://localhost:8080/auth/github/callback`. Production requires HTTPS and
-`NODE_ENV=production` for secure cookies behind a proxy.
-
-### `GET /auth/github`
-
-Authenticated. Returns a `302` redirect to
-GitHub. For a browser frontend, use `/auth/github?format=json` to receive
-`{ "authorizationUrl": "https://github.com/login/oauth/authorize?..." }`, then
-navigate to that URL. The manual console example uses same-origin requests.
-
-Both modes set a random `HttpOnly`, `SameSite=Lax` cookie, scoped to the callback,
-with a ten-minute lifetime. It is marked `Secure` on HTTPS or in production.
-The cookie secret is separate from the `state` in the URL. A different cookie
-name per request supports multiple tabs. Responses are not cached.
-
-Do not start with `curl` and paste its redirect into a browser: they do not share
-the cookie required to finish the request.
-
-### `GET /auth/github/callback`
-
-Receives GitHub's `state` and `code` (or authorization error). It checks the
-pending request, its expiration and the browser cookie **before** exchanging
-the code or writing to the database. A missing or incorrect cookie returns
-`403` without consuming the legitimate browser's pending request. Invalid,
-expired or reused state returns `400`.
-
-After a valid browser check, the state is consumed and the cookie cleared, even
-if GitHub refused access or the exchange later fails. Start a new request from
-the browser console to retry. Abandoned requests are automatically removed after ten minutes;
-server restarts discard pending requests. Saved OAuth tokens remain in PostgreSQL.
-
-Successful callbacks create or update the `(userId, provider)` token record and
-return only `{ "message": "GitHub account linked", "userId": 1 }`. Tokens and
-client secrets are never returned to the page.
+The GitHub widgets use this linked account. Its access token is stored encrypted
+(`account.encryptOAuthTokens`), read back through Better Auth (which refreshes it when it
+expires) and never returned to the page. `DELETE /services/github/connection` unlinks it,
+except when GitHub is the account's only sign-in method (`409`).

@@ -10,7 +10,7 @@ Build a web dashboard (React/Express/PostgreSQL) allowing users to configure and
 ## Tech Stack
 
 - **Frontend**: React (Vite, TypeScript) + Tailwind CSS + `shadcn/ui` + TanStack Query + `react-grid-layout`
-- **Backend**: Node.js (Express, TypeScript run directly by Node), Prisma ORM, Zod
+- **Backend**: Node.js (Express, TypeScript run directly by Node), Prisma ORM, Zod, Better Auth (authentication: `backend/src/auth.ts`, `/api/auth/*`)
 - **Shared**: `shared/` workspace with Zod schemas and types used by both apps
 - **Tooling**: npm workspaces (run `npm ci`, `npm test`, `npm run lint` from the root), Node 24
 - **Database**: PostgreSQL (Containerized)
