@@ -71,8 +71,10 @@ Requirements: Node.js 24 (see `.nvmrc`, `nvm use`) and Docker with Docker Compos
    Set `BETTER_AUTH_SECRET` in `backend/.env` to a long random value. You can generate
    one with `openssl rand -hex 32`. `BETTER_AUTH_URL` is the API's public URL
    (`http://localhost:8080` by default). Fill in `GITHUB_CLIENT_ID` and
-   `GITHUB_CLIENT_SECRET` to enable GitHub sign-in and linking, and register this
-   callback in your GitHub OAuth App: `http://localhost:8080/api/auth/callback/github`.
+   `GITHUB_CLIENT_SECRET` to enable GitHub sign-in and the GitHub service (widgets, with
+   several GitHub accounts per user), and register both callback URLs in your GitHub OAuth
+   App (GitHub matches them exactly): `http://localhost:8080/api/auth/callback/github` and
+   `http://localhost:8080/api/auth/callback/github-service`.
    `CORS_ORIGINS` lists the frontend origins allowed to call the API; the example
    includes Vite on ports 5173/5174 and the Docker frontend on port 8081.
    `SMTP_*` configure the emails (verification and reset codes). With Gmail: turn on

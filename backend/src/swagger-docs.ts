@@ -144,7 +144,7 @@
  *         description: "{ url, redirect }"
  * /api/auth/link-social:
  *   post:
- *     summary: Link GitHub to the signed-in account (GitHub widgets)
+ *     summary: Connect a GitHub account to the GitHub service (provider github-service; repeat for several)
  *     tags: [Auth]
  *     responses:
  *       200:
@@ -232,7 +232,7 @@
  *       200:
  *         description: Service connected
  *   delete:
- *     summary: Disconnect a service
+ *     summary: Disconnect a service (for GitHub, every connected account)
  *     tags: [Services]
  *     parameters:
  *       - in: path
@@ -243,6 +243,26 @@
  *     responses:
  *       204:
  *         description: Service disconnected
+ * /services/{serviceName}/accounts/{accountId}:
+ *   delete:
+ *     summary: Disconnect one account of an OAuth service (e.g. one GitHub account)
+ *     tags: [Services]
+ *     parameters:
+ *       - in: path
+ *         name: serviceName
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: accountId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       204:
+ *         description: Account disconnected
+ *       404:
+ *         description: Not an account of this user and service
  *
  * /widgets:
  *   get:

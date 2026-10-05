@@ -339,11 +339,22 @@ a connection-required message until the service is connected again.
 
 **Response (204 No Content)**
 
-## GitHub sign-in and account linking
+## GitHub: sign-in and the GitHub service
 
-GitHub is a Better Auth social provider (`GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`). The
-GitHub OAuth App's callback URL is `<BETTER_AUTH_URL>/api/auth/callback/github`
-(`http://localhost:8080/api/auth/callback/github` locally). Better Auth binds each flow to the
+GitHub plays two separate roles, with two Better Auth providers:
+
+| | Sign-in (`github`) | GitHub service (`github-service`) |
+| --- | --- | --- |
+| Used for | identity: register and sign in | the GitHub widgets |
+| Scope | `read:user user:email` | `read:user user:email repo` |
+| Per user | one | several (one per GitHub account) |
+| Can sign in | yes | never (`400 NOT_A_SIGN_IN_PROVIDER`) |
+
+Both use `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` (the service can use another GitHub OAuth
+App with `GITHUB_SERVICE_CLIENT_ID` / `GITHUB_SERVICE_CLIENT_SECRET`). GitHub requires each
+`redirect_uri` to match a registered callback URL exactly, so the OAuth App lists both:
+`<BETTER_AUTH_URL>/api/auth/callback/github` and `<BETTER_AUTH_URL>/api/auth/callback/github-service`
+(with a second app, each app lists its own). Better Auth binds each flow to the
 browser that started it (signed state cookie, PKCE), accepts a state only once and expires it.
 
 ### Sign-in and sign-up: `POST /api/auth/sign-in/social`
@@ -358,18 +369,27 @@ origin (`CORS_ORIGINS`).
   `"additionalData": { "cguAccepted": true, "is16OrOlder": true }`. Without both declarations:
   `?error=REGISTRATION_REQUIREMENTS`. A GitHub account whose primary email is not verified:
   `?error=EMAIL_NOT_VERIFIED`.
-- A GitHub email that matches an existing email/password account is not signed in
-  automatically (`?error=account_not_linked`): those emails are never verified, so the
-  account could belong to someone else. Sign in with the password, then link GitHub.
+- A GitHub email that matches an existing email/password account signs into it only when both
+  emails are verified (GitHub's, and the account's own, by code). Otherwise
+  `?error=account_not_linked`: sign in with the password first.
 - Success sets the session cookie and redirects to `callbackURL`; no token appears in any URL.
 
-### Linking: `POST /api/auth/link-social`
+### The GitHub service: connecting accounts
 
-Signed in. `{ "provider": "github", "callbackURL", "errorCallbackURL" }` returns `{ "url" }`.
-The GitHub account may use another email than the Dashboard account; it cannot be linked to
-two Dashboard accounts (`?error=account_already_linked_to_different_user`).
+`POST /api/auth/link-social` (signed in) with
+`{ "provider": "github-service", "callbackURL", "errorCallbackURL", "disableRedirect": true }`
+returns `{ "url" }`. Repeat it to connect several GitHub accounts; their emails may differ from
+the Dashboard account's or be unverified. A GitHub account cannot be connected to two Dashboard
+users (`?error=account_already_linked_to_different_user`).
 
-The GitHub widgets use this linked account. Its access token is stored encrypted
-(`account.encryptOAuthTokens`), read back through Better Auth (which refreshes it when it
-expires) and never returned to the page. `DELETE /services/github/connection` unlinks it,
-except when GitHub is the account's only sign-in method (`409`).
+- `GET /services`: the `github` entry lists `accounts: [{ "id", "login", "avatarUrl" }]`
+  (`login` is `null` when GitHub no longer accepts the account).
+- Each GitHub widget names its account in the `account` parameter (an `id` above). With one
+  account connected it may omit it; with several, `400 Choose which GitHub account to use`.
+  An account of another user is never used (`409`). A token GitHub no longer accepts gives
+  `502`: reconnect the account.
+- `DELETE /services/github/accounts/:id` removes one account; `DELETE /services/github/connection`
+  removes them all. Neither touches the GitHub account used to sign in.
+
+Tokens are stored encrypted (`account.encryptOAuthTokens`), read through Better Auth on the
+server (which refreshes them when they expire) and never returned to the page.
