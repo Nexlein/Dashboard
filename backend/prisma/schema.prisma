@@ -42,7 +42,7 @@ model Session {
   expiresAt      DateTime
   ipAddress      String?
   userAgent      String?
-  impersonatedBy String? // Admin plugin: id of the admin impersonating this user
+  impersonatedBy String? // Required by the admin plugin's schema; impersonation is disabled
   userId         Int
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt

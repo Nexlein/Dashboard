@@ -218,9 +218,25 @@ describe('administration (admin plugin)', () => {
         expect(await prisma.user.count({ where: { id: user.id } })).toBe(1);
     });
 
-    it('no longer serves the old /admin routes', async () => {
+    it.each([
+        ['post', '/api/auth/admin/impersonate-user'],
+        ['post', '/api/auth/admin/stop-impersonating'],
+        ['get', '/api/auth/admin/list-user-sessions'],
+        ['post', '/api/auth/admin/revoke-user-session'],
+        ['post', '/api/auth/admin/set-user-password'],
+        ['post', '/api/auth/admin/create-user'],
+        ['post', '/api/auth/admin/update-user'],
+        ['post', '/api/auth/admin/has-permission'],
+    ] as const)('does not offer %s %s, even to administrators', async (method, path) => {
         const { agent } = await adminAgent();
+        const target = await signedIn();
+        const sessions = await prisma.session.count({ where: { userId: target.user.id } });
 
-        expect((await agent.get('/admin/users')).status).toBe(404);
+        const res = await agent[method](path)
+            .set('Origin', FRONTEND)
+            .send({ userId: String(target.user.id), password: 'new-password-123' });
+
+        expect(res.status).toBe(404);
+        expect(await prisma.session.count({ where: { userId: target.user.id } })).toBe(sessions);
     });
 });

@@ -129,9 +129,15 @@ keeps working after the change. `409 Email already taken` if another account use
 ## Administration
 
 Better Auth's admin plugin, under `/api/auth/admin/*`, for users whose `role` is `admin`
-(others get `403`). Among others: `GET list-users`, `POST remove-user`, `POST ban-user`,
-`POST set-role`. A ban revokes the user's sessions and blocks sign-in. Administrators cannot
-remove their own account this way.
+(others get `403`). The routes offered: `GET list-users`, `GET get-user`, `POST remove-user`,
+`POST ban-user`, `POST unban-user`, `POST set-role` and `POST revoke-user-sessions`. A ban
+revokes the user's sessions and blocks sign-in. Administrators cannot remove their own account
+this way.
+
+The plugin's other routes answer `404` (`disabledPaths` in `backend/src/auth.ts`):
+impersonation (`impersonate-user`, `stop-impersonating`), `list-user-sessions` and
+`revoke-user-session` (they handle session tokens), `set-user-password`, `create-user` (it would
+skip the CGU and age declarations), `update-user` and `has-permission`.
 
 ## Widgets
 

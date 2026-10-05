@@ -71,10 +71,24 @@ export const auth = betterAuth({
     // utils/rateLimit.ts limits sign-in and sign-up instead (app.ts): its counters live in
     // Redis, shared by every replica, where Better Auth's default storage is per process.
     rateLimit: { enabled: false },
-    // Over HTTP only (the server keeps calling them through auth.api): the routes that hand a
-    // GitHub token or session tokens to the page are closed, so a script injected in the page
-    // cannot take them (utils/oauthAccounts.ts reads the token server-side).
-    disabledPaths: ['/get-access-token', '/refresh-token', '/list-sessions'],
+    // Closed over HTTP (the server keeps calling them through auth.api):
+    disabledPaths: [
+        // They hand a GitHub token or session tokens to the page, where an injected script
+        // could take them (utils/oauthAccounts.ts reads the GitHub token server-side).
+        '/get-access-token',
+        '/refresh-token',
+        '/list-sessions',
+        // Admin plugin routes the project does not use. Administrators keep list-users,
+        // get-user, remove-user, ban-user, unban-user, set-role and revoke-user-sessions.
+        '/admin/impersonate-user', // act as a user
+        '/admin/stop-impersonating',
+        '/admin/list-user-sessions', // returns session tokens
+        '/admin/revoke-user-session', // needs those tokens
+        '/admin/set-user-password', // an administrator would know the password
+        '/admin/create-user', // would skip the CGU and age declarations
+        '/admin/update-user', // could change the email or its verification
+        '/admin/has-permission',
+    ],
     advanced: {
         // Better Auth skips its Origin/callback URL checks when NODE_ENV is "test": keep them
         // on everywhere, so the tests exercise the production behavior.
