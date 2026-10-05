@@ -1,5 +1,5 @@
 # Build context: repository root (see docker-compose.yml).
-FROM node:24-alpine AS builder
+FROM node:26-alpine AS builder
 WORKDIR /app
 RUN apk add --no-cache openssl
 # Workspace manifests first so the dependency layer is cached across source edits.
@@ -15,7 +15,7 @@ RUN npm run build -w shared
 COPY backend ./backend
 RUN cd backend && npx prisma generate
 
-FROM node:24-alpine AS runner
+FROM node:26-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 RUN apk add --no-cache openssl
