@@ -18,4 +18,4 @@ function errorHandler(err, req, res, _next) {
     res.status(500).json({ error: 'Internal server error' });
 }
 
-module.exports = errorHandler;
+export default errorHandler;

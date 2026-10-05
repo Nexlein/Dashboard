@@ -23,4 +23,4 @@ async function getVerifiedGitHubEmail(accessToken) {
     return verified?.email;
 }
 
-module.exports = { getGitHubProfile, getVerifiedGitHubEmail };
+export { getGitHubProfile, getVerifiedGitHubEmail };

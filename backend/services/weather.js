@@ -1,6 +1,6 @@
 const MAX_CACHE_TTL_MS = 5 * 60 * 1000;
 const MIN_REFRESH_RATE_SECONDS = 60;
-const { getCache, setCache, clearCache } = require('../utils/redisCache');
+import { getCache, setCache, clearCache } from '../utils/redisCache.js';
 
 class WeatherServiceError extends Error {
     constructor(message, statusCode = 502) {
@@ -169,7 +169,7 @@ async function verifyCredentials(credentials) {
     await fetchOpenWeather('/geo/1.0/direct', { q: 'London', limit: '1' }, apiKey);
 }
 
-module.exports = {
+export default {
     name: 'weather',
     displayName: 'OpenWeather',
     description: 'Current weather and forecasts',

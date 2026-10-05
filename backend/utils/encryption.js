@@ -1,4 +1,4 @@
-const crypto = require('node:crypto');
+import crypto from 'node:crypto';
 
 // AES-256-GCM with a key derived from ENCRYPTION_KEY (JWT_SECRET when unset).
 // One cipher, two storage formats:
@@ -74,7 +74,7 @@ function decryptString(text) {
     return open({ iv: match[1], authTag: match[2], data: match[3] });
 }
 
-module.exports = {
+export {
     getEncryptionKey,
     encryptJson,
     decryptJson,

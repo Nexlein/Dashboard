@@ -1,7 +1,7 @@
-module.exports = {
-    createClient: () => ({
-        on: jest.fn(),
-        connect: jest.fn().mockResolvedValue(true),
-        isReady: false,
-    }),
-};
+import { vi } from 'vitest';
+
+export const createClient = () => ({
+    on: vi.fn(),
+    connect: vi.fn().mockResolvedValue(true),
+    isReady: false,
+});

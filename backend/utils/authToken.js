@@ -1,5 +1,5 @@
-const jwt = require('jsonwebtoken');
-const env = require('./env');
+import jwt from 'jsonwebtoken';
+import env from './env.js';
 
 function normalizeEmail(value) {
     return typeof value === 'string' ? value.trim().toLowerCase() : '';
@@ -12,4 +12,4 @@ function signAuthToken(user) {
     });
 }
 
-module.exports = { normalizeEmail, signAuthToken };
+export { normalizeEmail, signAuthToken };

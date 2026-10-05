@@ -1,31 +1,36 @@
-process.env.JWT_SECRET = 'test-secret-with-at-least-32-characters!';
+import { describe, test, expect, vi, beforeEach } from 'vitest';
+import request from 'supertest';
+import jwt from 'jsonwebtoken';
 
-const request = require('supertest');
-const jwt = require('jsonwebtoken');
-
-jest.mock('@prisma/client', () => {
+vi.mock('@prisma/client', () => {
     const mockPrisma = {
         user: {
-            findUnique: jest.fn(),
-            findMany: jest.fn(),
-            delete: jest.fn(),
+            findUnique: vi.fn(),
+            findMany: vi.fn(),
+            delete: vi.fn(),
         },
     };
 
     return {
-        PrismaClient: jest.fn(() => mockPrisma),
+        PrismaClient: vi.fn(function () {
+            return mockPrisma;
+        }),
     };
 });
 
-const { PrismaClient } = require('@prisma/client');
+import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
-const app = require('../app');
+import app from '../app.js';
+// Runs before the imports below: the app reads these when it loads.
+vi.hoisted(() => {
+    process.env.JWT_SECRET = 'test-secret-with-at-least-32-characters!';
+});
 
 const adminToken = jwt.sign({ userId: 1, isAdmin: true }, process.env.JWT_SECRET);
 
 describe('Admin routes', () => {
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
     });
 
     test('rejects unauthenticated requests', async () => {

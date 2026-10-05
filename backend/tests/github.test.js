@@ -1,26 +1,35 @@
-process.env.JWT_SECRET = 'github-service-test-secret';
-const { decryptString } = require('../utils/encryption');
-const githubService = require('../services/github');
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { decryptString } from '../utils/encryption.js';
+import githubService from '../services/github.js';
 
-jest.mock('@prisma/client', () => {
+vi.mock('@prisma/client', () => {
     const mPrisma = {
         oAuthToken: {
-            update: jest.fn(),
+            update: vi.fn(),
         },
     };
-    return { PrismaClient: jest.fn(() => mPrisma) };
+    return {
+        PrismaClient: vi.fn(function () {
+            return mPrisma;
+        }),
+    };
 });
 
-const { PrismaClient } = require('@prisma/client');
+import { PrismaClient } from '@prisma/client';
+// Runs before the imports below: the app reads these when it loads.
+vi.hoisted(() => {
+    process.env.JWT_SECRET = 'github-service-test-secret';
+});
+
 const prisma = new PrismaClient();
 
-global.fetch = jest.fn();
+global.fetch = vi.fn();
 
 describe('GitHub Service', () => {
     let mockContext;
 
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
         githubService.clearCache();
         process.env.GITHUB_CLIENT_ID = 'test-client';
         process.env.GITHUB_CLIENT_SECRET = 'test-secret';

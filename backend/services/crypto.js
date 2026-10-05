@@ -3,7 +3,7 @@ const MAX_CACHE_TTL_MS = 5 * 60 * 1000;
 const MIN_REFRESH_RATE_SECONDS = 60;
 const MAX_CHART_COINS = 8;
 const COINGECKO_HISTORY_START = 1230768000; // 2009-01-01, before the first crypto market data.
-const { getCache, setCache, clearCache } = require('../utils/redisCache');
+import { getCache, setCache, clearCache } from '../utils/redisCache.js';
 
 class CryptoServiceError extends Error {
     constructor(message, statusCode = 502) {
@@ -291,7 +291,7 @@ async function execute(widgetName, params = {}, options = {}) {
     return data;
 }
 
-module.exports = {
+export default {
     name: 'crypto',
     displayName: 'CoinGecko',
     description: 'Cryptocurrency prices and market history',

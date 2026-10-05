@@ -1,7 +1,7 @@
-const prisma = require('../utils/prisma');
-const asyncHandler = require('../utils/asyncHandler');
+import prisma from '../utils/prisma.js';
+import asyncHandler from '../utils/asyncHandler.js';
 
-exports.getUsers = asyncHandler(async (req, res) => {
+export const getUsers = asyncHandler(async (req, res) => {
     try {
         const users = await prisma.user.findMany({
             select: {
@@ -23,7 +23,7 @@ exports.getUsers = asyncHandler(async (req, res) => {
     }
 });
 
-exports.deleteUser = asyncHandler(async (req, res) => {
+export const deleteUser = asyncHandler(async (req, res) => {
     const userId = Number(req.params.id);
     if (!Number.isInteger(userId) || userId <= 0) {
         return res.status(400).json({ error: 'Invalid user ID' });

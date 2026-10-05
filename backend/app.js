@@ -1,27 +1,27 @@
-require('dotenv').config({ path: require('node:path').join(__dirname, '.env') });
-const env = require('./utils/env'); // Validates environment variables at boot (exits on error)
+// First import: loads .env and validates the environment (exits on error).
+import env from './utils/env.js';
 
-const express = require('express');
-const cors = require('cors');
-const cookieParser = require('cookie-parser');
-const helmet = require('helmet');
+import express from 'express';
+import cors from 'cors';
+import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
 
-const adminRoutes = require('./routes/admin');
-const authRoutes = require('./routes/auth');
-const aboutRoutes = require('./routes/about');
-const widgetRoutes = require('./routes/widgets');
-const serviceRoutes = require('./routes/services');
-const healthRoutes = require('./routes/health');
-const chatbotRoutes = require('./routes/chatbot');
+import adminRoutes from './routes/admin.js';
+import authRoutes from './routes/auth.js';
+import aboutRoutes from './routes/about.js';
+import widgetRoutes from './routes/widgets.js';
+import serviceRoutes from './routes/services.js';
+import healthRoutes from './routes/health.js';
+import chatbotRoutes from './routes/chatbot.js';
 
-const authMiddleware = require('./middleware/auth');
-const adminMiddleware = require('./middleware/admin');
-const errorHandler = require('./middleware/errorHandler');
-const { createRateLimiter } = require('./utils/rateLimit');
-const { allowedOrigins } = require('./utils/origins');
+import authMiddleware from './middleware/auth.js';
+import adminMiddleware from './middleware/admin.js';
+import errorHandler from './middleware/errorHandler.js';
+import { createRateLimiter } from './utils/rateLimit.js';
+import { allowedOrigins } from './utils/origins.js';
 
-const swaggerUi = require('swagger-ui-express');
-const swaggerJsdoc = require('swagger-jsdoc');
+import swaggerUi from 'swagger-ui-express';
+import swaggerJsdoc from 'swagger-jsdoc';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -81,4 +81,4 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use(errorHandler);
 
-module.exports = app;
+export default app;

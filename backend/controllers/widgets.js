@@ -1,9 +1,9 @@
-const { z } = require('zod');
-const { encryptJson, decryptJson } = require('../utils/encryption');
-const registry = require('../services/registry');
-const asyncHandler = require('../utils/asyncHandler');
+import { z } from 'zod';
+import { encryptJson, decryptJson } from '../utils/encryption.js';
+import registry from '../services/registry.js';
+import asyncHandler from '../utils/asyncHandler.js';
 
-const prisma = require('../utils/prisma');
+import prisma from '../utils/prisma.js';
 const MIN_REFRESH_RATE_SECONDS = 60;
 
 const layoutSchema = z.object({
@@ -58,7 +58,7 @@ function invalid(res, result) {
     return res.status(400).json({ error: result.error.issues[0].message });
 }
 
-exports.getWidgets = asyncHandler(async (req, res) => {
+export const getWidgets = asyncHandler(async (req, res) => {
     const widgets = await prisma.widgetConfig.findMany({ where: { userId: req.user.userId } });
     const decryptedWidgets = widgets.map((w) => ({
         ...w,
@@ -68,7 +68,7 @@ exports.getWidgets = asyncHandler(async (req, res) => {
     res.json(decryptedWidgets);
 });
 
-exports.addWidget = asyncHandler(async (req, res) => {
+export const addWidget = asyncHandler(async (req, res) => {
     const validated = createWidgetSchema.safeParse(req.body);
     if (!validated.success) return invalid(res, validated);
     const { serviceName, widgetName, params, refreshRate, layout } = validated.data;
@@ -126,7 +126,7 @@ exports.addWidget = asyncHandler(async (req, res) => {
     });
 });
 
-exports.updateLayout = asyncHandler(async (req, res) => {
+export const updateLayout = asyncHandler(async (req, res) => {
     const validated = updateLayoutSchema.safeParse(req.body);
     if (!validated.success) return invalid(res, validated);
     const { layouts } = validated.data;
@@ -141,7 +141,7 @@ exports.updateLayout = asyncHandler(async (req, res) => {
     res.status(204).send();
 });
 
-exports.getWidgetData = asyncHandler(async (req, res) => {
+export const getWidgetData = asyncHandler(async (req, res) => {
     const widgetId = parseWidgetId(req.params.id);
     if (!widgetId) return res.status(400).json({ error: 'Invalid widget id' });
     const widget = await prisma.widgetConfig.findUnique({ where: { id: widgetId } });
@@ -181,7 +181,7 @@ exports.getWidgetData = asyncHandler(async (req, res) => {
     res.json(data);
 });
 
-exports.updateWidget = asyncHandler(async (req, res) => {
+export const updateWidget = asyncHandler(async (req, res) => {
     const widgetId = parseWidgetId(req.params.id);
     if (!widgetId) return res.status(400).json({ error: 'Invalid widget id' });
     const validated = updateWidgetSchema.safeParse(req.body);
@@ -205,7 +205,7 @@ exports.updateWidget = asyncHandler(async (req, res) => {
     res.json({ ...updated, params: decryptJson(updated.params) });
 });
 
-exports.deleteWidget = asyncHandler(async (req, res) => {
+export const deleteWidget = asyncHandler(async (req, res) => {
     const widgetId = parseWidgetId(req.params.id);
     if (!widgetId) return res.status(400).json({ error: 'Invalid widget id' });
     const existing = await prisma.widgetConfig.findUnique({ where: { id: widgetId } });
@@ -217,7 +217,7 @@ exports.deleteWidget = asyncHandler(async (req, res) => {
     res.status(204).send();
 });
 
-exports.chatWidget = asyncHandler(async (req, res) => {
+export const chatWidget = asyncHandler(async (req, res) => {
     const widgetId = parseWidgetId(req.params.id);
     if (!widgetId) return res.status(400).json({ error: 'Invalid widget id' });
     const validated = chatSchema.safeParse(req.body);

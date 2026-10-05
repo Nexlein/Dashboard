@@ -1,6 +1,6 @@
-const { rateLimit } = require('express-rate-limit');
-const { RedisStore } = require('rate-limit-redis');
-const { redisClient } = require('./redisCache');
+import { rateLimit } from 'express-rate-limit';
+import { RedisStore } from 'rate-limit-redis';
+import { redisClient } from './redisCache.js';
 
 /**
  * express-rate-limit store whose counters live in Redis, so every replica shares them.
@@ -71,4 +71,4 @@ function createRateLimiter({ name, windowMs, limit, message }) {
     });
 }
 
-module.exports = { createRateLimiter, SharedRedisStore };
+export { createRateLimiter, SharedRedisStore };

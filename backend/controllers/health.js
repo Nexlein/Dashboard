@@ -1,6 +1,6 @@
-const prisma = require('../utils/prisma');
+import prisma from '../utils/prisma.js';
 
-exports.checkHealth = async (req, res) => {
+export const checkHealth = async (req, res) => {
     try {
         await prisma.$queryRaw`SELECT 1`;
         res.status(200).json({

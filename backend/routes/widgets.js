@@ -1,6 +1,6 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const widgetsController = require('../controllers/widgets');
+import * as widgetsController from '../controllers/widgets.js';
 
 router.get('/', widgetsController.getWidgets);
 router.post('/', widgetsController.addWidget);
@@ -10,4 +10,4 @@ router.put('/:id', widgetsController.updateWidget);
 router.delete('/:id', widgetsController.deleteWidget);
 router.post('/:id/chat', widgetsController.chatWidget);
 
-module.exports = router;
+export default router;

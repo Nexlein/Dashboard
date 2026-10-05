@@ -1,33 +1,43 @@
-process.env.JWT_SECRET = 'gdpr-test-secret-with-at-least-32-chars!';
-process.env.ENCRYPTION_KEY = 'gdpr-encryption-test-secret-32chars!!';
-process.env.GITHUB_CLIENT_ID = 'test-client';
-process.env.GITHUB_CLIENT_SECRET = 'test-client-secret';
-process.env.GITHUB_CALLBACK_URL = 'http://localhost:8080/auth/github/callback';
-
-const request = require('supertest');
-const jwt = require('jsonwebtoken');
-jest.mock('@prisma/client', () => ({
-    PrismaClient: jest.fn(() => ({
-        $transaction: jest.fn(),
-        user: { findUnique: jest.fn(), update: jest.fn(), create: jest.fn(), delete: jest.fn() },
-        oAuthToken: { upsert: jest.fn(), findUnique: jest.fn() },
-    })),
+import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
+import request from 'supertest';
+import jwt from 'jsonwebtoken';
+vi.mock('@prisma/client', () => ({
+    PrismaClient: vi.fn(function () {
+        return {
+            $transaction: vi.fn(),
+            user: { findUnique: vi.fn(), update: vi.fn(), create: vi.fn(), delete: vi.fn() },
+            oAuthToken: { upsert: vi.fn(), findUnique: vi.fn() },
+        };
+    }),
 }));
-const { PrismaClient } = require('@prisma/client');
-const express = require('express');
+import { PrismaClient } from '@prisma/client';
+import express from 'express';
+import cookieParser from 'cookie-parser';
+import authRouter from '../routes/auth.js';
+import { encryptJson, encryptString, decryptString } from '../utils/encryption.js';
+
+// Same middleware stack as app.js for the auth routes.
 const app = express();
 app.use(express.json());
-app.use(require('cookie-parser')());
-app.use('/auth', require('../routes/auth'));
+app.use(cookieParser());
+app.use('/auth', authRouter);
 const prisma = PrismaClient.mock.results[0].value;
-const { encryptJson, encryptString, decryptString } = require('../utils/encryption');
+// Runs before the imports below: the app reads these when it loads.
+vi.hoisted(() => {
+    process.env.JWT_SECRET = 'gdpr-test-secret-with-at-least-32-chars!';
+    process.env.ENCRYPTION_KEY = 'gdpr-encryption-test-secret-32chars!!';
+    process.env.GITHUB_CLIENT_ID = 'test-client';
+    process.env.GITHUB_CLIENT_SECRET = 'test-client-secret';
+    process.env.GITHUB_CALLBACK_URL = 'http://localhost:8080/auth/github/callback';
+});
+
 const authorization = `Bearer ${jwt.sign({ userId: 42 }, process.env.JWT_SECRET)}`;
 
 beforeEach(() => {
-    jest.resetAllMocks();
+    vi.resetAllMocks();
     prisma.$transaction.mockImplementation((transaction) => transaction(prisma));
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 /** JWT stored in the session cookie set by the response. */
 function sessionToken(res) {
@@ -97,7 +107,7 @@ describe('Profile and data rights', () => {
         prisma.oAuthToken.findUnique.mockResolvedValue({
             accessToken: encryptString('github-token'),
         });
-        jest.spyOn(global, 'fetch').mockResolvedValue({
+        vi.spyOn(global, 'fetch').mockResolvedValue({
             ok: true,
             json: async () => ({ id: 142 }),
         });
@@ -121,7 +131,7 @@ describe('Profile and data rights', () => {
     test('keeps the old email when the legacy GitHub identity cannot be verified', async () => {
         prisma.user.findUnique.mockResolvedValue({ email: 'github@example.com', password: null });
         prisma.oAuthToken.findUnique.mockResolvedValue({ accessToken: encryptString('expired') });
-        jest.spyOn(global, 'fetch').mockResolvedValue({
+        vi.spyOn(global, 'fetch').mockResolvedValue({
             ok: false,
             json: async () => ({ message: 'Bad credentials' }),
         });
@@ -282,7 +292,7 @@ describe('Age confirmation', () => {
     async function githubCallback(query = {}, callbackQuery = {}) {
         const start = await request(app).get('/auth/github/login').query(query).expect(302);
         const state = new URL(start.headers.location).searchParams.get('state');
-        jest.spyOn(global, 'fetch')
+        vi.spyOn(global, 'fetch')
             .mockResolvedValueOnce({
                 ok: true,
                 json: async () => ({ access_token: 'github-access' }),
@@ -350,7 +360,7 @@ describe('GitHub identity after profile changes', () => {
         prisma.oAuthToken.upsert.mockResolvedValue({ id: 1 });
         const start = await request(app).get('/auth/github/login').expect(302);
         const state = new URL(start.headers.location).searchParams.get('state');
-        jest.spyOn(global, 'fetch')
+        vi.spyOn(global, 'fetch')
             .mockResolvedValueOnce({ ok: true, json: async () => ({ access_token: 'token' }) })
             .mockResolvedValueOnce({
                 ok: true,
@@ -376,7 +386,7 @@ describe('GitHub identity validation', () => {
             .query({ cguAccepted: 'true', is16OrOlder: 'true' })
             .expect(302);
         const state = new URL(start.headers.location).searchParams.get('state');
-        jest.spyOn(global, 'fetch')
+        vi.spyOn(global, 'fetch')
             .mockResolvedValueOnce({ ok: true, json: async () => ({ access_token: 'token' }) })
             .mockResolvedValueOnce({
                 ok: true,

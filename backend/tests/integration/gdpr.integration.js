@@ -1,8 +1,9 @@
 // Run against a disposable PostgreSQL database, never a development/production DB.
-const assert = require('node:assert/strict');
-const { spawn } = require('node:child_process');
-const { randomUUID, randomInt } = require('node:crypto');
-const net = require('node:net');
+import path from 'node:path';
+import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
+import { randomUUID, randomInt } from 'node:crypto';
+import net from 'node:net';
 
 if (!process.env.TEST_DATABASE_URL)
     throw new Error('TEST_DATABASE_URL must point to an isolated test database');
@@ -15,9 +16,9 @@ process.env.GITHUB_CLIENT_SECRET = 'integration-client-secret';
 process.env.GITHUB_CALLBACK_URL = 'http://localhost/auth/github/callback';
 process.env.TEST_GITHUB_ID = String(randomInt(1000000, 1000000000));
 process.env.TEST_GITHUB_EMAIL = `${randomUUID()}@integration.test`;
-const { PrismaClient } = require('@prisma/client');
-const jwt = require('jsonwebtoken');
-const { encryptJson, encryptString, decryptString } = require('../../utils/encryption');
+import { PrismaClient } from '@prisma/client';
+import jwt from 'jsonwebtoken';
+import { encryptJson, encryptString, decryptString } from '../../utils/encryption.js';
 const prisma = new PrismaClient();
 let child;
 const ids = [];
@@ -68,9 +69,9 @@ async function main() {
     });
     child = spawn(
         process.execPath,
-        ['--require', require.resolve('./github.fixture'), 'server.js'],
+        ['--require', path.join(import.meta.dirname, 'github.fixture.cjs'), 'server.js'],
         {
-            cwd: require('node:path').join(__dirname, '../..'),
+            cwd: path.join(import.meta.dirname, '../..'),
             env: { ...process.env, PORT: String(port) },
             stdio: ['ignore', 'pipe', 'inherit'],
         },

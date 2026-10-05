@@ -1,18 +1,26 @@
-const { spawnSync } = require('node:child_process');
-const path = require('node:path');
+import { describe, it, expect } from 'vitest';
+import { spawnSync } from 'node:child_process';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
-const ENV_MODULE = path.join(__dirname, '..', 'utils', 'env.js');
+const ENV_MODULE = path.join(import.meta.dirname, '..', 'utils', 'env.js');
 const VALID = {
     PATH: process.env.PATH,
     DATABASE_URL: 'postgresql://user:password@localhost:5432/dashboard',
     JWT_SECRET: 'a'.repeat(32),
+    // Keeps utils/env from reading the developer's backend/.env.
+    NODE_ENV: 'test',
 };
 
 // utils/env exits the process on invalid input, so load it in a child process.
 function loadEnv(overrides) {
     const result = spawnSync(
         process.execPath,
-        ['-e', `process.stdout.write(JSON.stringify(require(${JSON.stringify(ENV_MODULE)})))`],
+        [
+            '-e',
+            `import(${JSON.stringify(pathToFileURL(ENV_MODULE).href)})` +
+                '.then((m) => process.stdout.write(JSON.stringify(m.default)))',
+        ],
         { env: { ...VALID, ...overrides }, encoding: 'utf8' },
     );
     return {

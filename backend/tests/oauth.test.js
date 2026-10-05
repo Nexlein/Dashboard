@@ -1,30 +1,36 @@
-const request = require('supertest');
-const jwt = require('jsonwebtoken');
+import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from 'vitest';
+import request from 'supertest';
+import jwt from 'jsonwebtoken';
 
-jest.mock('@prisma/client', () => {
+vi.mock('@prisma/client', () => {
     const mockPrisma = {
-        $transaction: jest.fn((transaction) => transaction(mockPrisma)),
-        user: { update: jest.fn() },
+        $transaction: vi.fn((transaction) => transaction(mockPrisma)),
+        user: { update: vi.fn() },
         oAuthToken: {
-            upsert: jest.fn(),
+            upsert: vi.fn(),
         },
     };
 
     return {
-        PrismaClient: jest.fn(() => mockPrisma),
+        PrismaClient: vi.fn(function () {
+            return mockPrisma;
+        }),
     };
 });
 
 const originalEnv = { ...process.env };
-process.env.JWT_SECRET = 'oauth-test-secret-with-at-least-32-chars!';
-process.env.GITHUB_CLIENT_ID = 'test-client-id';
-process.env.GITHUB_CLIENT_SECRET = 'test-client-secret';
-process.env.GITHUB_CALLBACK_URL = 'http://localhost:8080/auth/github/callback';
 
-const app = require('../app');
-const { PrismaClient } = require('@prisma/client');
+import app from '../app.js';
+import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
-const { decryptString } = require('../utils/encryption');
+import { decryptString } from '../utils/encryption.js';
+// Runs before the imports below: the app reads these when it loads.
+vi.hoisted(() => {
+    process.env.JWT_SECRET = 'oauth-test-secret-with-at-least-32-chars!';
+    process.env.GITHUB_CLIENT_ID = 'test-client-id';
+    process.env.GITHUB_CLIENT_SECRET = 'test-client-secret';
+    process.env.GITHUB_CALLBACK_URL = 'http://localhost:8080/auth/github/callback';
+});
 
 function authToken(userId = 1) {
     return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '1h' });
@@ -54,7 +60,7 @@ function callback(link, query = { code: 'github-code' }) {
 describe('GitHub account linking', () => {
     beforeEach(() => {
         prisma.oAuthToken.upsert.mockReset().mockResolvedValue({ id: 1 });
-        jest.spyOn(global, 'fetch').mockImplementation(async (url) => ({
+        vi.spyOn(global, 'fetch').mockImplementation(async (url) => ({
             ok: true,
             json: async () =>
                 url === 'https://api.github.com/user'
@@ -64,8 +70,8 @@ describe('GitHub account linking', () => {
     });
 
     afterEach(() => {
-        jest.restoreAllMocks();
-        jest.useRealTimers();
+        vi.restoreAllMocks();
+        vi.useRealTimers();
     });
 
     afterAll(() => {
@@ -201,16 +207,16 @@ describe('GitHub account linking', () => {
     it('rejects an expired request even before its cleanup timer runs', async () => {
         const link = await startLink();
         const now = Date.now();
-        jest.spyOn(Date, 'now').mockReturnValue(now + 10 * 60 * 1000 + 1);
+        vi.spyOn(Date, 'now').mockReturnValue(now + 10 * 60 * 1000 + 1);
         const response = await callback(link).expect(400);
         expect(response.body.error).toBe('Unknown or already used state');
         expect(global.fetch).not.toHaveBeenCalled();
     });
 
     it('removes abandoned requests automatically after ten minutes', async () => {
-        jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] });
+        vi.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] });
         const link = await startLink();
-        jest.advanceTimersByTime(10 * 60 * 1000 + 1);
+        vi.advanceTimersByTime(10 * 60 * 1000 + 1);
         const response = await callback(link).expect(400);
         expect(response.body.error).toBe('Unknown or already used state');
         expect(global.fetch).not.toHaveBeenCalled();

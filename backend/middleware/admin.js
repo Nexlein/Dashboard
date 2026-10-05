@@ -1,4 +1,4 @@
-const prisma = require('../utils/prisma');
+import prisma from '../utils/prisma.js';
 
 async function requireAdmin(req, res, next) {
     try {
@@ -17,4 +17,4 @@ async function requireAdmin(req, res, next) {
     }
 }
 
-module.exports = requireAdmin;
+export default requireAdmin;

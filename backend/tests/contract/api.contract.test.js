@@ -1,6 +1,7 @@
-const request = require('supertest');
-const app = require('../../app'); // Assumes app.js is the express app
-const { registerSchema } = require('shared');
+import { describe, it, expect } from 'vitest';
+import request from 'supertest';
+import app from '../../app.js';
+import { registerSchema } from 'shared';
 
 describe('API Contract Tests', () => {
     describe('POST /auth/register contract', () => {

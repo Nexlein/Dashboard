@@ -1,4 +1,4 @@
-const { createClient } = require('redis');
+import { createClient } from 'redis';
 
 const localCache = new Map();
 let redisClient = null;
@@ -46,4 +46,4 @@ async function clearCache() {
     localCache.clear();
 }
 
-module.exports = { getCache, setCache, deleteCache, clearCache, redisClient };
+export { getCache, setCache, deleteCache, clearCache, redisClient };

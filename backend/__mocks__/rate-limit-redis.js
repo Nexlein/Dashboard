@@ -1,8 +1,2 @@
-module.exports = {
-    default: class RedisStore {
-        constructor() {}
-    },
-    RedisStore: class RedisStore {
-        constructor() {}
-    },
-};
+export class RedisStore {}
+export default RedisStore;

@@ -1,6 +1,6 @@
-const asyncHandler = require('../utils/asyncHandler');
+import asyncHandler from '../utils/asyncHandler.js';
 
-exports.getModels = asyncHandler(async (req, res) => {
+export const getModels = asyncHandler(async (req, res) => {
     const response = await fetch('http://ollama:11434/api/tags');
     if (!response.ok) {
         return res.status(response.status).json({ error: 'Failed to fetch models from Ollama' });
@@ -9,7 +9,7 @@ exports.getModels = asyncHandler(async (req, res) => {
     res.json(data);
 });
 
-exports.pullModel = asyncHandler(async (req, res) => {
+export const pullModel = asyncHandler(async (req, res) => {
     const model = req.body.model;
     if (!model) return res.status(400).json({ error: 'Model name is required' });
 

@@ -1,31 +1,35 @@
-const { EventEmitter } = require('node:events');
-const express = require('express');
-const request = require('supertest');
+import { describe, test, expect, vi, beforeEach } from 'vitest';
+import { EventEmitter } from 'node:events';
+import express from 'express';
+import request from 'supertest';
 
-const mockStores = [];
-const mockInitFailures = [];
-jest.mock('rate-limit-redis', () => ({
-    RedisStore: jest.fn().mockImplementation(() => {
+// Shared with the hoisted vi.mock factory below.
+const { mockStores, mockInitFailures } = vi.hoisted(() => ({
+    mockStores: [],
+    mockInitFailures: [],
+}));
+vi.mock('rate-limit-redis', () => ({
+    RedisStore: vi.fn(function () {
         const failure = mockInitFailures.shift();
         const store = {
             init: failure
-                ? jest.fn().mockRejectedValue(failure)
-                : jest.fn().mockResolvedValue(undefined),
-            increment: jest.fn().mockResolvedValue({ totalHits: 1, resetTime: new Date() }),
-            decrement: jest.fn().mockResolvedValue(undefined),
-            resetKey: jest.fn().mockResolvedValue(undefined),
+                ? vi.fn().mockRejectedValue(failure)
+                : vi.fn().mockResolvedValue(undefined),
+            increment: vi.fn().mockResolvedValue({ totalHits: 1, resetTime: new Date() }),
+            decrement: vi.fn().mockResolvedValue(undefined),
+            resetKey: vi.fn().mockResolvedValue(undefined),
         };
         mockStores.push(store);
         return store;
     }),
 }));
 
-const { SharedRedisStore } = require('../utils/rateLimit');
+import { SharedRedisStore, createRateLimiter } from '../utils/rateLimit.js';
 
 function fakeClient({ ready = false } = {}) {
     const client = new EventEmitter();
     client.isReady = ready;
-    client.sendCommand = jest.fn();
+    client.sendCommand = vi.fn();
     client.becomeReady = () => {
         client.isReady = true;
         client.emit('ready');
@@ -67,7 +71,7 @@ describe('SharedRedisStore', () => {
         const client = fakeClient();
         const store = new SharedRedisStore(client, 'rl:test:');
         store.init({ windowMs: 1000 });
-        jest.spyOn(console, 'error').mockImplementation(() => {});
+        vi.spyOn(console, 'error').mockImplementation(() => {});
 
         mockInitFailures.push(new Error('connection lost'));
         client.becomeReady();
@@ -105,7 +109,6 @@ describe('createRateLimiter', () => {
     }
 
     test('limits requests per IP (in memory under test)', async () => {
-        const { createRateLimiter } = require('../utils/rateLimit');
         const app = appWith(
             createRateLimiter({ name: 'mem', windowMs: 60000, limit: 2, message: 'Slow down' }),
         );
@@ -119,18 +122,18 @@ describe('createRateLimiter', () => {
     test('lets requests through when Redis is unavailable instead of failing or waiting', async () => {
         const previousEnv = process.env.NODE_ENV;
         process.env.NODE_ENV = 'production';
-        jest.spyOn(console, 'error').mockImplementation(() => {});
-        let limiter;
-        jest.isolateModules(() => {
-            jest.doMock('../utils/redisCache', () => ({ redisClient: fakeClient() }));
-            const { createRateLimiter } = require('../utils/rateLimit');
-            limiter = createRateLimiter({
-                name: 'down',
-                windowMs: 60000,
-                limit: 1,
-                message: 'Slow down',
-            });
+        vi.spyOn(console, 'error').mockImplementation(() => {});
+        // Fresh copy of utils/rateLimit bound to a Redis client that never becomes ready.
+        vi.resetModules();
+        vi.doMock('../utils/redisCache.js', () => ({ redisClient: fakeClient() }));
+        const isolated = await import('../utils/rateLimit.js');
+        const limiter = isolated.createRateLimiter({
+            name: 'down',
+            windowMs: 60000,
+            limit: 1,
+            message: 'Slow down',
         });
+        vi.doUnmock('../utils/redisCache.js');
         process.env.NODE_ENV = previousEnv;
 
         const app = appWith(limiter);

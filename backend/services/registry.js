@@ -1,13 +1,13 @@
-const weather = require('./weather');
-const github = require('./github');
-const youtube = require('./youtube');
-const chatbot = require('./chatbot');
-const crypto = require('./crypto');
+import weather from './weather.js';
+import github from './github.js';
+import youtube from './youtube.js';
+import chatbot from './chatbot.js';
+import crypto from './crypto.js';
 
 // Add new services to this array
 const services = [weather, github, youtube, crypto, chatbot];
 
-module.exports = {
+export default {
     getAllServices: () => services,
     getService: (name) => services.find((service) => service.name === name),
 };

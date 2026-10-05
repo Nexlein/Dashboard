@@ -1,4 +1,13 @@
-const { z } = require('zod');
+import path from 'node:path';
+import dotenv from 'dotenv';
+import { z } from 'zod';
+
+// Loads backend/.env before anything reads process.env. With ES modules a file's imports run
+// before its own code, so this module must be the first import of the entry points.
+// Tests set their own environment and must not depend on the developer's .env.
+if (process.env.NODE_ENV !== 'test') {
+    dotenv.config({ path: path.join(import.meta.dirname, '..', '.env'), quiet: true });
+}
 
 // Validates the environment once at boot and exits on error. Modules may still read
 // process.env at call time (tests change it per case); this schema is the single list
@@ -36,4 +45,4 @@ if (!_env.success) {
     process.exit(1);
 }
 
-module.exports = _env.data;
+export default _env.data;

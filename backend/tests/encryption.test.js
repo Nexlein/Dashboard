@@ -1,4 +1,5 @@
-const crypto = require('node:crypto');
+import { describe, test, expect, vi, beforeEach, afterAll } from 'vitest';
+import crypto from 'node:crypto';
 
 const originalEnv = { ...process.env };
 const KEY_SALT = 'dashboard-widget-encryption';
@@ -16,9 +17,9 @@ const STORED_STRING =
     'v1:19b9e71abb45a9f7a858b7d1:950e61bc0a00d43bb53974da5d11a36a:d2fa34fcf2fcd5a6f443c7b15705dafafd9e';
 
 // The module caches the derived key: reload it after changing the environment.
-function load() {
-    jest.resetModules();
-    return require('../utils/encryption');
+async function load() {
+    vi.resetModules();
+    return import('../utils/encryption.js');
 }
 
 function tamper(hex) {
@@ -36,28 +37,28 @@ afterAll(() => {
 describe('key derivation', () => {
     test.each(['a'.repeat(64), 'short-secret', 'é'.repeat(32)])(
         'derives the key from ENCRYPTION_KEY of any length (%#)',
-        (secret) => {
+        async (secret) => {
             process.env.ENCRYPTION_KEY = secret;
-            const { getEncryptionKey } = load();
+            const { getEncryptionKey } = await load();
             expect(getEncryptionKey()).toEqual(crypto.scryptSync(secret, KEY_SALT, 32));
         },
     );
 
-    test('falls back to JWT_SECRET when ENCRYPTION_KEY is unset', () => {
-        const { getEncryptionKey } = load();
+    test('falls back to JWT_SECRET when ENCRYPTION_KEY is unset', async () => {
+        const { getEncryptionKey } = await load();
         expect(getEncryptionKey()).toEqual(crypto.scryptSync(process.env.JWT_SECRET, KEY_SALT, 32));
     });
 
-    test('refuses to encrypt without any secret', () => {
+    test('refuses to encrypt without any secret', async () => {
         delete process.env.JWT_SECRET;
-        const { encryptString } = load();
+        const { encryptString } = await load();
         expect(() => encryptString('token')).toThrow(/must be set/);
     });
 });
 
 describe('JSON values', () => {
-    test('round-trips an object with a fresh IV each time', () => {
-        const { encryptJson, decryptJsonStrict } = load();
+    test('round-trips an object with a fresh IV each time', async () => {
+        const { encryptJson, decryptJsonStrict } = await load();
         const params = { city: 'Paris', coins: ['bitcoin'] };
         const sealed = encryptJson(params);
         expect(sealed).toMatchObject({ _encrypted: true });
@@ -66,58 +67,59 @@ describe('JSON values', () => {
         expect(encryptJson(params).iv).not.toBe(sealed.iv);
     });
 
-    test('passes through values that are not encrypted objects', () => {
-        const { encryptJson, decryptJsonStrict } = load();
+    test('passes through values that are not encrypted objects', async () => {
+        const { encryptJson, decryptJsonStrict } = await load();
         for (const value of [null, undefined, 'text', 42]) expect(encryptJson(value)).toBe(value);
         expect(decryptJsonStrict({ city: 'Paris' })).toEqual({ city: 'Paris' });
     });
 
-    test('reads payloads written by the previous implementation', () => {
+    test('reads payloads written by the previous implementation', async () => {
         process.env.ENCRYPTION_KEY = FIXTURE_SECRET;
-        expect(load().decryptJsonStrict(STORED_JSON)).toEqual({
+        expect((await load()).decryptJsonStrict(STORED_JSON)).toEqual({
             city: 'Paris',
             coins: ['bitcoin'],
         });
     });
 
-    test('strict decryption throws on tampering; decryptJson reports an error instead', () => {
-        const { encryptJson, decryptJson, decryptJsonStrict } = load();
+    test('strict decryption throws on tampering; decryptJson reports an error instead', async () => {
+        const { encryptJson, decryptJson, decryptJsonStrict } = await load();
         const sealed = encryptJson({ city: 'Paris' });
         const damaged = { ...sealed, data: tamper(sealed.data) };
         expect(() => decryptJsonStrict(damaged)).toThrow();
-        jest.spyOn(console, 'error').mockImplementation(() => {});
+        vi.spyOn(console, 'error').mockImplementation(() => {});
         expect(decryptJson(damaged)).toEqual({ error: 'Failed to decrypt parameters' });
     });
 });
 
 describe('string values', () => {
-    test('round-trips a token in the v1 format', () => {
-        const { encryptString, decryptString } = load();
+    test('round-trips a token in the v1 format', async () => {
+        const { encryptString, decryptString } = await load();
         const sealed = encryptString('github-token');
         expect(sealed).toMatch(/^v1:[a-f0-9]{24}:[a-f0-9]{32}:[a-f0-9]+$/);
         expect(decryptString(sealed)).toBe('github-token');
         expect(encryptString('github-token')).not.toBe(sealed);
     });
 
-    test('passes null and undefined through', () => {
-        const { encryptString, decryptString } = load();
+    test('passes null and undefined through', async () => {
+        const { encryptString, decryptString } = await load();
         expect(encryptString(null)).toBeNull();
         expect(decryptString(undefined)).toBeUndefined();
     });
 
-    test('reads tokens written by the previous implementation', () => {
+    test('reads tokens written by the previous implementation', async () => {
         process.env.ENCRYPTION_KEY = FIXTURE_SECRET;
-        expect(load().decryptString(STORED_STRING)).toBe('gho_legacyToken123');
+        expect((await load()).decryptString(STORED_STRING)).toBe('gho_legacyToken123');
     });
 
-    test('rejects plaintext, damaged and wrong-key values instead of sending them to GitHub', () => {
-        const { encryptString, decryptString } = load();
+    test('rejects plaintext, damaged and wrong-key values instead of sending them to GitHub', async () => {
+        const { encryptString, decryptString } = await load();
         expect(() => decryptString('plaintext-token')).toThrow(/not an encrypted string/);
         expect(() => decryptString('v1:broken')).toThrow();
         const sealed = encryptString('token');
         expect(() => decryptString(tamper(sealed))).toThrow();
 
         process.env.JWT_SECRET = 'another-secret';
-        expect(() => load().decryptString(sealed)).toThrow();
+        const reloaded = await load();
+        expect(() => reloaded.decryptString(sealed)).toThrow();
     });
 });

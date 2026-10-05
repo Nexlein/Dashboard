@@ -1,49 +1,59 @@
-process.env.JWT_SECRET = 'api-test-secret-that-is-long-enough-for-authentication-tests';
-
-const request = require('supertest');
-const jwt = require('jsonwebtoken');
-const app = require('../app');
-const weatherService = require('../services/weather');
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import request from 'supertest';
+import jwt from 'jsonwebtoken';
+import app from '../app.js';
+import weatherService from '../services/weather.js';
 
 // Mock Prisma Client
-jest.mock('@prisma/client', () => {
+vi.mock('@prisma/client', () => {
     const mPrisma = {
         user: {
-            findUnique: jest.fn(),
-            create: jest.fn(),
+            findUnique: vi.fn(),
+            create: vi.fn(),
         },
         widgetConfig: {
-            findMany: jest.fn(),
-            findUnique: jest.fn(),
-            create: jest.fn(),
-            update: jest.fn(),
-            updateMany: jest.fn(),
-            delete: jest.fn(),
+            findMany: vi.fn(),
+            findUnique: vi.fn(),
+            create: vi.fn(),
+            update: vi.fn(),
+            updateMany: vi.fn(),
+            delete: vi.fn(),
         },
         serviceConnection: {
-            findMany: jest.fn(),
-            findUnique: jest.fn(),
-            upsert: jest.fn(),
-            deleteMany: jest.fn(),
+            findMany: vi.fn(),
+            findUnique: vi.fn(),
+            upsert: vi.fn(),
+            deleteMany: vi.fn(),
         },
         oAuthToken: {
-            findMany: jest.fn(),
-            findUnique: jest.fn(),
-            upsert: jest.fn(),
-            deleteMany: jest.fn(),
+            findMany: vi.fn(),
+            findUnique: vi.fn(),
+            upsert: vi.fn(),
+            deleteMany: vi.fn(),
         },
-        $transaction: jest.fn(),
-        $queryRaw: jest.fn(),
+        $transaction: vi.fn(),
+        $queryRaw: vi.fn(),
     };
-    return { PrismaClient: jest.fn(() => mPrisma) };
+    return {
+        PrismaClient: vi.fn(function () {
+            return mPrisma;
+        }),
+    };
 });
 
-const { PrismaClient } = require('@prisma/client');
+import { PrismaClient } from '@prisma/client';
+import { encryptJson } from '../utils/encryption.js';
+import chatbotService from '../services/chatbot.js';
+// Runs before the imports below: the app reads these when it loads.
+vi.hoisted(() => {
+    process.env.JWT_SECRET = 'api-test-secret-that-is-long-enough-for-authentication-tests';
+});
+
 const prisma = new PrismaClient();
 
 describe('API Endpoints', () => {
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
     });
 
     describe('GET /health', () => {
@@ -290,13 +300,12 @@ describe('API Endpoints', () => {
         });
 
         it('should create a widget with encrypted params and return the public contract', async () => {
-            const { encryptJson } = require('../utils/encryption');
             prisma.serviceConnection.findUnique.mockResolvedValue({
                 id: 9,
                 encryptedCredentials: encryptJson({ apiKey: 'test' }),
             });
             prisma.widgetConfig.create.mockResolvedValue(mockWidget);
-            const executeSpy = jest.spyOn(weatherService, 'execute').mockResolvedValue({});
+            const executeSpy = vi.spyOn(weatherService, 'execute').mockResolvedValue({});
 
             const res = await request(app)
                 .post('/widgets')
@@ -366,7 +375,7 @@ describe('API Endpoints', () => {
                 serviceName: 'weather',
                 encryptedCredentials: { apiKey: 'test-key' },
             });
-            const execute = jest.spyOn(weatherService, 'execute').mockResolvedValue({
+            const execute = vi.spyOn(weatherService, 'execute').mockResolvedValue({
                 type: 'current_weather',
                 temperature: 19,
             });
@@ -470,7 +479,6 @@ describe('API Endpoints', () => {
         });
 
         describe('POST /widgets/:id/chat', () => {
-            const chatbotService = require('../services/chatbot');
             const chatWidget = {
                 ...mockWidget,
                 serviceName: 'chatbot',
@@ -481,7 +489,7 @@ describe('API Endpoints', () => {
 
             it('forwards the conversation to the chatbot service', async () => {
                 prisma.widgetConfig.findUnique.mockResolvedValue(chatWidget);
-                const chat = jest
+                const chat = vi
                     .spyOn(chatbotService, 'chat')
                     .mockResolvedValue({ reply: 'Hi there' });
 
@@ -505,7 +513,7 @@ describe('API Endpoints', () => {
                 const error = Object.assign(new Error('Ollama API Error: Not Found'), {
                     statusCode: 404,
                 });
-                const chat = jest.spyOn(chatbotService, 'chat').mockRejectedValue(error);
+                const chat = vi.spyOn(chatbotService, 'chat').mockRejectedValue(error);
 
                 const res = await request(app)
                     .post('/widgets/1/chat')
@@ -576,7 +584,7 @@ describe('API Endpoints', () => {
         });
 
         it('verifies and securely saves an OpenWeather API key', async () => {
-            const verify = jest.spyOn(weatherService, 'verifyCredentials').mockResolvedValue();
+            const verify = vi.spyOn(weatherService, 'verifyCredentials').mockResolvedValue();
             prisma.serviceConnection.upsert.mockResolvedValue(connection);
 
             const res = await request(app)

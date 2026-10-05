@@ -1,8 +1,9 @@
-const prisma = require('../utils/prisma');
+import { encryptString } from '../utils/encryption.js';
+import prisma from '../utils/prisma.js';
 
 const MAX_CACHE_TTL_MS = 5 * 60 * 1000;
 const MIN_REFRESH_RATE_SECONDS = 60;
-const { getCache, setCache, clearCache } = require('../utils/redisCache');
+import { getCache, setCache, clearCache } from '../utils/redisCache.js';
 
 async function refreshGitHubToken(userId, refreshToken) {
     if (!process.env.GITHUB_CLIENT_ID || !process.env.GITHUB_CLIENT_SECRET) {
@@ -28,7 +29,6 @@ async function refreshGitHubToken(userId, refreshToken) {
         throw new Error('Could not refresh GitHub token');
     }
 
-    const { encryptString } = require('../utils/encryption');
     await prisma.oAuthToken.update({
         where: { userId_provider: { userId, provider: 'github' } },
         data: {
@@ -77,7 +77,7 @@ async function fetchWithRefresh(url, context) {
     return res;
 }
 
-module.exports = {
+export default {
     name: 'github',
     displayName: 'GitHub',
     connection: {

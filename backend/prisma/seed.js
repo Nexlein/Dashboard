@@ -1,13 +1,13 @@
-const { PrismaClient } = require('@prisma/client');
-const bcrypt = require('bcrypt');
-const path = require('node:path');
+import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcrypt';
+import path from 'node:path';
 
-// Manually load dotenv so we can access JWT_SECRET / ENCRYPTION_KEY when seeding
-require('dotenv').config({
-    path: path.join(__dirname, '../.env'),
-});
+import dotenv from 'dotenv';
 
-const { encryptJson } = require('../utils/encryption');
+// Load backend/.env for JWT_SECRET / ENCRYPTION_KEY when seeding.
+dotenv.config({ path: path.join(import.meta.dirname, '../.env'), quiet: true });
+
+import { encryptJson } from '../utils/encryption.js';
 
 const prisma = new PrismaClient();
 

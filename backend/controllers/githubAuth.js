@@ -1,11 +1,11 @@
-const crypto = require('node:crypto');
-const { getCache, setCache, deleteCache } = require('../utils/redisCache');
-const { encryptString } = require('../utils/encryption');
-const { getGitHubProfile, getVerifiedGitHubEmail } = require('../services/githubIdentity');
-const asyncHandler = require('../utils/asyncHandler');
-const { normalizeEmail } = require('../utils/authToken');
-const { startSession } = require('../utils/session');
-const prisma = require('../utils/prisma');
+import crypto from 'node:crypto';
+import { getCache, setCache, deleteCache } from '../utils/redisCache.js';
+import { encryptString } from '../utils/encryption.js';
+import { getGitHubProfile, getVerifiedGitHubEmail } from '../services/githubIdentity.js';
+import asyncHandler from '../utils/asyncHandler.js';
+import { normalizeEmail } from '../utils/authToken.js';
+import { startSession } from '../utils/session.js';
+import prisma from '../utils/prisma.js';
 
 // GitHub OAuth: link an account to GitHub, or sign in / sign up with GitHub.
 
@@ -21,7 +21,7 @@ function githubCookieOptions(req) {
     };
 }
 
-exports.githubLink = asyncHandler(async (req, res) => {
+export const githubLink = asyncHandler(async (req, res) => {
     if (
         !process.env.GITHUB_CLIENT_ID ||
         !process.env.GITHUB_CLIENT_SECRET ||
@@ -56,7 +56,7 @@ exports.githubLink = asyncHandler(async (req, res) => {
     res.redirect(authorizationUrl);
 });
 
-exports.githubLogin = asyncHandler(async (req, res) => {
+export const githubLogin = asyncHandler(async (req, res) => {
     if (
         !process.env.GITHUB_CLIENT_ID ||
         !process.env.GITHUB_CLIENT_SECRET ||
@@ -91,7 +91,7 @@ exports.githubLogin = asyncHandler(async (req, res) => {
     res.redirect(authorizationUrl);
 });
 
-exports.githubCallback = asyncHandler(async (req, res) => {
+export const githubCallback = asyncHandler(async (req, res) => {
     const { code, state } = req.query;
     if (typeof state !== 'string' || !/^[a-f0-9]{64}$/.test(state))
         return res.status(400).json({ error: 'Missing or invalid state' });

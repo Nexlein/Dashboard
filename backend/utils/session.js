@@ -1,5 +1,5 @@
-const jwt = require('jsonwebtoken');
-const { signAuthToken } = require('./authToken');
+import jwt from 'jsonwebtoken';
+import { signAuthToken } from './authToken.js';
 
 // The JWT lives in an httpOnly cookie: page scripts (and so an XSS payload) cannot read it.
 const SESSION_COOKIE = 'dashboard_session';
@@ -26,4 +26,4 @@ function endSession(req, res) {
     res.clearCookie(SESSION_COOKIE, cookieOptions(req));
 }
 
-module.exports = { SESSION_COOKIE, startSession, endSession };
+export { SESSION_COOKIE, startSession, endSession };

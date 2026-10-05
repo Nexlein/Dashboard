@@ -1,6 +1,8 @@
+import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from 'vitest';
+import weather from '../services/weather.js';
+
 describe('Weather service', () => {
     const originalFetch = global.fetch;
-    const weather = require('../services/weather');
     const connectionOptions = {
         credentials: { apiKey: 'test-key' },
         cacheScope: 'user-1',
@@ -8,11 +10,11 @@ describe('Weather service', () => {
 
     beforeEach(() => {
         weather.clearCache();
-        global.fetch = jest.fn();
+        global.fetch = vi.fn();
     });
 
     afterEach(() => {
-        jest.restoreAllMocks();
+        vi.restoreAllMocks();
     });
 
     afterAll(() => {
@@ -110,7 +112,7 @@ describe('Weather service', () => {
     });
 
     it('expires cached data at the configured refresh interval', async () => {
-        jest.spyOn(Date, 'now').mockReturnValue(0);
+        vi.spyOn(Date, 'now').mockReturnValue(0);
         global.fetch
             .mockResolvedValueOnce({
                 ok: true,

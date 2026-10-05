@@ -1,20 +1,27 @@
-process.env.JWT_SECRET = 'session-test-secret-with-at-least-32-chars!';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import request from 'supertest';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 
-const request = require('supertest');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-
-jest.mock('@prisma/client', () => {
+vi.mock('@prisma/client', () => {
     const mockPrisma = {
-        user: { findUnique: jest.fn(), delete: jest.fn() },
-        widgetConfig: { updateMany: jest.fn() },
-        $transaction: jest.fn(),
+        user: { findUnique: vi.fn(), delete: vi.fn() },
+        widgetConfig: { updateMany: vi.fn() },
+        $transaction: vi.fn(),
     };
-    return { PrismaClient: jest.fn(() => mockPrisma) };
+    return {
+        PrismaClient: vi.fn(function () {
+            return mockPrisma;
+        }),
+    };
 });
 
-const { PrismaClient } = require('@prisma/client');
-const app = require('../app');
+import { PrismaClient } from '@prisma/client';
+import app from '../app.js';
+// Runs before the imports below: the app reads these when it loads.
+vi.hoisted(() => {
+    process.env.JWT_SECRET = 'session-test-secret-with-at-least-32-chars!';
+});
 
 const prisma = new PrismaClient();
 const FRONTEND = 'http://localhost:5173';
@@ -36,7 +43,7 @@ async function login(headers = {}) {
     return { res, cookie: sessionCookie(res).split(';')[0] };
 }
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => vi.clearAllMocks());
 
 describe('session cookie', () => {
     it('is set by login as httpOnly, and the token is not in the response body', async () => {

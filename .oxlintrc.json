@@ -69,12 +69,6 @@
             "rules": {
                 "no-undef": "error"
             }
-        },
-        {
-            "files": ["backend/tests/**", "backend/__mocks__/**", "backend/jest.setup.js"],
-            "env": {
-                "jest": true
-            }
         }
     ],
     "rules": {

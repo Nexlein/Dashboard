@@ -1,5 +1,5 @@
-const express = require('express');
-const registry = require('../services/registry');
+import express from 'express';
+import registry from '../services/registry.js';
 
 const router = express.Router();
 
@@ -15,4 +15,4 @@ router.get('/', (req, res) => {
     });
 });
 
-module.exports = router;
+export default router;

@@ -1,4 +1,5 @@
-const { getCache, setCache, clearCache } = require('../utils/redisCache');
+import { describe, test, expect, beforeEach } from 'vitest';
+import { getCache, setCache, clearCache } from '../utils/redisCache.js';
 
 describe('redisCache utility (fallback mode)', () => {
     beforeEach(async () => {

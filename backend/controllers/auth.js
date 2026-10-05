@@ -1,17 +1,17 @@
-const bcrypt = require('bcrypt');
-const { decryptString } = require('../utils/encryption');
-const { getGitHubProfile } = require('../services/githubIdentity');
-const { registerSchema, loginSchema, updateMeSchema } = require('shared');
-const asyncHandler = require('../utils/asyncHandler');
-const { normalizeEmail } = require('../utils/authToken');
-const { startSession, endSession } = require('../utils/session');
-const env = require('../utils/env');
-const prisma = require('../utils/prisma');
+import bcrypt from 'bcrypt';
+import { decryptString } from '../utils/encryption.js';
+import { getGitHubProfile } from '../services/githubIdentity.js';
+import { registerSchema, loginSchema, updateMeSchema } from 'shared';
+import asyncHandler from '../utils/asyncHandler.js';
+import { normalizeEmail } from '../utils/authToken.js';
+import { startSession, endSession } from '../utils/session.js';
+import env from '../utils/env.js';
+import prisma from '../utils/prisma.js';
 
 // Password registration/login and the current user's profile.
 // GitHub OAuth lives in githubAuth.js, GDPR export/deletion in account.js.
 
-exports.register = asyncHandler(async (req, res) => {
+export const register = asyncHandler(async (req, res) => {
     const validated = registerSchema.safeParse(req.body);
     if (!validated.success)
         return res.status(400).json({ error: validated.error.issues[0].message });
@@ -33,7 +33,7 @@ exports.register = asyncHandler(async (req, res) => {
     res.status(201).json({ message: 'User registered successfully', userId: user.id });
 });
 
-exports.login = asyncHandler(async (req, res) => {
+export const login = asyncHandler(async (req, res) => {
     const validated = loginSchema.safeParse(req.body);
     if (!validated.success)
         return res.status(400).json({ error: validated.error.issues[0].message });
@@ -50,12 +50,12 @@ exports.login = asyncHandler(async (req, res) => {
     res.json({ message: 'Login successful' });
 });
 
-exports.logout = (req, res) => {
+export const logout = (req, res) => {
     endSession(req, res);
     res.status(204).send();
 };
 
-exports.getMe = asyncHandler(async (req, res) => {
+export const getMe = asyncHandler(async (req, res) => {
     const user = await prisma.user.findUnique({
         where: { id: req.user.userId },
         select: { id: true, email: true, displayName: true },
@@ -64,7 +64,7 @@ exports.getMe = asyncHandler(async (req, res) => {
     res.json(user);
 });
 
-exports.updateMe = asyncHandler(async (req, res) => {
+export const updateMe = asyncHandler(async (req, res) => {
     const validated = updateMeSchema.safeParse(req.body);
     if (!validated.success)
         return res.status(400).json({ error: validated.error.issues[0].message });

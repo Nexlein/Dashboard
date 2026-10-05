@@ -1,11 +1,11 @@
-const { decryptJsonStrict } = require('../utils/encryption');
-const asyncHandler = require('../utils/asyncHandler');
-const prisma = require('../utils/prisma');
-const { endSession } = require('../utils/session');
+import { decryptJsonStrict } from '../utils/encryption.js';
+import asyncHandler from '../utils/asyncHandler.js';
+import prisma from '../utils/prisma.js';
+import { endSession } from '../utils/session.js';
 
 // GDPR: export and delete everything stored about the current user.
 
-exports.downloadData = asyncHandler(async (req, res) => {
+export const downloadData = asyncHandler(async (req, res) => {
     const user = await prisma.user.findUnique({
         where: { id: req.user.userId },
         select: {
@@ -48,7 +48,7 @@ exports.downloadData = asyncHandler(async (req, res) => {
     }
 });
 
-exports.deleteAccount = asyncHandler(async (req, res) => {
+export const deleteAccount = asyncHandler(async (req, res) => {
     try {
         await prisma.user.delete({ where: { id: req.user.userId } });
         endSession(req, res);

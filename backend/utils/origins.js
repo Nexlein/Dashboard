@@ -11,4 +11,4 @@ function isAllowedOrigin(origin) {
     return typeof origin === 'string' && allowedOrigins.includes(origin);
 }
 
-module.exports = { allowedOrigins, isAllowedOrigin };
+export { allowedOrigins, isAllowedOrigin };

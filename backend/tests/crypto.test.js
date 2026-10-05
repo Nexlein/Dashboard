@@ -1,6 +1,8 @@
+import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from 'vitest';
+import cryptoService from '../services/crypto.js';
+
 describe('Crypto service', () => {
     const originalFetch = global.fetch;
-    const cryptoService = require('../services/crypto');
     const connectionOptions = {
         credentials: { apiKey: 'demo-key' },
         cacheScope: 'user-1',
@@ -9,11 +11,11 @@ describe('Crypto service', () => {
 
     beforeEach(() => {
         cryptoService.clearCache();
-        global.fetch = jest.fn();
+        global.fetch = vi.fn();
     });
 
     afterEach(() => {
-        jest.restoreAllMocks();
+        vi.restoreAllMocks();
     });
 
     afterAll(() => {

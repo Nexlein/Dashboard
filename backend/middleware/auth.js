@@ -1,6 +1,6 @@
-const jwt = require('jsonwebtoken');
-const { SESSION_COOKIE } = require('../utils/session');
-const { isAllowedOrigin } = require('../utils/origins');
+import jwt from 'jsonwebtoken';
+import { SESSION_COOKIE } from '../utils/session.js';
+import { isAllowedOrigin } from '../utils/origins.js';
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
@@ -29,4 +29,4 @@ function requireAuth(req, res, next) {
     next();
 }
 
-module.exports = requireAuth;
+export default requireAuth;

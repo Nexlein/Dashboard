@@ -1,10 +1,10 @@
-const registry = require('../services/registry');
-const { encryptJson } = require('../utils/encryption');
-const asyncHandler = require('../utils/asyncHandler');
+import registry from '../services/registry.js';
+import { decryptString, encryptJson } from '../utils/encryption.js';
+import asyncHandler from '../utils/asyncHandler.js';
 
-const prisma = require('../utils/prisma');
+import prisma from '../utils/prisma.js';
 
-exports.getServices = asyncHandler(async (req, res) => {
+export const getServices = asyncHandler(async (req, res) => {
     const [connections, oauthTokens] = await Promise.all([
         prisma.serviceConnection.findMany({ where: { userId: req.user.userId } }),
         prisma.oAuthToken.findMany({ where: { userId: req.user.userId } }),
@@ -28,7 +28,6 @@ exports.getServices = asyncHandler(async (req, res) => {
 
                 if (token && name === 'github') {
                     try {
-                        const { decryptString } = require('../utils/encryption');
                         const accessToken = decryptString(token.accessToken);
                         const res = await fetch('https://api.github.com/user', {
                             headers: {
@@ -69,7 +68,7 @@ exports.getServices = asyncHandler(async (req, res) => {
     res.json(servicesList);
 });
 
-exports.connectService = asyncHandler(async (req, res) => {
+export const connectService = asyncHandler(async (req, res) => {
     const serviceName = req.params.serviceName;
     const { apiKey } = req.body;
 
@@ -104,7 +103,7 @@ exports.connectService = asyncHandler(async (req, res) => {
     res.json({ success: true, verifiedAt: connection.verifiedAt, keyHint: connection.keyHint });
 });
 
-exports.disconnectService = asyncHandler(async (req, res) => {
+export const disconnectService = asyncHandler(async (req, res) => {
     const serviceName = req.params.serviceName;
     const service = registry.getService(serviceName);
 

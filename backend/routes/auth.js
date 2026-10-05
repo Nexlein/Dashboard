@@ -1,10 +1,10 @@
-const express = require('express');
-const requireAuth = require('../middleware/auth');
-const authController = require('../controllers/auth');
-const githubAuthController = require('../controllers/githubAuth');
-const accountController = require('../controllers/account');
-const env = require('../utils/env');
-const { createRateLimiter } = require('../utils/rateLimit');
+import express from 'express';
+import requireAuth from '../middleware/auth.js';
+import * as authController from '../controllers/auth.js';
+import * as githubAuthController from '../controllers/githubAuth.js';
+import * as accountController from '../controllers/account.js';
+import env from '../utils/env.js';
+import { createRateLimiter } from '../utils/rateLimit.js';
 
 const router = express.Router();
 
@@ -37,4 +37,4 @@ router.get('/github/login', githubAuthController.githubLogin);
 router.get('/download-data', requireAuth, accountController.downloadData);
 router.delete('/delete-account', requireAuth, accountController.deleteAccount);
 
-module.exports = router;
+export default router;
