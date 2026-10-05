@@ -12,6 +12,10 @@ updates:
       directories: ['/backend', '/frontend']
       schedule:
           interval: 'weekly'
+      ignore:
+          # Node majors move together with .nvmrc and CI, once the new major is LTS.
+          - dependency-name: 'node'
+            update-types: ['version-update:semver-major']
     - package-ecosystem: 'github-actions'
       directory: '/'
       schedule:
