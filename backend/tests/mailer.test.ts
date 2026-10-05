@@ -44,6 +44,21 @@ describe('sendMail', () => {
         });
     });
 
+    it('sends from the SMTP account when MAIL_FROM is not set (Gmail)', async () => {
+        const { sendMail } = await loadMailer({
+            SMTP_HOST: 'smtp.gmail.com',
+            SMTP_USER: 'dashboard.team@gmail.com',
+            SMTP_PASSWORD: 'app-password',
+            MAIL_FROM: undefined,
+        });
+
+        await sendMail(MAIL);
+
+        expect(transport.sendMail).toHaveBeenCalledWith(
+            expect.objectContaining({ from: 'Dashboard <dashboard.team@gmail.com>' }),
+        );
+    });
+
     it('prints the email instead when SMTP is not configured (development)', async () => {
         const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
         const { sendMail } = await loadMailer({ SMTP_HOST: undefined });

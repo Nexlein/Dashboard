@@ -12,11 +12,15 @@ const transport = env.SMTP_HOST
       })
     : null;
 
+const FROM =
+    env.MAIL_FROM ??
+    (env.SMTP_USER ? `Dashboard <${env.SMTP_USER}>` : 'Dashboard <no-reply@localhost>');
+
 /** Sends an email through SMTP; without SMTP_HOST (development only), prints it instead. */
 export async function sendMail(mail: Mail): Promise<void> {
     if (!transport) {
         console.warn(`[mail] SMTP_HOST is not set, email not sent. To: ${mail.to}\n${mail.text}`);
         return;
     }
-    await transport.sendMail({ from: env.MAIL_FROM, ...mail });
+    await transport.sendMail({ from: FROM, ...mail });
 }

@@ -35,7 +35,7 @@
   - `server`: Express Node.js backend replicas (internal).
   - `redis`: Centralized caching and state store (port 6379).
   - `db`: PostgreSQL 15 database (port 5433).
-  - `mailpit`: development inbox catching every email the API sends (web UI on port 8025, SMTP on 1025).
+  - `mailpit` (profile `e2e`, not started by default): test inbox the e2e tests read the emailed codes from (web UI and API on port 8025, SMTP on 1025).
   - `ollama`: local LLM server for the chatbot widget (port 11434).
 
 ## 6. Testing

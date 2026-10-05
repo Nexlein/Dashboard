@@ -141,11 +141,14 @@ Playwright tests in `e2e/tests/` drive the real frontend and backend:
 - `a11y.spec.ts`: axe scans of `/login`, `/register` and the dashboard with every
   rule enabled, and the light theme on public pages under a dark OS scheme.
 
-Run them with the database and Mailpit up, and `backend/.env` configured (its SMTP settings
-must point to Mailpit: `SMTP_HOST=localhost`, `SMTP_PORT=1025`, as in the example):
+Run them with the database and Mailpit (a test inbox, started only for these tests) up. The
+backend Playwright starts sends its emails to Mailpit whatever `backend/.env` says, so the
+tests never email real addresses. Stop any backend already running on port 8080 first:
+Playwright would reuse it.
 
 ```bash
-docker compose up -d db redis mailpit
+docker compose up -d db redis
+docker compose --profile e2e up -d mailpit
 npm run db:deploy -w backend
 npm exec -w e2e -- playwright install chromium   # first time only
 npm run test:e2e

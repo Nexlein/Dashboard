@@ -41,8 +41,8 @@ describe('environment validation', () => {
             BETTER_AUTH_URL: 'http://localhost:8080',
             SMTP_PORT: 587,
             SMTP_SECURE: false,
-            MAIL_FROM: 'Dashboard <no-reply@dashboard.local>',
         });
+        expect(env.MAIL_FROM).toBeUndefined();
     });
 
     it('treats empty optional values from .env.example as unset', () => {

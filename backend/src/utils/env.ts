@@ -52,7 +52,8 @@ const envSchema = z.object({
         .transform((v) => v === 'true'),
     SMTP_USER: optional(z.string()),
     SMTP_PASSWORD: optional(z.string()),
-    MAIL_FROM: z.string().default('Dashboard <no-reply@dashboard.local>'),
+    // Sender; defaults to SMTP_USER (Gmail rewrites any other address to the account's).
+    MAIL_FROM: optional(z.string()),
 });
 
 const _env = envSchema

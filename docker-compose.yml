@@ -26,10 +26,7 @@ services:
             - PORT=8080
             - DATABASE_URL=postgres://user:password@db:5432/dashboard
             - REDIS_URL=redis://redis:6379
-            # Emails go to Mailpit (http://localhost:8025) unless SMTP_HOST/SMTP_PORT are set in
-            # the shell or the root .env (a real provider; credentials in backend/.env).
-            - SMTP_HOST=${SMTP_HOST:-mailpit}
-            - SMTP_PORT=${SMTP_PORT:-1025}
+            # Emails use the SMTP_* settings of backend/.env (Gmail, see the README).
         restart: unless-stopped
         deploy:
             replicas: 3
@@ -38,18 +35,17 @@ services:
                 condition: service_healthy
             redis:
                 condition: service_started
-            mailpit:
-                condition: service_started
         extra_hosts:
             - 'host.docker.internal:host-gateway'
 
-    # Development inbox: catches every email the API sends (verification and reset codes).
+    # Test inbox for the e2e tests only (they read the emailed codes from it):
+    # docker compose --profile e2e up -d mailpit
     mailpit:
-        restart: unless-stopped
+        profiles: [e2e]
         image: axllent/mailpit:v1.31
         ports:
-            - '8025:8025' # web inbox
-            - '1025:1025' # SMTP, for a backend started with npm run dev
+            - '8025:8025' # web inbox and API
+            - '1025:1025' # SMTP
 
     client:
         restart: unless-stopped
