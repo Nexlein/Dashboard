@@ -231,7 +231,7 @@ export function CryptoChartWidget({
                                 className={`flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium transition-colors ${
                                     hidden
                                         ? 'text-muted-foreground opacity-45'
-                                        : 'bg-background text-foreground shadow-sm'
+                                        : 'bg-background text-foreground shadow-xs'
                                 }`}
                                 aria-pressed={!hidden}
                                 onClick={() => toggleCoin(series.coin)}
@@ -258,7 +258,7 @@ export function CryptoChartWidget({
                                     type="button"
                                     className={`rounded px-2.5 py-1 text-[11px] font-semibold transition-colors ${
                                         active
-                                            ? 'bg-background text-foreground shadow-sm'
+                                            ? 'bg-background text-foreground shadow-xs'
                                             : 'text-muted-foreground hover:text-foreground'
                                     }`}
                                     aria-pressed={active}

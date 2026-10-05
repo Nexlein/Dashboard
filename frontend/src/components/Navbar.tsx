@@ -99,7 +99,7 @@ export default function Navbar({
     }
 
     return (
-        <nav className="flex flex-wrap items-center justify-between gap-4 border-b border-border bg-card p-4 shadow-sm">
+        <nav className="flex flex-wrap items-center justify-between gap-4 border-b border-border bg-card p-4 shadow-xs">
             <div className="flex items-center gap-1">
                 <NavLink
                     to="/"

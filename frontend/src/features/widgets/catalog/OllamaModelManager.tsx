@@ -155,7 +155,7 @@ export function OllamaModelManager({ selectedModel, onSelectModel }: CustomConfi
                     type="text"
                     aria-label="Custom model tag"
                     placeholder="Custom model tag (e.g. mistral)"
-                    className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-xs shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-xs shadow-xs transition-colors focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
                     value={customModel}
                     onChange={(event) => setCustomModel(event.target.value)}
                 />
