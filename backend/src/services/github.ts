@@ -1,6 +1,13 @@
 import { HttpError } from '../utils/httpError.ts';
 import { getCache, setCache, clearCache } from '../utils/redisCache.ts';
-import type { ServiceContext, ServiceDefinition, WidgetParams } from './types.ts';
+import { GITHUB_SERVICE_PROVIDER } from '../utils/oauthProviders.ts';
+import type {
+    ConnectedAccountInfo,
+    ServiceContext,
+    ServiceCredentials,
+    ServiceDefinition,
+    WidgetParams,
+} from './types.ts';
 
 const MAX_CACHE_TTL_MS = 5 * 60 * 1000;
 const MIN_REFRESH_RATE_SECONDS = 60;
@@ -54,13 +61,16 @@ export default {
     displayName: 'GitHub',
     connection: {
         type: 'oauth',
-        label: 'GitHub Account',
+        label: 'GitHub accounts',
+        // Connected from the Services page, separately from GitHub sign-in; several allowed.
+        provider: GITHUB_SERVICE_PROVIDER,
     },
     widgets: [
         {
             name: 'repo_stats',
             description: 'Displays stars, forks, and open issues for a repository',
             params: [
+                { name: 'account', type: 'string' },
                 { name: 'owner', type: 'string' },
                 { name: 'repo', type: 'string' },
             ],
@@ -69,6 +79,7 @@ export default {
             name: 'latest_commits',
             description: 'Displays the latest commits from a branch',
             params: [
+                { name: 'account', type: 'string' },
                 { name: 'owner', type: 'string' },
                 { name: 'repo', type: 'string' },
                 { name: 'branch', type: 'string' },
@@ -77,9 +88,20 @@ export default {
         {
             name: 'user_profile',
             description: 'Displays a GitHub user profile',
-            params: [{ name: 'username', type: 'string' }],
+            params: [
+                { name: 'account', type: 'string' },
+                { name: 'username', type: 'string' },
+            ],
         },
     ],
+    describeAccount: async (credentials: ServiceCredentials): Promise<ConnectedAccountInfo> => {
+        const res = await fetchGitHub(
+            'https://api.github.com/user',
+            credentials as GitHubCredentials,
+        );
+        const profile = (await res.json()) as Profile;
+        return { login: profile.login, avatarUrl: profile.avatar_url };
+    },
     execute: async (widgetName: string, params: WidgetParams, context: ServiceContext) => {
         const credentials = context.credentials as GitHubCredentials | null | undefined;
         if (!credentials || typeof credentials.accessToken !== 'string') {

@@ -41,6 +41,10 @@ const envSchema = z.object({
     REDIS_URL: optional(z.url('REDIS_URL must be a valid URL')),
     GITHUB_CLIENT_ID: optional(z.string()),
     GITHUB_CLIENT_SECRET: optional(z.string()),
+    // Optional second GitHub OAuth App for the GitHub service accounts (widgets); defaults to
+    // the sign-in app above.
+    GITHUB_SERVICE_CLIENT_ID: optional(z.string()),
+    GITHUB_SERVICE_CLIENT_SECRET: optional(z.string()),
     // Outgoing email (verification and password-reset codes), any SMTP provider. Without
     // SMTP_HOST, development prints the emails in the console; production refuses to start.
     SMTP_HOST: optional(z.string()),

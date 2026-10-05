@@ -1,67 +1,60 @@
-import { APIError } from 'better-auth/api';
+import type { Request } from 'express';
 import { fromNodeHeaders } from 'better-auth/node';
 import { auth } from '../auth.ts';
 import registry from '../services/registry.ts';
+import type { ServiceDefinition } from '../services/types.ts';
 import { encryptJson } from '../utils/encryption.ts';
 import asyncHandler from '../utils/asyncHandler.ts';
-import { getProviderAccessToken } from '../utils/oauthAccounts.ts';
+import { accountAccessToken, linkedAccounts } from '../utils/oauthAccounts.ts';
 import prisma from '../utils/prisma.ts';
 import { authUser } from '../middleware/auth.ts';
 
+/** The connected OAuth accounts of `service`, each with who it is (login, avatar). */
+async function connectedAccounts(userId: number, service: ServiceDefinition) {
+    const provider = service.connection?.provider;
+    if (!provider) return [];
+    const accounts = await linkedAccounts(userId, provider);
+    return Promise.all(
+        accounts.map(async ({ id }) => {
+            try {
+                const accessToken = await accountAccessToken(userId, id);
+                const info = await service.describeAccount?.({ accessToken });
+                return { id, login: info?.login ?? null, avatarUrl: info?.avatarUrl ?? null };
+            } catch {
+                // Revoked on the provider's side: still listed, so it can be removed.
+                return { id, login: null, avatarUrl: null };
+            }
+        }),
+    );
+}
+
 export const getServices = asyncHandler(async (req, res) => {
     const userId = authUser(req).userId;
-    const [connections, accounts] = await Promise.all([
-        prisma.serviceConnection.findMany({ where: { userId } }),
-        // OAuth services are connected through a linked Better Auth account.
-        prisma.account.findMany({ where: { userId }, select: { providerId: true } }),
-    ]);
-
-    const connectedServiceNames = new Set([
-        ...connections.map((c) => c.serviceName),
-        ...accounts.map((a) => a.providerId),
-    ]);
+    const connections = await prisma.serviceConnection.findMany({ where: { userId } });
 
     const servicesList = await Promise.all(
         registry.getAllServices().map(async (service) => {
             const name = service.name;
+            const connection = connections.find((c) => c.serviceName === name);
+            const accounts =
+                service.connection?.type === 'oauth'
+                    ? await connectedAccounts(userId, service)
+                    : [];
             // Services without a connection (YouTube, chatbot) need nothing from the user.
-            const isConnected = service.connection ? connectedServiceNames.has(name) : true;
-            let displayName = service.displayName || name;
-            let description = '';
-
-            if (isConnected) {
-                const connection = connections.find((c) => c.serviceName === name);
-                const linked = accounts.some((a) => a.providerId === name);
-
-                if (linked && name === 'github') {
-                    try {
-                        const accessToken = await getProviderAccessToken(userId, name);
-                        if (!accessToken) throw new Error('No GitHub token');
-                        const res = await fetch('https://api.github.com/user', {
-                            headers: {
-                                Authorization: `Bearer ${accessToken}`,
-                                Accept: 'application/vnd.github.v3+json',
-                                'User-Agent': 'Dashboard-App',
-                            },
-                        });
-                        if (res.ok) {
-                            const data = (await res.json()) as {
-                                login?: string;
-                                name?: string | null;
-                                bio?: string | null;
-                            };
-                            if (data.login) {
-                                displayName = data.login;
-                                description = data.name || data.bio || 'GitHub Account';
-                            }
-                        }
-                    } catch {
-                        // Silently ignore GitHub fetch error on listing
-                    }
-                } else if (connection) {
-                    description = `Connected on ${connection.verifiedAt.toLocaleDateString()}`;
-                }
-            }
+            const isConnected = !service.connection
+                ? true
+                : service.connection.type === 'oauth'
+                  ? accounts.length > 0
+                  : Boolean(connection);
+            const displayName = service.displayName || name;
+            const description =
+                service.connection?.type === 'oauth'
+                    ? accounts.length
+                        ? `${accounts.length} account${accounts.length > 1 ? 's' : ''} connected`
+                        : ''
+                    : connection
+                      ? `Connected on ${connection.verifiedAt.toLocaleDateString()}`
+                      : '';
 
             return {
                 name,
@@ -72,7 +65,8 @@ export const getServices = asyncHandler(async (req, res) => {
                 connectionType: service.connection?.type || 'apikey',
                 credentialLabel: service.connection?.label ?? null,
                 documentationUrl: service.connection?.documentationUrl,
-                keyHint: connections.find((c) => c.serviceName === name)?.keyHint,
+                keyHint: connection?.keyHint,
+                ...(service.connection?.type === 'oauth' && { accounts }),
             };
         }),
     );
@@ -118,6 +112,16 @@ export const connectService = asyncHandler(async (req, res) => {
     res.json({ success: true, verifiedAt: connection.verifiedAt, keyHint: connection.keyHint });
 });
 
+/** Unlinks accounts through Better Auth, which also checks they belong to the user. */
+async function unlinkAccounts(req: Request, accountIds: number[]) {
+    for (const accountId of accountIds) {
+        await auth.api.unlinkAccount({
+            body: { accountId: String(accountId) },
+            headers: fromNodeHeaders(req.headers),
+        });
+    }
+}
+
 export const disconnectService = asyncHandler(async (req, res) => {
     const service = registry.getService(String(req.params.serviceName));
 
@@ -125,30 +129,34 @@ export const disconnectService = asyncHandler(async (req, res) => {
     if (service.configurable === false)
         return res.status(400).json({ error: 'Service is not configurable' });
 
-    if (service.connection?.type === 'oauth') {
-        const account = await prisma.account.findFirst({
-            where: { userId: authUser(req).userId, providerId: service.name },
-            select: { id: true },
-        });
-        if (!account) return res.status(204).send();
-        try {
-            await auth.api.unlinkAccount({
-                body: { accountId: String(account.id) },
-                headers: fromNodeHeaders(req.headers),
-            });
-        } catch (error) {
-            // Better Auth keeps the last sign-in method of an account (e.g. GitHub-only users).
-            if (error instanceof APIError && error.body?.code === 'FAILED_TO_UNLINK_LAST_ACCOUNT')
-                return res.status(409).json({
-                    error: 'GitHub is how you sign in to this account, so it cannot be disconnected.',
-                });
-            throw error;
-        }
+    const provider = service.connection?.provider;
+    if (provider) {
+        // Every account connected to the service (they are not ways to sign in).
+        const accounts = await linkedAccounts(authUser(req).userId, provider);
+        await unlinkAccounts(
+            req,
+            accounts.map((account) => account.id),
+        );
     } else {
         await prisma.serviceConnection.deleteMany({
             where: { userId: authUser(req).userId, serviceName: service.name },
         });
     }
 
+    res.status(204).send();
+});
+
+/** Removes one connected account of an OAuth service (e.g. one GitHub account). */
+export const disconnectAccount = asyncHandler(async (req, res) => {
+    const service = registry.getService(String(req.params.serviceName));
+    const provider = service?.connection?.provider;
+    if (!provider) return res.status(404).json({ error: 'Service not found' });
+
+    const accountId = Number(req.params.accountId);
+    const accounts = await linkedAccounts(authUser(req).userId, provider);
+    if (!accounts.some((account) => account.id === accountId))
+        return res.status(404).json({ error: 'Account not found' });
+
+    await unlinkAccounts(req, [accountId]);
     res.status(204).send();
 });

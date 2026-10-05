@@ -6,7 +6,7 @@ import type { ServiceCredentials, ServiceDefinition, WidgetParams } from '../ser
 import asyncHandler from '../utils/asyncHandler.ts';
 import prisma from '../utils/prisma.ts';
 import { authUser } from '../middleware/auth.ts';
-import { getProviderAccessToken } from '../utils/oauthAccounts.ts';
+import { accountAccessToken, linkedAccounts } from '../utils/oauthAccounts.ts';
 
 const MIN_REFRESH_RATE_SECONDS = 60;
 
@@ -71,31 +71,61 @@ function decryptObject(stored: unknown): Record<string, unknown> {
 }
 
 type ServiceAccess = { credentials: ServiceCredentials | null; cacheScope?: string };
+type AccessResult = { access: ServiceAccess } | { status: number; error: string };
 
 /**
- * What `service` needs to run for this user: the linked OAuth account's token, the stored API
- * key, or nothing. Null when the service needs a connection the user has not made.
+ * What `service` needs to run this widget for the user: the token of the connected OAuth
+ * account the widget names (`account` param; the only one when it names none), the stored API
+ * key, or nothing.
  */
 async function serviceAccess(
     userId: number,
     service: ServiceDefinition,
-): Promise<ServiceAccess | null> {
-    if (service.connection?.type === 'oauth') {
-        const accessToken = await getProviderAccessToken(userId, service.name);
-        if (!accessToken) return null;
-        return { credentials: { accessToken }, cacheScope: `${userId}:${service.name}` };
+    params: WidgetParams,
+): Promise<AccessResult> {
+    const notConnected = {
+        status: 409,
+        error: `${service.displayName || service.name} is not connected`,
+    };
+    if (service.connection?.type === 'oauth' && service.connection.provider) {
+        const accounts = await linkedAccounts(userId, service.connection.provider);
+        const chosen =
+            params.account === undefined || params.account === ''
+                ? accounts.length === 1
+                    ? accounts[0]
+                    : undefined
+                : accounts.find((account) => String(account.id) === String(params.account));
+        if (!chosen) {
+            if (accounts.length > 1 && !params.account)
+                return { status: 400, error: `Choose which ${service.displayName} account to use` };
+            return notConnected;
+        }
+        let accessToken: string;
+        try {
+            accessToken = await accountAccessToken(userId, chosen.id);
+        } catch {
+            return {
+                status: 502,
+                error: `This ${service.displayName} account no longer works: reconnect it in Services`,
+            };
+        }
+        return {
+            access: { credentials: { accessToken }, cacheScope: `${userId}:account:${chosen.id}` },
+        };
     }
     if (service.connection?.type === 'apiKey') {
         const connection = await prisma.serviceConnection.findUnique({
             where: { userId_serviceName: { userId, serviceName: service.name } },
         });
-        if (!connection) return null;
+        if (!connection) return notConnected;
         return {
-            credentials: decryptObject(connection.encryptedCredentials) as ServiceCredentials,
-            cacheScope: `${userId}:${connection.id}`,
+            access: {
+                credentials: decryptObject(connection.encryptedCredentials) as ServiceCredentials,
+                cacheScope: `${userId}:${connection.id}`,
+            },
         };
     }
-    return { credentials: null };
+    return { access: { credentials: null } };
 }
 
 function errorMessage(error: unknown, fallback: string): string {
@@ -126,11 +156,9 @@ export const addWidget = asyncHandler(async (req, res) => {
             .status(400)
             .json({ error: `Unknown widget: ${widgetName} in service ${serviceName}` });
 
-    const access = await serviceAccess(authUser(req).userId, service);
-    if (!access)
-        return res
-            .status(409)
-            .json({ error: `${service.displayName || serviceName} is not connected` });
+    const result = await serviceAccess(authUser(req).userId, service, params);
+    if ('error' in result) return res.status(result.status).json({ error: result.error });
+    const { access } = result;
 
     if (typeof service.execute === 'function') {
         try {
@@ -190,17 +218,15 @@ export const getWidgetData = asyncHandler(async (req, res) => {
     const service = registry.getService(widget.serviceName);
     if (!service) return res.status(404).json({ error: 'Service not found' });
 
-    const access = await serviceAccess(authUser(req).userId, service);
-    if (!access)
-        return res
-            .status(409)
-            .json({ error: `${service.displayName || widget.serviceName} is not connected` });
+    const params: WidgetParams = decryptObject(widget.params);
+    const result = await serviceAccess(authUser(req).userId, service, params);
+    if ('error' in result) return res.status(result.status).json({ error: result.error });
+    const { access } = result;
 
     // Services that declare widgets without fetching any data (e.g. YouTube placeholders).
     if (!service.execute)
         return res.status(501).json({ error: 'Widget data is not available for this service' });
 
-    const params: WidgetParams = decryptObject(widget.params);
     let data: unknown;
     try {
         data = await service.execute(widget.widgetName, params, {

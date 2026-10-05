@@ -19,6 +19,9 @@ export type ServiceContext = {
     cacheScope?: string;
 };
 
+/** A connected OAuth account, as Services shows it. */
+export type ConnectedAccountInfo = { login: string; avatarUrl?: string };
+
 export type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string };
 
 export type ServiceDefinition = {
@@ -27,9 +30,17 @@ export type ServiceDefinition = {
     description?: string;
     /** False for services that work without a user connection. */
     configurable?: boolean;
-    connection?: { type: 'apiKey' | 'oauth'; label: string; documentationUrl?: string };
+    connection?: {
+        type: 'apiKey' | 'oauth';
+        label: string;
+        documentationUrl?: string;
+        /** OAuth: the Better Auth provider of the accounts the user connects (several allowed). */
+        provider?: string;
+    };
     widgets: WidgetSpec[];
     execute?(widgetName: string, params: WidgetParams, context: ServiceContext): Promise<unknown>;
+    /** OAuth: who a connected account is, shown in Services (e.g. the GitHub login). */
+    describeAccount?(credentials: ServiceCredentials): Promise<ConnectedAccountInfo>;
     /** Throws when the credentials are rejected by the provider. */
     verifyCredentials?(credentials: ServiceCredentials): Promise<unknown>;
     chat?(

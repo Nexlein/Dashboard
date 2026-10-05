@@ -1,11 +1,13 @@
 import { betterAuth } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { APIError, createAuthMiddleware, getOAuthState } from 'better-auth/api';
-import { admin, emailOTP } from 'better-auth/plugins';
+import { admin, emailOTP, genericOAuth } from 'better-auth/plugins';
+import { github } from 'better-auth/social-providers';
 import { profileSchema, registerSchema } from 'shared';
 import env from './utils/env.ts';
 import prisma from './utils/prisma.ts';
 import { allowedOrigins } from './utils/origins.ts';
+import { GITHUB_SERVICE_PROVIDER } from './utils/oauthProviders.ts';
 import { sendOtpEmail } from './utils/otpEmails.ts';
 
 // Authentication is Better Auth: email/password with emailed one-time codes (email verification,
@@ -21,6 +23,33 @@ const TOKEN_RESPONSES = new Set([
     '/sign-up/email',
     '/email-otp/verify-email',
 ]);
+
+function githubServiceProvider(clientId: string, clientSecret: string) {
+    // Better Auth's GitHub implementation (code exchange, profile, verified emails), under
+    // another provider id.
+    const githubApi = github({ clientId, clientSecret, scope: ['repo'] });
+    return {
+        providerId: GITHUB_SERVICE_PROVIDER,
+        clientId,
+        clientSecret,
+        authorizationUrl: 'https://github.com/login/oauth/authorize',
+        tokenUrl: 'https://github.com/login/oauth/access_token',
+        scopes: ['read:user', 'user:email', 'repo'],
+        // Connected from the Services page only: never a way to create an account.
+        disableSignUp: true,
+        getToken: async (data: Parameters<typeof githubApi.validateAuthorizationCode>[0]) => {
+            const tokens = await githubApi.validateAuthorizationCode(data);
+            // Better Auth turns this error into an error redirect, like for GitHub sign-in.
+            if (!tokens) throw new Error('GitHub refused the authorization code');
+            return tokens;
+        },
+        getUserInfo: async (tokens: Parameters<typeof githubApi.getUserInfo>[0]) => {
+            const info = await githubApi.getUserInfo(tokens);
+            if (!info) return null;
+            return { ...info.user, id: String(info.data.id) };
+        },
+    };
+}
 
 const REGISTRATION_REQUIREMENTS = {
     code: 'REGISTRATION_REQUIREMENTS',
@@ -63,8 +92,8 @@ export const auth = betterAuth({
                   github: {
                       clientId: env.GITHUB_CLIENT_ID,
                       clientSecret: env.GITHUB_CLIENT_SECRET,
-                      // The GitHub widgets read repositories on the user's behalf.
-                      scope: ['repo'],
+                      // Identity only (profile and email): the GitHub widgets use the accounts
+                      // connected to the GitHub service (GITHUB_SERVICE_PROVIDER).
                       // The sign-in page cannot create accounts: only the registration page
                       // (requestSignUp) can, once the CGU and age boxes are checked.
                       disableImplicitSignUp: true,
@@ -82,7 +111,13 @@ export const auth = betterAuth({
         // GitHub tokens are stored encrypted (AES-256-GCM, key derived from the secret).
         encryptOAuthTokens: true,
         // A signed-in user may link a GitHub account whose email differs from theirs.
-        accountLinking: { enabled: true, allowDifferentEmails: true },
+        accountLinking: {
+            enabled: true,
+            allowDifferentEmails: true,
+            // GitHub service accounts link even when their email is not verified: they are
+            // not a way to sign in.
+            trustedProviders: [GITHUB_SERVICE_PROVIDER],
+        },
     },
     // utils/rateLimit.ts limits sign-in and sign-up instead (app.ts): its counters live in
     // Redis, shared by every replica, where Better Auth's default storage is per process.
@@ -118,6 +153,12 @@ export const auth = betterAuth({
     hooks: {
         before: createAuthMiddleware(async (ctx) => {
             const body = (ctx.body ?? {}) as Record<string, unknown>;
+            if (ctx.path === '/sign-in/social' && body.provider === GITHUB_SERVICE_PROVIDER) {
+                throw APIError.from('BAD_REQUEST', {
+                    code: 'NOT_A_SIGN_IN_PROVIDER',
+                    message: 'GitHub service accounts cannot be used to sign in.',
+                });
+            }
             if (ctx.path === '/sign-up/email') {
                 const parsed = registerSchema.safeParse(body);
                 if (!parsed.success) {
@@ -193,6 +234,18 @@ export const auth = betterAuth({
         },
     },
     plugins: [
+        ...(env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET
+            ? [
+                  genericOAuth({
+                      config: [
+                          githubServiceProvider(
+                              env.GITHUB_SERVICE_CLIENT_ID ?? env.GITHUB_CLIENT_ID,
+                              env.GITHUB_SERVICE_CLIENT_SECRET ?? env.GITHUB_CLIENT_SECRET,
+                          ),
+                      ],
+                  }),
+              ]
+            : []),
         admin(),
         emailOTP({
             // Codes replace Better Auth's verification links.

@@ -1,11 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import request from 'supertest';
-import { APIError } from 'better-auth/api';
-import { FRONTEND, signedInAs } from './helpers.ts';
+import { FRONTEND, signedInAs, stubFetch } from './helpers.ts';
 
 const prisma = vi.hoisted(() => ({
     user: { findUnique: vi.fn() },
-    account: { findFirst: vi.fn(), findMany: vi.fn() },
+    account: { findMany: vi.fn() },
     serviceConnection: { findMany: vi.fn(), findUnique: vi.fn(), deleteMany: vi.fn() },
     widgetConfig: { findUnique: vi.fn(), findMany: vi.fn().mockResolvedValue([]) },
 }));
@@ -83,74 +82,125 @@ describe('GET /account/export', () => {
 
 describe('GitHub as a service', () => {
     beforeEach(() => signedInAs(3));
+    const githubOf = (res: { body: { name: string }[] }) =>
+        res.body.find((s) => s.name === 'github') as Record<string, unknown>;
 
-    it('shows GitHub as not connected without a linked account', async () => {
+    it('shows GitHub as not connected without a connected account', async () => {
         prisma.serviceConnection.findMany.mockResolvedValue([]);
-        prisma.account.findMany.mockResolvedValue([{ providerId: 'credential' }]);
+        prisma.account.findMany.mockResolvedValue([]);
 
         const res = await request(app).get('/services');
 
-        const github = res.body.find((s: { name: string }) => s.name === 'github');
-        expect(github).toMatchObject({ connected: false, connectionType: 'oauth' });
+        expect(githubOf(res)).toMatchObject({
+            connected: false,
+            connectionType: 'oauth',
+            accounts: [],
+        });
+        expect(prisma.account.findMany).toHaveBeenCalledWith(
+            expect.objectContaining({ where: { userId: 3, providerId: 'github-service' } }),
+        );
         expect(auth.api.getAccessToken).not.toHaveBeenCalled();
     });
 
-    it('keeps the listing working when GitHub cannot be reached', async () => {
+    it('lists each connected account by its GitHub login, without its token', async () => {
         prisma.serviceConnection.findMany.mockResolvedValue([]);
-        prisma.account.findMany.mockResolvedValue([{ providerId: 'github' }]);
-        prisma.account.findFirst.mockResolvedValue({ id: 12 });
+        prisma.account.findMany.mockResolvedValue([{ id: 12, accountId: '1' }]);
+        vi.mocked(auth.api.getAccessToken).mockResolvedValue({
+            accessToken: 'gho_secret',
+        } as never);
+        stubFetch().mockResolvedValue(
+            Response.json({ login: 'octocat', avatar_url: 'https://avatars/1' }),
+        );
+
+        const res = await request(app).get('/services');
+
+        expect(githubOf(res)).toMatchObject({
+            connected: true,
+            accounts: [{ id: 12, login: 'octocat', avatarUrl: 'https://avatars/1' }],
+        });
+        expect(JSON.stringify(res.body)).not.toContain('gho_secret');
+    });
+
+    it('keeps listing an account whose token GitHub revoked, so it can be removed', async () => {
+        prisma.serviceConnection.findMany.mockResolvedValue([]);
+        prisma.account.findMany.mockResolvedValue([{ id: 12, accountId: '1' }]);
         vi.mocked(auth.api.getAccessToken).mockRejectedValue(new Error('refresh failed'));
 
         const res = await request(app).get('/services');
 
         expect(res.status).toBe(200);
-        expect(res.body.find((s: { name: string }) => s.name === 'github').connected).toBe(true);
+        expect(githubOf(res)).toMatchObject({
+            connected: true,
+            accounts: [{ id: 12, login: null, avatarUrl: null }],
+        });
     });
 
-    it('answers 204 when GitHub was not linked', async () => {
-        prisma.account.findFirst.mockResolvedValue(null);
+    it('removes one connected account, and only an account of this user', async () => {
+        prisma.account.findMany.mockResolvedValue([{ id: 12, accountId: '1' }]);
+
+        const unknown = await request(app)
+            .delete('/services/github/accounts/99')
+            .set('Origin', FRONTEND);
+        const known = await request(app)
+            .delete('/services/github/accounts/12')
+            .set('Origin', FRONTEND);
+
+        expect(unknown.status).toBe(404);
+        expect(known.status).toBe(204);
+        expect(auth.api.unlinkAccount).toHaveBeenCalledTimes(1);
+        expect(auth.api.unlinkAccount).toHaveBeenCalledWith(
+            expect.objectContaining({ body: { accountId: '12' } }),
+        );
+    });
+
+    it('removes every connected account at once', async () => {
+        prisma.account.findMany.mockResolvedValue([
+            { id: 12, accountId: '1' },
+            { id: 13, accountId: '2' },
+        ]);
 
         const res = await request(app)
             .delete('/services/github/connection')
             .set('Origin', FRONTEND);
 
         expect(res.status).toBe(204);
-        expect(auth.api.unlinkAccount).not.toHaveBeenCalled();
+        expect(vi.mocked(auth.api.unlinkAccount).mock.calls.map(([arg]) => arg?.body)).toEqual([
+            { accountId: '12' },
+            { accountId: '13' },
+        ]);
     });
 
-    it('refuses to remove the last sign-in method', async () => {
-        prisma.account.findFirst.mockResolvedValue({ id: 12 });
-        vi.mocked(auth.api.unlinkAccount).mockRejectedValue(
-            APIError.from('BAD_REQUEST', {
-                code: 'FAILED_TO_UNLINK_LAST_ACCOUNT',
-                message: "You can't unlink your last account",
-            }),
-        );
-
-        const res = await request(app)
-            .delete('/services/github/connection')
-            .set('Origin', FRONTEND);
-
-        expect(res.status).toBe(409);
-        expect(auth.api.unlinkAccount).toHaveBeenCalledWith(
-            expect.objectContaining({ body: { accountId: '12' } }),
-        );
-    });
-
-    it('reports a GitHub widget as not connected without a linked account', async () => {
+    function githubWidget(params: Record<string, unknown>) {
         prisma.widgetConfig.findUnique.mockResolvedValue({
             id: 5,
             userId: 3,
             serviceName: 'github',
             widgetName: 'repo_stats',
-            params: encryptJson({ owner: 'o', repo: 'r' }),
+            params: encryptJson({ owner: 'o', repo: 'r', ...params }),
             refreshRate: 60,
         });
-        prisma.account.findFirst.mockResolvedValue(null);
+    }
+
+    it('reports a GitHub widget as not connected without a connected account', async () => {
+        githubWidget({});
+        prisma.account.findMany.mockResolvedValue([]);
 
         const res = await request(app).get('/widgets/5/data');
 
         expect(res.status).toBe(409);
         expect(res.body.error).toBe('GitHub is not connected');
+    });
+
+    it('asks to reconnect an account GitHub no longer accepts', async () => {
+        githubWidget({ account: '12' });
+        prisma.account.findMany.mockResolvedValue([{ id: 12, accountId: '1' }]);
+        vi.mocked(auth.api.getAccessToken).mockRejectedValue(new Error('refresh failed'));
+
+        const res = await request(app).get('/widgets/5/data');
+
+        expect(res.status).toBe(502);
+        expect(res.body.error).toBe(
+            'This GitHub account no longer works: reconnect it in Services',
+        );
     });
 });

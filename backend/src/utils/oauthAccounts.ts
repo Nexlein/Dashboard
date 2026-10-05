@@ -1,21 +1,23 @@
 import { auth } from '../auth.ts';
 import prisma from './prisma.ts';
 
-/**
- * The access token of the user's linked `providerId` account (e.g. "github"), or null when
- * none is linked. Better Auth decrypts it and refreshes it first when it has expired.
- */
-export async function getProviderAccessToken(
-    userId: number,
-    providerId: string,
-): Promise<string | null> {
-    const account = await prisma.account.findFirst({
+/** The user's accounts linked for `providerId` (e.g. "github-service"), oldest first. */
+export function linkedAccounts(userId: number, providerId: string) {
+    return prisma.account.findMany({
         where: { userId, providerId },
-        select: { id: true },
+        select: { id: true, accountId: true },
+        orderBy: { id: 'asc' },
     });
-    if (!account) return null;
+}
+
+/**
+ * The access token of one of the user's linked accounts. Better Auth decrypts it and refreshes
+ * it first when it has expired.
+ */
+export async function accountAccessToken(userId: number, accountId: number): Promise<string> {
     const { accessToken } = await auth.api.getAccessToken({
-        body: { accountId: String(account.id), userId: String(userId) },
+        body: { accountId: String(accountId), userId: String(userId) },
     });
-    return accessToken ?? null;
+    if (!accessToken) throw new Error('No access token for this account');
+    return accessToken;
 }
