@@ -66,7 +66,10 @@ export const getServices = asyncHandler(async (req, res) => {
                 credentialLabel: service.connection?.label ?? null,
                 documentationUrl: service.connection?.documentationUrl,
                 keyHint: connection?.keyHint,
-                ...(service.connection?.type === 'oauth' && { accounts }),
+                ...(service.connection?.type === 'oauth' && {
+                    provider: service.connection.provider,
+                    accounts,
+                }),
             };
         }),
     );

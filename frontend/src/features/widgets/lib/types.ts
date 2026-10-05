@@ -7,9 +7,11 @@ export type ParamOption = { value: string; label: string };
 export type WidgetParamDefinition = {
     id: string;
     label: string;
-    type: 'text' | 'select' | 'coin-multiselect' | 'hidden';
+    type: 'text' | 'select' | 'coin-multiselect' | 'account' | 'hidden';
     placeholder?: string;
     options?: ParamOption[];
+    /** `account` params: the service whose connected accounts are offered. */
+    service?: string;
 };
 
 /** Props WidgetRenderer passes to every catalog widget. `data` is the /widgets/:id/data response. */

@@ -1,6 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getOAuthLinkUrl } from '@/lib/auth';
-import { fetchServices, connectService, disconnectService } from '../lib/services';
+import {
+    fetchServices,
+    connectService,
+    disconnectAccount,
+    disconnectService,
+} from '../lib/services';
 
 export function useServices() {
     return useQuery({
@@ -26,8 +31,19 @@ export function useDisconnectService() {
     });
 }
 
+export function useDisconnectAccount() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ serviceName, accountId }: { serviceName: string; accountId: number }) =>
+            disconnectAccount(serviceName, accountId),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['services'] }),
+    });
+}
+
+/** Where to send the browser to connect an account of `provider` to `serviceName`. */
 export function useOAuthUrl() {
     return useMutation({
-        mutationFn: (serviceName: string) => getOAuthLinkUrl(serviceName),
+        mutationFn: ({ provider, serviceName }: { provider: string; serviceName: string }) =>
+            getOAuthLinkUrl(provider, serviceName),
     });
 }

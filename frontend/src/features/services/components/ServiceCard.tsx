@@ -14,7 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { type ServiceConnection } from '@/features/services/lib/services';
-import { useOAuthUrl } from '@/features/services/hooks/useServices';
+import { ConnectedAccounts } from '@/features/services/components/ConnectedAccounts';
 
 interface ServiceCardProps {
     service: ServiceConnection;
@@ -28,8 +28,7 @@ export function ServiceCard({ service, onConnect, onDisconnect, setError }: Serv
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
 
-    const oauthMutation = useOAuthUrl();
-
+    const isOAuth = service.connectionType === 'oauth';
     const showForm = !service.connected || isEditing;
 
     const handleConnectClick = async () => {
@@ -93,60 +92,21 @@ export function ServiceCard({ service, onConnect, onDisconnect, setError }: Serv
                 </span>
             </CardHeader>
             <CardContent className="space-y-4 p-5">
-                {service.connected && !showForm && (
+                {isOAuth && <ConnectedAccounts service={service} setError={setError} />}
+
+                {!isOAuth && service.connected && !showForm && (
                     <div className="flex items-center gap-3 rounded-lg bg-muted/60 p-3">
                         <CheckCircle2 className="size-5 text-emerald-500" />
                         <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium">
-                                {service.connectionType === 'oauth'
-                                    ? 'Compte lié'
-                                    : 'API key verified'}
+                            <p className="text-sm font-medium">API key verified</p>
+                            <p className="text-xs text-muted-foreground">
+                                Key ending in ••••{service.keyHint}
                             </p>
-                            {service.connectionType !== 'oauth' && (
-                                <p className="text-xs text-muted-foreground">
-                                    Key ending in ••••{service.keyHint}
-                                </p>
-                            )}
                         </div>
                     </div>
                 )}
 
-                {showForm && service.connectionType === 'oauth' && (
-                    <div className="space-y-2">
-                        <Button
-                            disabled={oauthMutation.isPending}
-                            onClick={() => {
-                                oauthMutation.mutate(service.name, {
-                                    onSuccess: (url) => {
-                                        window.location.href = url;
-                                    },
-                                    onError: (err) => {
-                                        setError(
-                                            err instanceof Error
-                                                ? err.message
-                                                : 'Unable to start linking flow',
-                                        );
-                                    },
-                                });
-                            }}
-                            className="w-full"
-                            variant="outline"
-                        >
-                            {oauthMutation.isPending ? (
-                                <Loader2 className="mr-2 size-4 animate-spin" />
-                            ) : (
-                                <ExternalLink className="mr-2 size-4" />
-                            )}
-                            Lier mon compte {service.displayName}
-                        </Button>
-                        <p className="text-xs text-muted-foreground">
-                            Vous allez être redirigé vers {service.displayName} pour autoriser
-                            l'accès.
-                        </p>
-                    </div>
-                )}
-
-                {showForm && service.connectionType !== 'oauth' && (
+                {showForm && !isOAuth && (
                     <div className="space-y-2">
                         <Label htmlFor={`${service.name}-api-key`}>
                             {service.credentialLabel || 'API key'}
@@ -175,12 +135,12 @@ export function ServiceCard({ service, onConnect, onDisconnect, setError }: Serv
                 )}
 
                 <div className="flex flex-wrap items-center gap-2">
-                    {service.connected && !showForm && service.connectionType !== 'oauth' && (
+                    {service.connected && !showForm && !isOAuth && (
                         <Button variant="outline" onClick={() => setIsEditing(true)}>
                             Replace key
                         </Button>
                     )}
-                    {service.connected && (
+                    {service.connected && !isOAuth && (
                         <Button
                             variant="ghost"
                             className="text-destructive hover:text-destructive"

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +12,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import type { WidgetParamDefinition } from '@/features/widgets/lib/types';
+import { useServices } from '@/features/services/hooks/useServices';
 
 type FieldProps = {
     param: WidgetParamDefinition;
@@ -129,8 +131,55 @@ function CoinMultiSelectField({ param, value, onChange }: FieldProps) {
     );
 }
 
+/** Which connected account (e.g. which GitHub account) the widget reads from. */
+function AccountField({ param, value, onChange }: FieldProps) {
+    const { data: services } = useServices();
+    const service = services?.find((item) => item.name === param.service);
+    const accounts = service?.accounts ?? [];
+    const onlyAccount = accounts.length === 1 ? String(accounts[0].id) : null;
+
+    // With a single connected account there is nothing to choose.
+    useEffect(() => {
+        if (onlyAccount && !value) onChange(onlyAccount);
+    }, [onlyAccount, value, onChange]);
+
+    if (services && accounts.length === 0) {
+        return (
+            <p className="rounded-lg bg-muted/60 p-3 text-sm text-muted-foreground" role="status">
+                Connect a {service?.displayName ?? param.service} account in{' '}
+                <Link to="/services" className="font-medium text-foreground underline">
+                    Services
+                </Link>{' '}
+                first.
+            </p>
+        );
+    }
+
+    return (
+        <div className="grid gap-2">
+            <Label htmlFor={param.id}>{param.label}</Label>
+            <Select value={value || ''} onValueChange={(next) => onChange(String(next ?? ''))}>
+                <SelectTrigger id={param.id}>
+                    <SelectValue placeholder="Choose an account" />
+                </SelectTrigger>
+                <SelectContent>
+                    {accounts.map((account) => (
+                        <SelectItem key={account.id} value={String(account.id)}>
+                            {account.login ?? `Account #${account.id} (no longer accessible)`}
+                        </SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+        </div>
+    );
+}
+
 export function WidgetParameterField({ param, value, onChange }: FieldProps) {
     if (param.type === 'hidden') return null;
+
+    if (param.type === 'account') {
+        return <AccountField param={param} value={value} onChange={onChange} />;
+    }
 
     if (param.type === 'coin-multiselect') {
         return <CoinMultiSelectField param={param} value={value} onChange={onChange} />;

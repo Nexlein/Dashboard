@@ -137,13 +137,16 @@ export async function startGitHubLogin(registration?: {
     if (url) window.location.assign(url);
 }
 
-/** Links an OAuth provider (e.g. GitHub) to the signed-in account; returns where to go. */
-export async function getOAuthLinkUrl(provider: string): Promise<string> {
+/**
+ * Connects an account of an OAuth provider to a service (e.g. "github-service" for the GitHub
+ * service); returns where to send the browser.
+ */
+export async function getOAuthLinkUrl(provider: string, serviceName: string): Promise<string> {
     const origin = window.location.origin;
     const { url } = unwrap(
         await authClient.linkSocial({
             provider,
-            callbackURL: `${origin}/services?linked=${provider}`,
+            callbackURL: `${origin}/services?linked=${serviceName}`,
             errorCallbackURL: `${origin}/services`,
             disableRedirect: true,
         }),

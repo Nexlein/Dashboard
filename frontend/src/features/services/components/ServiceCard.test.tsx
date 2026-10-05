@@ -74,9 +74,20 @@ describe('ServiceCard with an OAuth service', () => {
         connectionType: 'oauth',
         credentialLabel: null,
         documentationUrl: null,
+        connected: false,
+        provider: 'github-service',
+        accounts: [],
     });
+    const twoAccounts = {
+        ...github,
+        connected: true,
+        accounts: [
+            { id: 12, login: 'octocat', avatarUrl: 'https://avatars/1' },
+            { id: 13, login: null, avatarUrl: null },
+        ],
+    };
 
-    it('redirects to the authorization URL returned by the API', async () => {
+    it('connects an account through the service provider, apart from sign-in', async () => {
         const fetchMock = mockApi({
             'POST /api/auth/link-social': {
                 body: { url: 'https://github.com/login/oauth/authorize?x=1', redirect: false },
@@ -86,14 +97,13 @@ describe('ServiceCard with an OAuth service', () => {
         vi.stubGlobal('location', location);
         renderCard(github);
 
-        fireEvent.click(screen.getByRole('button', { name: /Lier mon compte GitHub/ }));
+        fireEvent.click(screen.getByRole('button', { name: 'Connect a GitHub account' }));
 
         await waitFor(() =>
             expect(location.href).toBe('https://github.com/login/oauth/authorize?x=1'),
         );
-        expect(String(fetchMock.mock.calls[0][0])).toContain('/api/auth/link-social');
         expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toMatchObject({
-            provider: 'github',
+            provider: 'github-service',
             callbackURL: 'http://localhost/services?linked=github',
         });
     });
@@ -103,14 +113,33 @@ describe('ServiceCard with an OAuth service', () => {
             'POST /api/auth/link-social': { status: 401, body: { message: 'Unauthorized' } },
         });
         const { setError } = renderCard(github);
-        fireEvent.click(screen.getByRole('button', { name: /Lier mon compte GitHub/ }));
+        fireEvent.click(screen.getByRole('button', { name: 'Connect a GitHub account' }));
         await waitFor(() => expect(setError).toHaveBeenCalledWith('Unauthorized'));
     });
 
-    it('shows a linked account without an API key hint', () => {
-        renderCard({ ...github, connected: true });
-        expect(screen.getByText('Compte lié')).toBeInTheDocument();
+    it('lists the connected accounts and offers to connect another', () => {
+        renderCard(twoAccounts);
+
+        expect(screen.getByText('octocat')).toBeInTheDocument();
+        expect(screen.getByText('Account no longer accessible')).toBeInTheDocument();
+        expect(
+            screen.getByRole('button', { name: 'Connect another GitHub account' }),
+        ).toBeInTheDocument();
         expect(screen.queryByText(/Key ending in/)).toBeNull();
-        expect(screen.queryByRole('button', { name: 'Replace key' })).toBeNull();
+        expect(screen.queryByRole('button', { name: 'Disconnect' })).toBeNull();
+    });
+
+    it('removes one account after confirmation', async () => {
+        vi.stubGlobal(
+            'confirm',
+            vi.fn(() => true),
+        );
+        const fetchMock = mockApi({ 'DELETE /services/github/accounts/12': { status: 204 } });
+        renderCard(twoAccounts);
+
+        fireEvent.click(screen.getByRole('button', { name: 'Disconnect octocat' }));
+
+        await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+        expect(String(fetchMock.mock.calls[0][0])).toContain('/services/github/accounts/12');
     });
 });

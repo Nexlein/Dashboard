@@ -155,9 +155,11 @@ describe('GitHub', () => {
             },
         });
 
-        await expect(getOAuthLinkUrl('github')).resolves.toBe('https://github.com/link');
+        await expect(getOAuthLinkUrl('github-service', 'github')).resolves.toBe(
+            'https://github.com/link',
+        );
         expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toMatchObject({
-            provider: 'github',
+            provider: 'github-service',
             callbackURL: 'http://localhost:5173/services?linked=github',
         });
     });
