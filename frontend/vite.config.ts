@@ -25,7 +25,7 @@ export default defineConfig({
                 'src/components/ui/**',
             ],
             // Regression floor a few points under the current numbers; raise it as coverage grows.
-            thresholds: { statements: 50, branches: 44, functions: 43, lines: 52 },
+            thresholds: { statements: 82, branches: 76, functions: 78, lines: 85 },
         },
     },
 });

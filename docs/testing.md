@@ -72,8 +72,12 @@ The frontend uses **Vitest** and **React Testing Library**.
   selected assets from the widget configuration.
 - Global mocks (like `ResizeObserver` for the grid layout) are configured in `frontend/src/test/setup.ts`.
 - Tests are type-checked like the app (`tsconfig.test.json`, part of `tsc -b`). Build test
-  data with `makeWidget` and `makeUser` from `frontend/src/test/fixtures.ts` so fixtures
-  keep the real shapes; `makeWidget` goes through the same API mapping as the app.
+  data with `makeWidget`, `makeUser` and `makeService` from `frontend/src/test/fixtures.ts`
+  so fixtures keep the real shapes; `makeWidget` goes through the same API mapping as the app.
+- Prefer `mockApi({ 'GET /widgets': { body: [...] } })` over mocking modules: it stubs
+  `fetch` per route and fails on any unexpected request, so the test runs through the real
+  API client, React Query hooks and components.
+- Routing is tested through `AppRoutes` inside a `MemoryRouter` (see `App.test.tsx`).
 - Hooks that call the API (`features/widgets/hooks/useWidgets.ts`, `features/services/hooks/useServices.ts`) are mocked with `vi.mock` in component tests.
 
 ## GDPR regression coverage

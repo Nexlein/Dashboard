@@ -12,7 +12,7 @@ async function scan(page: Page) {
 }
 
 test.describe('Accessibility', () => {
-    for (const path of ['/login', '/register']) {
+    for (const path of ['/login', '/register', '/privacy', '/cgu']) {
         test(`${path} has no axe violations`, async ({ page }) => {
             await page.goto(path);
             await page.waitForSelector('main');

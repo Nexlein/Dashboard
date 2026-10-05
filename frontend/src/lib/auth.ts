@@ -43,7 +43,9 @@ export function hasValidAuthToken() {
     const token = localStorage.getItem(AUTH_TOKEN_KEY);
     if (!token) return false;
     try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
+        // JWT segments are base64url: map back to base64 before decoding.
+        const segment = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+        const payload = JSON.parse(atob(segment));
         return typeof payload.exp !== 'number' || payload.exp * 1000 > Date.now();
     } catch {
         localStorage.removeItem(AUTH_TOKEN_KEY);

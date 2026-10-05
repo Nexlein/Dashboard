@@ -6,3 +6,9 @@ globalThis.ResizeObserver = class ResizeObserver {
     unobserve() {}
     disconnect() {}
 };
+
+// Pointer capture and scrollIntoView are used by Radix Select and are missing from happy-dom.
+Element.prototype.hasPointerCapture ??= () => false;
+Element.prototype.setPointerCapture ??= () => {};
+Element.prototype.releasePointerCapture ??= () => {};
+Element.prototype.scrollIntoView ??= () => {};

@@ -5,7 +5,9 @@ import {
     updateWidgetConfig,
     updateWidgetsLayout,
     removeWidgetConfig,
+    toDashboardWidget,
     type CreateWidgetPayload,
+    type DashboardWidget,
     type UpdateWidgetPayload,
     type WidgetLayout,
 } from '../lib/widgets';
@@ -35,9 +37,18 @@ export function useUpdateWidget() {
 }
 
 export function useUpdateLayout() {
+    const queryClient = useQueryClient();
     return useMutation({
         mutationFn: (layouts: { id: number; layout: WidgetLayout }[]) =>
             updateWidgetsLayout(layouts),
+        // Keep the cached widgets in line with what the server now stores, without a refetch.
+        onSuccess: (_result, layouts) =>
+            queryClient.setQueryData<DashboardWidget[]>(['widgets'], (widgets) =>
+                widgets?.map((widget) => {
+                    const saved = layouts.find((item) => item.id === widget.id);
+                    return saved ? toDashboardWidget({ ...widget, layout: saved.layout }) : widget;
+                }),
+            ),
     });
 }
 
