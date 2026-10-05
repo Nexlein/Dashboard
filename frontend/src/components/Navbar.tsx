@@ -215,7 +215,7 @@ export default function Navbar({
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                             variant="destructive"
-                            className="min-h-9 px-2 cursor-pointer text-red-500 focus:text-red-500"
+                            className="min-h-9 px-2 cursor-pointer"
                             disabled={privacyBusy}
                             onClick={deleteAccount}
                         >
