@@ -1,17 +1,13 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 import { setCookies, signToken, stubFetch, verifyToken } from './helpers.ts';
 import request, { type Response } from 'supertest';
-// The client the app gets from new PrismaClient(): plain stubs, hoisted for vi.mock.
+// The shared client from utils/prisma.ts: plain stubs, hoisted for vi.mock.
 const prisma = vi.hoisted(() => ({
     $transaction: vi.fn(),
     user: { findUnique: vi.fn(), update: vi.fn(), create: vi.fn(), delete: vi.fn() },
     oAuthToken: { upsert: vi.fn(), findUnique: vi.fn() },
 }));
-vi.mock('@prisma/client', () => ({
-    PrismaClient: vi.fn(function () {
-        return prisma;
-    }),
-}));
+vi.mock('../src/utils/prisma.ts', () => ({ default: prisma }));
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import authRouter from '../src/routes/auth.ts';

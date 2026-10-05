@@ -1,5 +1,5 @@
 import jwt, { type SignOptions } from 'jsonwebtoken';
-import type { User } from '@prisma/client';
+import type { User } from '../generated/prisma/client.ts';
 import env from './env.ts';
 
 /** Claims of the session JWT. */

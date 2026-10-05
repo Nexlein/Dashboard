@@ -1,6 +1,6 @@
 import type { CookieOptions, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
-import type { User } from '@prisma/client';
+import type { User } from '../generated/prisma/client.ts';
 import { signAuthToken } from './authToken.ts';
 
 // The JWT lives in an httpOnly cookie: page scripts (and so an XSS payload) cannot read it.

@@ -3,17 +3,13 @@ import { setCookies, signToken, verifyToken } from './helpers.ts';
 import request, { type Response } from 'supertest';
 import bcrypt from 'bcrypt';
 
-// The client the app gets from new PrismaClient(): plain stubs, hoisted for vi.mock.
+// The shared client from utils/prisma.ts: plain stubs, hoisted for vi.mock.
 const prisma = vi.hoisted(() => ({
     user: { findUnique: vi.fn(), delete: vi.fn() },
     widgetConfig: { updateMany: vi.fn() },
     $transaction: vi.fn(),
 }));
-vi.mock('@prisma/client', () => ({
-    PrismaClient: vi.fn(function () {
-        return prisma;
-    }),
-}));
+vi.mock('../src/utils/prisma.ts', () => ({ default: prisma }));
 
 import app from '../src/app.ts';
 // Runs before the imports below: the app reads these when it loads.

@@ -4,17 +4,13 @@ import { decryptString } from '../src/utils/encryption.ts';
 import githubService from '../src/services/github.ts';
 import type { ServiceContext } from '../src/services/types.ts';
 
-// The client the app gets from new PrismaClient(): plain stubs, hoisted for vi.mock.
+// The shared client from utils/prisma.ts: plain stubs, hoisted for vi.mock.
 const prisma = vi.hoisted(() => ({
     oAuthToken: {
         update: vi.fn(),
     },
 }));
-vi.mock('@prisma/client', () => ({
-    PrismaClient: vi.fn(function () {
-        return prisma;
-    }),
-}));
+vi.mock('../src/utils/prisma.ts', () => ({ default: prisma }));
 
 // Runs before the imports below: the app reads these when it loads.
 vi.hoisted(() => {

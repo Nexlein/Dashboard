@@ -5,7 +5,7 @@ import app from '../src/app.ts';
 import weatherService from '../src/services/weather.ts';
 
 // Mock Prisma Client
-// The client the app gets from new PrismaClient(): plain stubs, hoisted for vi.mock.
+// The shared client from utils/prisma.ts: plain stubs, hoisted for vi.mock.
 const prisma = vi.hoisted(() => ({
     user: {
         findUnique: vi.fn(),
@@ -34,11 +34,7 @@ const prisma = vi.hoisted(() => ({
     $transaction: vi.fn(),
     $queryRaw: vi.fn(),
 }));
-vi.mock('@prisma/client', () => ({
-    PrismaClient: vi.fn(function () {
-        return prisma;
-    }),
-}));
+vi.mock('../src/utils/prisma.ts', () => ({ default: prisma }));
 
 import { encryptJson } from '../src/utils/encryption.ts';
 import chatbotService from '../src/services/chatbot.ts';

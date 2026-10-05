@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import type { CookieOptions, Request } from 'express';
-import type { Prisma } from '@prisma/client';
+import type { Prisma } from '../generated/prisma/client.ts';
 import { getCache, setCache, deleteCache } from '../utils/redisCache.ts';
 import { encryptString } from '../utils/encryption.ts';
 import { getGitHubProfile, getVerifiedGitHubEmail } from '../services/githubIdentity.ts';

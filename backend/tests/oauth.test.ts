@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach, afterAll, type Mock } 
 import { signToken, stubFetch } from './helpers.ts';
 import request from 'supertest';
 
-// The client the app gets from new PrismaClient(): plain stubs, hoisted for vi.mock.
+// The shared client from utils/prisma.ts: plain stubs, hoisted for vi.mock.
 const prisma = vi.hoisted(() => {
     const client = {
         $transaction: vi.fn((transaction: (tx: unknown) => unknown): unknown =>
@@ -13,11 +13,7 @@ const prisma = vi.hoisted(() => {
     };
     return client;
 });
-vi.mock('@prisma/client', () => ({
-    PrismaClient: vi.fn(function () {
-        return prisma;
-    }),
-}));
+vi.mock('../src/utils/prisma.ts', () => ({ default: prisma }));
 
 const originalEnv = { ...process.env };
 

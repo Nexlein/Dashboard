@@ -2,7 +2,7 @@ import { describe, test, expect, vi, beforeEach } from 'vitest';
 import { signToken } from './helpers.ts';
 import request from 'supertest';
 
-// The client the app gets from new PrismaClient(): plain stubs, hoisted for vi.mock.
+// The shared client from utils/prisma.ts: plain stubs, hoisted for vi.mock.
 const prisma = vi.hoisted(() => ({
     user: {
         findUnique: vi.fn(),
@@ -10,11 +10,7 @@ const prisma = vi.hoisted(() => ({
         delete: vi.fn(),
     },
 }));
-vi.mock('@prisma/client', () => ({
-    PrismaClient: vi.fn(function () {
-        return prisma;
-    }),
-}));
+vi.mock('../src/utils/prisma.ts', () => ({ default: prisma }));
 
 import app from '../src/app.ts';
 // Runs before the imports below: the app reads these when it loads.

@@ -17,10 +17,13 @@ process.env.GITHUB_CLIENT_SECRET = 'integration-client-secret';
 process.env.GITHUB_CALLBACK_URL = 'http://localhost/auth/github/callback';
 process.env.TEST_GITHUB_ID = String(randomInt(1000000, 1000000000));
 process.env.TEST_GITHUB_EMAIL = `${randomUUID()}@integration.test`;
-import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaClient } from '../../src/generated/prisma/client.ts';
 import jwt, { type JwtPayload } from 'jsonwebtoken';
 import { encryptJson, encryptString, decryptString } from '../../src/utils/encryption.ts';
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+    adapter: new PrismaPg({ connectionString: process.env.TEST_DATABASE_URL }),
+});
 let child: ChildProcess | undefined;
 const ids: number[] = [];
 
