@@ -29,11 +29,17 @@ export function ChatbotWidget({ widget }: { widget: DashboardWidget }) {
     const [input, setInput] = useState('');
     const [error, setError] = useState<string | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const previousMessageCountRef = useRef(messages.length);
 
     useEffect(() => {
         localStorage.setItem(storageKey, JSON.stringify(messages));
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages, storageKey]);
+
+    useEffect(() => {
+        if (messages.length === previousMessageCountRef.current) return;
+        previousMessageCountRef.current = messages.length;
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages.length]);
 
     const chatMutation = useMutation({
         mutationFn: (payloadMessages: ChatMessage[]) => sendWidgetChatMessage(id, payloadMessages),

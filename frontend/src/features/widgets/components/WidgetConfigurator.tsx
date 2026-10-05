@@ -8,6 +8,7 @@ import {
     type WidgetParams,
 } from '@/features/widgets/lib/widgets';
 import { fetchServices, type ServiceConnection } from '@/features/services/lib/services';
+import { ServiceLogo } from '@/features/services/components/ServiceLogo';
 import {
     REGISTRY,
     findWidgetDefinition,
@@ -76,15 +77,26 @@ export function WidgetConfigurator() {
     const serviceConnectionRequired = service === 'weather' || selectedConnection?.configurable;
     const serviceConnected = !serviceConnectionRequired || selectedConnection?.connected === true;
 
+    const handleWidgetTypeChange = (type: string, serviceName = service) => {
+        setWidgetType(type);
+        const definition = findWidgetDefinition(serviceName, type);
+        setParams(
+            Object.fromEntries(
+                (definition?.params ?? [])
+                    .filter((param) => param.defaultValue !== undefined)
+                    .map((param) => [param.id, param.defaultValue]),
+            ),
+        );
+    };
+
     const handleServiceChange = (val: string) => {
         setService(val);
         const widgets = getServiceDefinition(val)?.widgets ?? [];
         if (widgets.length === 1) {
-            setWidgetType(widgets[0].id);
+            handleWidgetTypeChange(widgets[0].id, val);
         } else {
-            setWidgetType('');
+            handleWidgetTypeChange('', val);
         }
-        setParams({});
         setError('');
     };
 
@@ -142,68 +154,76 @@ export function WidgetConfigurator() {
                     <div className="grid gap-2">
                         <Label htmlFor="service">Service</Label>
                         <Select value={service} onValueChange={handleServiceChange}>
-                            <SelectTrigger id="service">
+                            <SelectTrigger id="service" className="text-left">
                                 <SelectValue placeholder="Select a service..." />
                             </SelectTrigger>
                             <SelectContent>
                                 {Object.entries(REGISTRY).map(([key, svc]) => (
-                                    <SelectItem key={key} value={key}>
-                                        {svc.name}
+                                    <SelectItem
+                                        key={key}
+                                        value={key}
+                                        textValue={svc.name}
+                                        className="pl-3 pr-8 [&>span:first-child]:left-auto [&>span:first-child]:right-2"
+                                    >
+                                        <span className="flex items-center gap-2">
+                                            <ServiceLogo name={key} size="sm" decorative />
+                                            <span>{svc.name}</span>
+                                        </span>
                                     </SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
                     </div>
 
-                    {service &&
-                        (serviceConnectionRequired && !serviceConnected ? (
-                            <div className="rounded-lg border border-sky-500/30 bg-sky-500/10 p-3 text-sm">
-                                <div className="flex items-start gap-2">
-                                    <KeyRound className="mt-0.5 size-4 shrink-0 text-sky-500" />
-                                    <div>
-                                        <p className="font-medium">
-                                            {selectedConnection?.displayName || service} is not
-                                            connected
-                                        </p>
-                                        <p className="mt-1 text-muted-foreground">
-                                            {selectedConnection?.connectionType === 'oauth'
-                                                ? `Please link your ${selectedConnection?.displayName || service} account in Services before creating this widget.`
-                                                : `Add and verify your personal API key in Services before creating a ${service} widget.`}
-                                        </p>
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            className="mt-3"
-                                            onClick={() => {
-                                                setOpen(false);
-                                                navigate('/services');
-                                            }}
-                                        >
-                                            Open Services
-                                        </Button>
-                                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="widgetType">Widget Type</Label>
+                        <Select
+                            value={widgetType}
+                            onValueChange={(type) => handleWidgetTypeChange(type)}
+                            disabled={!serviceDef || connectionsLoading || !serviceConnected}
+                        >
+                            <SelectTrigger id="widgetType">
+                                <SelectValue placeholder="Select a widget type..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {serviceDef?.widgets.map((w) => (
+                                    <SelectItem key={w.id} value={w.id}>
+                                        {w.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    {service && serviceConnectionRequired && !serviceConnected && (
+                        <div className="rounded-lg border border-sky-500/30 bg-sky-500/10 p-3 text-sm">
+                            <div className="flex items-start gap-2">
+                                <KeyRound className="mt-0.5 size-4 shrink-0 text-sky-500" />
+                                <div>
+                                    <p className="font-medium">
+                                        {selectedConnection?.displayName || service} is not
+                                        connected
+                                    </p>
+                                    <p className="mt-1 text-muted-foreground">
+                                        {selectedConnection?.connectionType === 'oauth'
+                                            ? `Please link your ${selectedConnection?.displayName || service} account in Services before creating this widget.`
+                                            : `Add and verify your personal API key in Services before creating a ${service} widget.`}
+                                    </p>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="mt-3"
+                                        onClick={() => {
+                                            setOpen(false);
+                                            navigate('/services');
+                                        }}
+                                    >
+                                        Open Services
+                                    </Button>
                                 </div>
                             </div>
-                        ) : (
-                            serviceDef &&
-                            serviceDef.widgets.length > 1 && (
-                                <div className="grid gap-2 animate-in fade-in slide-in-from-top-2">
-                                    <Label htmlFor="widgetType">Widget Type</Label>
-                                    <Select value={widgetType} onValueChange={setWidgetType}>
-                                        <SelectTrigger id="widgetType">
-                                            <SelectValue placeholder="Select a widget type..." />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {serviceDef.widgets.map((w) => (
-                                                <SelectItem key={w.id} value={w.id}>
-                                                    {w.name}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            )
-                        ))}
+                        </div>
+                    )}
 
                     {connectionsLoading && service && (
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">

@@ -28,8 +28,6 @@ export type ServiceDefinition = {
     name: string;
     displayName?: string;
     description?: string;
-    /** False for services that work without a user connection. */
-    configurable?: boolean;
     connection?: {
         type: 'apiKey' | 'oauth';
         label: string;
@@ -38,11 +36,15 @@ export type ServiceDefinition = {
         provider?: string;
     };
     widgets: WidgetSpec[];
+    /** Local validation without consuming provider credits. */
+    validateParams?(widgetName: string, params: WidgetParams): void;
     execute?(widgetName: string, params: WidgetParams, context: ServiceContext): Promise<unknown>;
     /** OAuth: who a connected account is, shown in Services (e.g. the GitHub login). */
     describeAccount?(credentials: ServiceCredentials): Promise<ConnectedAccountInfo>;
     /** Throws when the credentials are rejected by the provider. */
     verifyCredentials?(credentials: ServiceCredentials): Promise<unknown>;
+    /** Searches the provider (e.g. stock symbols) with the user's connection. */
+    search?(query: string, context: ServiceContext): Promise<unknown>;
     chat?(
         params: WidgetParams,
         context: ServiceContext,

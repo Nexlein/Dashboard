@@ -2,7 +2,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { FRONTEND, signedInAs } from './helpers.ts';
 import request from 'supertest';
 import app from '../src/app.ts';
+import stocks from '../src/services/stocks.ts';
+import { StockPendingError } from '../src/services/stockProvider.ts';
 import weatherService from '../src/services/weather.ts';
+import { HttpError } from '../src/utils/httpError.ts';
+import { getCache, setCache } from '../src/utils/redisCache.ts';
 
 // Mock Prisma Client
 // The shared client from utils/prisma.ts: plain stubs, hoisted for vi.mock.
@@ -254,6 +258,106 @@ describe('API Endpoints', () => {
             execute.mockRestore();
         });
 
+        it('creates an eight-stock configuration without fetching market data twice', async () => {
+            prisma.serviceConnection.findUnique.mockResolvedValue({
+                id: 9,
+                encryptedCredentials: encryptJson({ apiKey: 'test-key' }),
+            });
+            prisma.widgetConfig.create.mockResolvedValue({
+                ...mockWidget,
+                serviceName: 'stocks',
+                widgetName: 'stock_market',
+            });
+            const execute = vi.spyOn(stocks, 'execute');
+            try {
+                const res = await request(app)
+                    .post('/widgets')
+                    .set('Origin', FRONTEND)
+                    .send({
+                        serviceName: 'stocks',
+                        widgetName: 'stock_market',
+                        params: {
+                            symbols: 'AAPL,MSFT,NVDA,TSLA,AMZN,GOOG,META,NFLX',
+                            period: '1M',
+                        },
+                        refreshRate: 60,
+                        layout: { x: 0, y: 0, w: 6, h: 5 },
+                    });
+                expect(res.statusCode).toBe(201);
+                expect(execute).not.toHaveBeenCalled();
+                expect(prisma.widgetConfig.create).toHaveBeenCalled();
+            } finally {
+                execute.mockRestore();
+            }
+        });
+
+        it('keeps local stock validation when creation no longer calls the provider', async () => {
+            prisma.serviceConnection.findUnique.mockResolvedValue({
+                id: 9,
+                encryptedCredentials: encryptJson({ apiKey: 'test-key' }),
+            });
+            const res = await request(app)
+                .post('/widgets')
+                .set('Origin', FRONTEND)
+                .send({
+                    serviceName: 'stocks',
+                    widgetName: 'stock_profile',
+                    params: { symbols: 'AAPL,MSFT', period: '1M' },
+                    refreshRate: 60,
+                    layout: { x: 0, y: 0, w: 4, h: 4 },
+                });
+            expect(res.statusCode).toBe(400);
+            expect(res.body.error).toContain('exactly one company');
+            expect(prisma.widgetConfig.create).not.toHaveBeenCalled();
+        });
+
+        it('returns provider cooldown information for automatic stock retries', async () => {
+            prisma.widgetConfig.findUnique.mockResolvedValue({
+                ...mockWidget,
+                serviceName: 'stocks',
+                widgetName: 'stock_market',
+                params: { symbols: 'AAPL', period: '1M' },
+            });
+            prisma.serviceConnection.findUnique.mockResolvedValue({
+                id: 9,
+                encryptedCredentials: encryptJson({ apiKey: 'test-key' }),
+            });
+            const execute = vi
+                .spyOn(stocks, 'execute')
+                .mockRejectedValue(new StockPendingError(Date.now() + 45000));
+            try {
+                const res = await request(app).get('/widgets/1/data').set('Origin', FRONTEND);
+                expect(res.statusCode).toBe(429);
+                expect(Number(res.headers['retry-after'])).toBeGreaterThanOrEqual(44);
+                expect(res.body.retryAfter).toBeGreaterThanOrEqual(44);
+            } finally {
+                execute.mockRestore();
+            }
+        });
+
+        it("does not pass a provider's 401 on as a session error", async () => {
+            prisma.widgetConfig.findUnique.mockResolvedValue({
+                ...mockWidget,
+                serviceName: 'stocks',
+                widgetName: 'stock_market',
+                params: { symbols: 'AAPL', period: '1M' },
+            });
+            prisma.serviceConnection.findUnique.mockResolvedValue({
+                id: 9,
+                encryptedCredentials: encryptJson({ apiKey: 'test-key' }),
+            });
+            const execute = vi
+                .spyOn(stocks, 'execute')
+                .mockRejectedValue(new HttpError('Provider token revoked', 401));
+            try {
+                const res = await request(app).get('/widgets/1/data').set('Origin', FRONTEND);
+                expect(res.statusCode).toBe(502);
+                expect(res.body.error).toBe('Provider token revoked');
+            } finally {
+                execute.mockRestore();
+            }
+        });
+
         it('answers 501 for a widget whose service fetches no data', async () => {
             prisma.widgetConfig.findUnique.mockResolvedValue({
                 ...mockWidget,
@@ -448,6 +552,58 @@ describe('API Endpoints', () => {
             expect(JSON.stringify(res.body)).not.toContain('encryptedCredentials');
         });
 
+        it('reports every configurable service as disconnected without credentials', async () => {
+            prisma.serviceConnection.findMany.mockResolvedValue([]);
+            prisma.account.findMany.mockResolvedValue([]);
+
+            const res = await request(app).get('/services').set('Origin', FRONTEND);
+
+            expect(res.statusCode).toBe(200);
+            for (const name of ['weather', 'crypto', 'stocks', 'github']) {
+                expect(res.body.find((service: { name: string }) => service.name === name)).toEqual(
+                    expect.objectContaining({ connected: false, configurable: true }),
+                );
+            }
+            for (const name of ['youtube', 'chatbot']) {
+                expect(res.body.find((service: { name: string }) => service.name === name)).toEqual(
+                    expect.objectContaining({ connected: true, configurable: false }),
+                );
+            }
+        });
+
+        it('requires a connected Twelve Data account to search stocks', async () => {
+            prisma.serviceConnection.findUnique.mockResolvedValue(null);
+            const res = await request(app)
+                .get('/services/stocks/search?q=apple')
+                .set('Origin', FRONTEND);
+            expect(res.statusCode).toBe(409);
+        });
+
+        it('searches stocks using only the authenticated user connection', async () => {
+            prisma.serviceConnection.findUnique.mockResolvedValue({
+                id: 9,
+                encryptedCredentials: encryptJson({ apiKey: 'test-key' }),
+            });
+            const results = [
+                { symbol: 'AAPL', name: 'Apple Inc.', exchange: 'NASDAQ', country: 'US' },
+            ];
+            const search = vi.spyOn(stocks, 'search').mockResolvedValue(results);
+            try {
+                const res = await request(app)
+                    .get('/services/stocks/search?q=apple')
+                    .set('Origin', FRONTEND);
+                expect(res.statusCode).toBe(200);
+                expect(res.body).toEqual(results);
+                expect(search).toHaveBeenCalledWith('apple', {
+                    credentials: { apiKey: 'test-key' },
+                    cacheScope: '1:9',
+                    userId: 1,
+                });
+            } finally {
+                search.mockRestore();
+            }
+        });
+
         it.each([[{}], [{ apiKey: '   ' }], [{ apiKey: { nested: 'object' } }]])(
             'rejects a missing or non-string API key %j',
             async (body) => {
@@ -486,6 +642,36 @@ describe('API Endpoints', () => {
             );
             expect(res.body).not.toHaveProperty('encryptedCredentials');
             verify.mockRestore();
+        });
+
+        it("keeps other users' cache and rate-limit entries when a key is saved or removed", async () => {
+            vi.spyOn(weatherService, 'verifyCredentials').mockResolvedValue();
+            prisma.serviceConnection.upsert.mockResolvedValue(connection);
+            prisma.serviceConnection.deleteMany.mockResolvedValue({ count: 1 });
+            await setCache('2:weather:paris', { temp: 20 }, 60_000);
+
+            await request(app)
+                .put('/services/weather/connection')
+                .set('Origin', FRONTEND)
+                .send({ apiKey: 'test-api-key' });
+            await request(app).delete('/services/weather/connection').set('Origin', FRONTEND);
+
+            expect(await getCache('2:weather:paris')).toEqual({ temp: 20 });
+            vi.mocked(weatherService.verifyCredentials).mockRestore();
+        });
+
+        it('disconnects a GitHub service account through Better Auth', async () => {
+            prisma.account.findMany.mockResolvedValue([{ id: 12, accountId: '1' }]);
+            const res = await request(app)
+                .delete('/services/github/connection')
+                .set('Origin', FRONTEND);
+            expect(res.statusCode).toBe(204);
+            expect(auth.api.unlinkAccount).toHaveBeenCalledWith(
+                expect.objectContaining({ body: { accountId: '12' } }),
+            );
+            expect(prisma.account.findMany).toHaveBeenCalledWith(
+                expect.objectContaining({ where: { userId: 1, providerId: 'github-service' } }),
+            );
         });
 
         it('disconnects only the authenticated user service', async () => {

@@ -28,6 +28,7 @@ describe('ChatbotWidget', () => {
     it('renders default message', () => {
         customRender(<ChatbotWidget widget={mockWidget} />);
         expect(screen.getByText('Hello! How can I help you today?')).toBeInTheDocument();
+        expect(window.HTMLElement.prototype.scrollIntoView).not.toHaveBeenCalled();
     });
 
     it('sends message and updates UI', async () => {
@@ -53,6 +54,7 @@ describe('ChatbotWidget', () => {
         await waitFor(() => {
             expect(screen.getByText('I am doing well, thanks!')).toBeInTheDocument();
         });
+        expect(window.HTMLElement.prototype.scrollIntoView).toHaveBeenCalled();
 
         // Ensure fetch was called correctly
         expect(fetchMock).toHaveBeenCalledWith(

@@ -38,3 +38,14 @@ export async function disconnectService(serviceName: string): Promise<void> {
 export async function disconnectAccount(serviceName: string, accountId: number): Promise<void> {
     await fetchClient(`/services/${serviceName}/accounts/${accountId}`, { method: 'DELETE' });
 }
+
+export type StockSearchResult = {
+    symbol: string;
+    name: string;
+    exchange: string | null;
+    country: string | null;
+};
+
+export async function searchStocks(query: string): Promise<StockSearchResult[]> {
+    return fetchClient(`/services/stocks/search?q=${encodeURIComponent(query)}`);
+}

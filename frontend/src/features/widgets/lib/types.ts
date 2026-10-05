@@ -7,8 +7,17 @@ export type ParamOption = { value: string; label: string };
 export type WidgetParamDefinition = {
     id: string;
     label: string;
-    type: 'text' | 'select' | 'coin-multiselect' | 'account' | 'hidden';
+    type:
+        | 'text'
+        | 'select'
+        | 'coin-multiselect'
+        | 'stock-multiselect'
+        | 'stock-select'
+        | 'segmented'
+        | 'account'
+        | 'hidden';
     placeholder?: string;
+    defaultValue?: string;
     options?: ParamOption[];
     /** `account` params: the service whose connected accounts are offered. */
     service?: string;
@@ -45,5 +54,12 @@ export type ServiceDefinition = {
     name: string;
     /** false for widgets that fetch nothing on a timer (the chatbot). */
     hasRefresh: boolean;
+    /** The param the widgets' period buttons change (default `days`). */
+    periodParam?: string;
+    /**
+     * Provider with a small credit quota (Twelve Data): data is not refetched on focus, a
+     * 429 is retried after its Retry-After, and the last chart stays visible meanwhile.
+     */
+    quotaLimited?: boolean;
     widgets: WidgetDefinition[];
 };

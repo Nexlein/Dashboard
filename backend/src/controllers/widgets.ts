@@ -9,6 +9,8 @@ import { authUser } from '../middleware/auth.ts';
 import { accountAccessToken, linkedAccounts } from '../utils/oauthAccounts.ts';
 
 const MIN_REFRESH_RATE_SECONDS = 60;
+/** Service error statuses that mean the same for the client; any other one becomes 502. */
+const FORWARDED_ERROR_STATUSES = new Set([400, 404, 409, 429, 503]);
 
 const layoutSchema = z.object({
     x: z.number().int(),
@@ -160,13 +162,15 @@ export const addWidget = asyncHandler(async (req, res) => {
     if ('error' in result) return res.status(result.status).json({ error: result.error });
     const { access } = result;
 
-    if (typeof service.execute === 'function') {
+    if (service.validateParams || typeof service.execute === 'function') {
         try {
-            await service.execute(widgetName, params, {
-                userId: authUser(req).userId,
-                refreshRate: Math.max(refreshRate, MIN_REFRESH_RATE_SECONDS),
-                ...access,
-            });
+            if (service.validateParams) service.validateParams(widgetName, params);
+            else
+                await service.execute!(widgetName, params, {
+                    userId: authUser(req).userId,
+                    refreshRate: Math.max(refreshRate, MIN_REFRESH_RATE_SECONDS),
+                    ...access,
+                });
         } catch (execError) {
             return res
                 .status(400)
@@ -235,9 +239,16 @@ export const getWidgetData = asyncHandler(async (req, res) => {
             ...access,
         });
     } catch (execError) {
-        return res
-            .status(502)
-            .json({ error: errorMessage(execError, 'Failed to fetch widget data') });
+        const details = execError as { statusCode?: number; retryAfter?: number };
+        if (details.retryAfter) res.set('Retry-After', String(details.retryAfter));
+        // Provider statuses such as 401 would read as this API's own session errors.
+        const status = FORWARDED_ERROR_STATUSES.has(details.statusCode ?? 0)
+            ? details.statusCode!
+            : 502;
+        return res.status(status).json({
+            error: errorMessage(execError, 'Failed to fetch widget data'),
+            ...(details.retryAfter && { retryAfter: details.retryAfter }),
+        });
     }
 
     res.json(data);

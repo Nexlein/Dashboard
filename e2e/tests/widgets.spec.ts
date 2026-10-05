@@ -18,7 +18,7 @@ test.describe('Dashboard widgets', () => {
         await page.getByRole('button', { name: 'Add Widget' }).click();
 
         const dialog = page.getByRole('dialog', { name: 'Add New Widget' });
-        await dialog.getByRole('combobox').click();
+        await dialog.getByRole('combobox', { name: 'Service' }).click();
         await page.getByRole('option', { name: 'Ollama' }).click();
         await dialog.getByRole('button', { name: 'Select' }).first().click();
         await dialog.getByRole('button', { name: 'Add to Dashboard' }).click();

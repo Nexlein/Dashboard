@@ -2,8 +2,14 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { render as renderWithProviders } from '@/test-utils';
 import { makeService, mockApi } from '@/test/fixtures';
 import { describe, expect, it, vi } from 'vitest';
+import { searchStocks } from '@/features/services/lib/services';
 import { WidgetParameterField } from './WidgetParameterField';
 import type { WidgetParamDefinition } from '@/features/widgets/lib/types';
+
+vi.mock('@/features/services/lib/services', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('@/features/services/lib/services')>()),
+    searchStocks: vi.fn(),
+}));
 
 const cryptoParam: WidgetParamDefinition = {
     id: 'coins',
@@ -11,6 +17,14 @@ const cryptoParam: WidgetParamDefinition = {
     type: 'coin-multiselect',
     placeholder: 'CoinGecko ID',
     options: [{ value: 'bitcoin', label: 'BTC' }],
+};
+
+const stockParam: WidgetParamDefinition = {
+    id: 'symbols',
+    label: 'Companies',
+    type: 'stock-multiselect',
+    placeholder: 'Search stocks',
+    options: [{ value: 'AAPL', label: 'Apple' }],
 };
 
 describe('WidgetParameterField', () => {
@@ -39,6 +53,28 @@ describe('WidgetParameterField', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Remove ethereum' }));
 
         expect(onChange).toHaveBeenCalledWith('bitcoin');
+    });
+
+    it('searches Twelve Data and adds the selected stock', async () => {
+        vi.mocked(searchStocks).mockResolvedValue([
+            {
+                symbol: 'NVDA',
+                name: 'NVIDIA Corp',
+                exchange: 'NASDAQ',
+                country: 'US',
+            },
+        ]);
+        const onChange = vi.fn();
+        render(<WidgetParameterField param={stockParam} value="AAPL" onChange={onChange} />);
+
+        fireEvent.change(screen.getByLabelText('Search stocks'), {
+            target: { value: 'nvidia' },
+        });
+
+        await waitFor(() => expect(searchStocks).toHaveBeenCalledWith('nvidia'));
+        fireEvent.click(await screen.findByRole('button', { name: /NVDA.*NVIDIA Corp/ }));
+
+        expect(onChange).toHaveBeenCalledWith('AAPL,NVDA');
     });
 });
 

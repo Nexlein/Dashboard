@@ -14,7 +14,8 @@ import { useWidgetLayoutManager } from '@/features/widgets/hooks/useWidgetLayout
 import { useState } from 'react';
 import WidgetRenderer from './WidgetRenderer';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { Bitcoin, CloudSun, Edit2, EllipsisVertical, Trash2, Loader2 } from 'lucide-react';
+import { Edit2, EllipsisVertical, Trash2, Loader2 } from 'lucide-react';
+import { ServiceLogo } from '@/features/services/components/ServiceLogo';
 import { WidgetEditDialog } from './WidgetEditDialog';
 import type { DashboardWidget } from '@/features/widgets/lib/widgets';
 
@@ -57,21 +58,10 @@ export default function DashboardGrid() {
                         <Card className="flex h-full w-full cursor-move flex-col overflow-hidden">
                             <CardHeader className="flex shrink-0 flex-row items-center justify-between border-b border-border bg-muted/50 p-4">
                                 <CardTitle className="flex items-center gap-2 text-sm">
-                                    {widget.serviceName === 'weather' && (
-                                        <CloudSun
-                                            aria-hidden="true"
-                                            className="h-5 w-5 text-sky-500"
-                                        />
-                                    )}
-                                    {widget.serviceName === 'crypto' && (
-                                        <Bitcoin
-                                            aria-hidden="true"
-                                            className="h-5 w-5 text-amber-500"
-                                        />
-                                    )}
+                                    <ServiceLogo name={widget.serviceName} size="sm" decorative />
                                     <span>{widget.title}</span>
                                 </CardTitle>
-                                <DropdownMenu>
+                                <DropdownMenu modal={false}>
                                     <DropdownMenuTrigger
                                         render={
                                             <Button
@@ -108,7 +98,9 @@ export default function DashboardGrid() {
                                 </DropdownMenu>
                             </CardHeader>
                             <CardContent className="flex min-h-0 flex-1 items-center justify-center overflow-auto p-4">
-                                <ErrorBoundary>
+                                <ErrorBoundary
+                                    key={`${widget.id}:${JSON.stringify(widget.params)}`}
+                                >
                                     <WidgetRenderer widget={widget} />
                                 </ErrorBoundary>
                             </CardContent>
