@@ -306,3 +306,37 @@ describe('GitHub as a service', () => {
         expect(user!.accounts.map((a) => a.providerId)).toEqual(['github']);
     });
 });
+
+describe('tokens out of reach of page scripts', () => {
+    it('no Better Auth endpoint returns the session token or the GitHub token', async () => {
+        const agent = browser();
+        const email = uniqueEmail();
+        await signUp(agent, { email });
+        await signIn(agent, email);
+        const github = fakeGitHub(githubProfile());
+        await githubFlow(agent, { path: '/api/auth/link-social' });
+        const user = await userByEmail(email);
+        const sessionToken = (await prisma.session.findFirst({
+            where: { userId: user!.id },
+            orderBy: { createdAt: 'desc' },
+        }))!.token;
+        const accountId = String(user!.accounts.find((a) => a.providerId === 'github')!.id);
+
+        const post = (path: string, body: object) =>
+            agent.post(`/api/auth${path}`).set('Origin', FRONTEND).send(body);
+        const calls: [string, () => PromiseLike<{ text: string }>][] = [
+            ['get-access-token', () => post('/get-access-token', { accountId })],
+            ['refresh-token', () => post('/refresh-token', { accountId })],
+            ['list-sessions', () => agent.get('/api/auth/list-sessions')],
+            ['update-session', () => post('/update-session', {})],
+            ['list-accounts', () => agent.get('/api/auth/list-accounts')],
+            ['account-info', () => agent.get('/api/auth/account-info').query({ accountId })],
+            ['get-session', () => agent.get('/api/auth/get-session')],
+        ];
+        for (const [path, call] of calls) {
+            const { text } = await call();
+            expect(text, path).not.toContain(sessionToken);
+            expect(text, path).not.toContain(github.accessToken);
+        }
+    });
+});

@@ -71,6 +71,10 @@ export const auth = betterAuth({
     // utils/rateLimit.ts limits sign-in and sign-up instead (app.ts): its counters live in
     // Redis, shared by every replica, where Better Auth's default storage is per process.
     rateLimit: { enabled: false },
+    // Over HTTP only (the server keeps calling them through auth.api): the routes that hand a
+    // GitHub token or session tokens to the page are closed, so a script injected in the page
+    // cannot take them (utils/oauthAccounts.ts reads the token server-side).
+    disabledPaths: ['/get-access-token', '/refresh-token', '/list-sessions'],
     advanced: {
         // Better Auth skips its Origin/callback URL checks when NODE_ENV is "test": keep them
         // on everywhere, so the tests exercise the production behavior.
