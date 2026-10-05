@@ -97,7 +97,7 @@ export function ChatbotWidget({ widget }: { widget: DashboardWidget }) {
                             <div
                                 className={`rounded-xl px-3 py-2 ${msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}
                             >
-                                <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                                <p className="whitespace-pre-wrap wrap-break-word">{msg.content}</p>
                             </div>
                         </div>
                     </div>
