@@ -1,5 +1,5 @@
 # Build context: repository root (see docker-compose.yml).
-FROM node:24-alpine AS builder
+FROM node:26-alpine AS builder
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY shared/package.json ./shared/
