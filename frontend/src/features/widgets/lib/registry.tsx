@@ -6,6 +6,8 @@ import {
 } from '@/features/widgets/catalog/GithubWidgets';
 import { CryptoPrice } from '@/features/widgets/catalog/CryptoPrice';
 import { CryptoChartWidget } from '@/features/widgets/catalog/CryptoChartWidget';
+import { StockProfileWidget } from '@/features/widgets/catalog/StockProfileWidget';
+import { StockMarketWidget } from '@/features/widgets/catalog/StockMarketWidget';
 import { ChatbotWidget } from '@/features/widgets/catalog/ChatbotWidget';
 import { OllamaModelManager } from '@/features/widgets/catalog/OllamaModelManager';
 import type { ServiceDefinition, WidgetDefinition } from './types';
@@ -179,6 +181,78 @@ export const REGISTRY: Record<string, ServiceDefinition> = {
                             { value: '30', label: '1 month' },
                             { value: '90', label: '3 months' },
                             { value: '365', label: '1 year' },
+                        ],
+                    },
+                ],
+            },
+        ],
+    },
+    stocks: {
+        name: 'Stock Market',
+        hasRefresh: true,
+        widgets: [
+            {
+                id: 'stock_market',
+                name: 'Stock Comparison Chart',
+                component: StockMarketWidget,
+                params: [
+                    {
+                        id: 'symbols',
+                        label: 'Companies',
+                        type: 'stock-multiselect',
+                        placeholder: 'Search by company or ticker',
+                        options: [
+                            { value: 'AAPL', label: 'Apple' },
+                            { value: 'NVDA', label: 'NVIDIA' },
+                            { value: 'MSFT', label: 'Microsoft' },
+                            { value: 'TSLA', label: 'Tesla' },
+                        ],
+                    },
+                    {
+                        id: 'period',
+                        label: 'Period',
+                        type: 'segmented',
+                        defaultValue: '1M',
+                        placeholder: 'Select a period',
+                        options: [
+                            { value: '1W', label: '1 week' },
+                            { value: '1M', label: '1 month' },
+                            { value: '1Y', label: '1 year' },
+                            { value: '5Y', label: '5 years' },
+                            { value: 'ALL', label: 'All available history' },
+                        ],
+                    },
+                ],
+            },
+            {
+                id: 'stock_profile',
+                name: 'Stock Profile',
+                component: StockProfileWidget,
+                params: [
+                    {
+                        id: 'symbols',
+                        label: 'Company',
+                        type: 'stock-select',
+                        placeholder: 'Search by company or ticker',
+                        options: [
+                            { value: 'AAPL', label: 'Apple' },
+                            { value: 'NVDA', label: 'NVIDIA' },
+                            { value: 'MSFT', label: 'Microsoft' },
+                            { value: 'TSLA', label: 'Tesla' },
+                        ],
+                    },
+                    {
+                        id: 'period',
+                        label: 'Period',
+                        type: 'segmented',
+                        defaultValue: '1M',
+                        placeholder: 'Select a period',
+                        options: [
+                            { value: '1W', label: '1 week' },
+                            { value: '1M', label: '1 month' },
+                            { value: '1Y', label: '1 year' },
+                            { value: '5Y', label: '5 years' },
+                            { value: 'ALL', label: 'All available history' },
                         ],
                     },
                 ],

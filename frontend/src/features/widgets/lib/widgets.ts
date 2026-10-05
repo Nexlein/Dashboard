@@ -82,6 +82,18 @@ const WIDGET_PRESENTATION: Record<string, WidgetPresentation> = {
         title: 'Crypto Price',
         defaultLayout: { x: 0, y: 0, w: 3, h: 2 },
     },
+    'stocks:stock_market': {
+        title: 'Stock Market',
+        defaultLayout: { x: 0, y: 0, w: 6, h: 5 },
+        minW: 3,
+        minH: 4,
+    },
+    'stocks:stock_profile': {
+        title: 'Stock Profile',
+        defaultLayout: { x: 0, y: 0, w: 4, h: 4 },
+        minW: 3,
+        minH: 4,
+    },
     'crypto:crypto_chart': {
         title: 'Crypto Market',
         defaultLayout: { x: 0, y: 0, w: 6, h: 5 },

@@ -7,8 +7,17 @@ export type ParamOption = { value: string; label: string };
 export type WidgetParamDefinition = {
     id: string;
     label: string;
-    type: 'text' | 'select' | 'coin-multiselect' | 'account' | 'hidden';
+    type:
+        | 'text'
+        | 'select'
+        | 'coin-multiselect'
+        | 'stock-multiselect'
+        | 'stock-select'
+        | 'segmented'
+        | 'account'
+        | 'hidden';
     placeholder?: string;
+    defaultValue?: string;
     options?: ParamOption[];
     /** `account` params: the service whose connected accounts are offered. */
     service?: string;
