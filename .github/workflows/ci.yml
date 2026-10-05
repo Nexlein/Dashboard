@@ -14,8 +14,8 @@ jobs:
     lint:
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v4
-            - uses: actions/setup-node@v4
+            - uses: actions/checkout@v7
+            - uses: actions/setup-node@v7
               with:
                   node-version-file: .nvmrc
                   cache: 'npm'
@@ -25,8 +25,8 @@ jobs:
     test-shared:
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v4
-            - uses: actions/setup-node@v4
+            - uses: actions/checkout@v7
+            - uses: actions/setup-node@v7
               with:
                   node-version-file: .nvmrc
                   cache: 'npm'
@@ -50,8 +50,8 @@ jobs:
                     --health-timeout 5s
                     --health-retries 10
         steps:
-            - uses: actions/checkout@v4
-            - uses: actions/setup-node@v4
+            - uses: actions/checkout@v7
+            - uses: actions/setup-node@v7
               with:
                   node-version-file: .nvmrc
                   cache: 'npm'
@@ -83,8 +83,8 @@ jobs:
     test-frontend:
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v4
-            - uses: actions/setup-node@v4
+            - uses: actions/checkout@v7
+            - uses: actions/setup-node@v7
               with:
                   node-version-file: .nvmrc
                   cache: 'npm'
@@ -109,8 +109,8 @@ jobs:
                     --health-timeout 5s
                     --health-retries 10
         steps:
-            - uses: actions/checkout@v4
-            - uses: actions/setup-node@v4
+            - uses: actions/checkout@v7
+            - uses: actions/setup-node@v7
               with:
                   node-version-file: .nvmrc
                   cache: 'npm'
@@ -124,7 +124,7 @@ jobs:
             - run: npm run test:e2e
               env:
                   DATABASE_URL: postgresql://postgres:postgres@localhost:5432/dashboard_e2e_test
-            - uses: actions/upload-artifact@v4
+            - uses: actions/upload-artifact@v7
               if: failure()
               with:
                   name: playwright-report
@@ -134,5 +134,5 @@ jobs:
     docker:
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v7
             - run: docker compose build
