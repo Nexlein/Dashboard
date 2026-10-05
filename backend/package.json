@@ -2,26 +2,38 @@
     "name": "backend",
     "version": "1.0.0",
     "description": "",
-    "main": "server.js",
+    "main": "dist/server.js",
     "scripts": {
-        "start": "node server.js",
-        "dev": "node --watch server.js",
+        "start": "node dist/server.js",
+        "dev": "node --watch src/server.ts",
         "test": "vitest run",
-        "test:gdpr-integration": "node tests/integration/gdpr.integration.js",
+        "test:gdpr-integration": "node tests/integration/gdpr.integration.ts",
         "test:load": "k6 run tests/k6/load.js",
         "test:stress": "k6 run tests/k6/stress.js",
         "test:spike": "k6 run tests/k6/spike.js",
         "db:generate": "prisma generate",
         "db:migrate": "prisma migrate dev",
         "db:deploy": "prisma migrate deploy",
-        "db:reset": "prisma migrate reset"
+        "db:reset": "prisma migrate reset",
+        "build": "tsc -p tsconfig.build.json",
+        "typecheck": "tsc -p tsconfig.json"
     },
     "keywords": [],
     "author": "",
     "license": "ISC",
     "devDependencies": {
+        "@types/bcrypt": "^6.0.0",
+        "@types/cookie-parser": "^1.4.10",
+        "@types/cors": "^2.8.19",
+        "@types/express": "^5.0.6",
+        "@types/jsonwebtoken": "^9.0.10",
+        "@types/node": "^24.19.1",
+        "@types/supertest": "^7.2.1",
+        "@types/swagger-jsdoc": "^6.0.4",
+        "@types/swagger-ui-express": "^4.1.8",
         "@vitest/coverage-v8": "^5.0.2",
         "supertest": "^7.3.0",
+        "typescript": "~7.0.2",
         "vitest": "^5.0.2"
     },
     "dependencies": {
@@ -43,7 +55,7 @@
         "zod": "^4.6.5"
     },
     "prisma": {
-        "seed": "node prisma/seed.js"
+        "seed": "node prisma/seed.ts"
     },
     "type": "module"
 }

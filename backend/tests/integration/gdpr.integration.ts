@@ -1,0 +1,221 @@
+// Run against a disposable PostgreSQL database, never a development/production DB.
+import path from 'node:path';
+import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
+import { randomUUID, randomInt } from 'node:crypto';
+import net from 'node:net';
+
+if (!process.env.TEST_DATABASE_URL)
+    throw new Error('TEST_DATABASE_URL must point to an isolated test database');
+process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
+process.env.JWT_SECRET = 'gdpr-integration-jwt-secret-at-least-32-chars-long';
+process.env.ENCRYPTION_KEY = 'gdpr-integration-encryption-secret-that-is-at-least-32-bytes';
+delete process.env.REDIS_URL;
+process.env.GITHUB_CLIENT_ID = 'integration-client';
+process.env.GITHUB_CLIENT_SECRET = 'integration-client-secret';
+process.env.GITHUB_CALLBACK_URL = 'http://localhost/auth/github/callback';
+process.env.TEST_GITHUB_ID = String(randomInt(1000000, 1000000000));
+process.env.TEST_GITHUB_EMAIL = `${randomUUID()}@integration.test`;
+import { PrismaClient } from '@prisma/client';
+import jwt from 'jsonwebtoken';
+import { encryptJson, encryptString, decryptString } from '../../src/utils/encryption.ts';
+const prisma = new PrismaClient();
+let child;
+const ids = [];
+
+async function main() {
+    const user = await prisma.user.create({
+        data: {
+            email: `${randomUUID()}@integration.test`,
+            password: 'password-hash',
+            displayName: 'Integration',
+            widgets: {
+                create: {
+                    serviceName: 'weather',
+                    widgetName: 'current_weather',
+                    params: encryptJson({ city: 'Paris' }),
+                    refreshRate: 60,
+                    layout: { x: 0, y: 0, w: 3, h: 2 },
+                },
+            },
+            tokens: {
+                create: {
+                    provider: 'github',
+                    accessToken: encryptString('stored-access'),
+                    refreshToken: encryptString('stored-refresh'),
+                },
+            },
+            serviceConnections: {
+                create: {
+                    serviceName: 'weather',
+                    encryptedCredentials: encryptJson({ apiKey: 'private-api-key' }),
+                    verifiedAt: new Date(),
+                },
+            },
+        },
+    });
+    ids.push(user.id);
+    const other = await prisma.user.create({
+        data: { email: `${randomUUID()}@integration.test`, password: null, githubId: randomUUID() },
+    });
+    ids.push(other.id);
+
+    const port = await new Promise((resolve) => {
+        const server = net.createServer();
+        server.listen(0, '127.0.0.1', () => {
+            const port = server.address().port;
+            server.close(() => resolve(port));
+        });
+    });
+    child = spawn(
+        process.execPath,
+        ['--require', path.join(import.meta.dirname, 'github.fixture.cjs'), 'src/server.ts'],
+        {
+            cwd: path.join(import.meta.dirname, '../..'),
+            env: { ...process.env, PORT: String(port) },
+            stdio: ['ignore', 'pipe', 'inherit'],
+        },
+    );
+    await new Promise((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error('Server did not start')), 15000);
+        child.stdout.on('data', (chunk) => {
+            if (String(chunk).includes('Server running on port')) {
+                clearTimeout(timer);
+                resolve();
+            }
+        });
+        child.once('exit', () => {
+            clearTimeout(timer);
+            reject(new Error('Server exited before startup completed'));
+        });
+        child.once('error', reject);
+    });
+    const stored = await prisma.oAuthToken.findUnique({
+        where: { userId_provider: { userId: user.id, provider: 'github' } },
+    });
+    assert.equal(decryptString(stored.accessToken), 'stored-access');
+    assert.equal(decryptString(stored.refreshToken), 'stored-refresh');
+
+    const base = `http://127.0.0.1:${port}`;
+    const headers = {
+        Authorization: `Bearer ${jwt.sign({ userId: user.id }, process.env.JWT_SECRET)}`,
+    };
+    const response = await fetch(`${base}/auth/download-data`, { headers });
+    assert.equal(response.status, 200);
+    const exported = await response.json();
+    assert.deepEqual(exported.widgets[0].params, { city: 'Paris' });
+    assert.equal(exported.password, undefined);
+    assert.equal(exported.tokens[0].accessToken, undefined);
+    assert.equal(exported.serviceConnections[0].encryptedCredentials, undefined);
+    assert.equal(exported.tokens[0].provider, 'github');
+    assert.equal((await fetch(`${base}/auth/download-data`)).status, 401);
+
+    const oauthHeaders = {
+        Authorization: `Bearer ${jwt.sign({ userId: other.id }, process.env.JWT_SECRET)}`,
+        'Content-Type': 'application/json',
+    };
+    assert.equal(
+        (
+            await fetch(`${base}/auth/me`, {
+                method: 'PUT',
+                headers: oauthHeaders,
+                body: JSON.stringify({ email: `${randomUUID()}@integration.test` }),
+            })
+        ).status,
+        200,
+    );
+    assert.equal(
+        (
+            await fetch(`${base}/auth/me`, {
+                method: 'PUT',
+                headers: oauthHeaders,
+                body: JSON.stringify({ displayName: 'Updated' }),
+            })
+        ).status,
+        200,
+    );
+
+    async function githubLogin(declarations = '') {
+        const start = await fetch(`${base}/auth/github/login${declarations}`, {
+            redirect: 'manual',
+        });
+        assert.equal(start.status, 302);
+        const state = new URL(start.headers.get('location')).searchParams.get('state');
+        const callback = await fetch(
+            `${base}/auth/github/callback?state=${state}&code=integration-code`,
+            {
+                redirect: 'manual',
+                headers: { Cookie: start.headers.get('set-cookie').split(';')[0] },
+            },
+        );
+        assert.equal(callback.status, 302);
+        const session = callback.headers
+            .getSetCookie()
+            .find((cookie) => cookie.startsWith('dashboard_session='));
+        return { location: callback.headers.get('location'), session };
+    }
+    const jwtFrom = (session) => session.split(';')[0].slice('dashboard_session='.length);
+
+    // The login page may not silently create a new account without the age declaration.
+    const refused = await githubLogin();
+    assert.ok(refused.location.includes('/register?error=github_registration_requirements'));
+    assert.equal(refused.session, undefined);
+    assert.equal(await prisma.user.count({ where: { githubId: process.env.TEST_GITHUB_ID } }), 0);
+    const firstLogin = await githubLogin('?cguAccepted=true&is16OrOlder=true');
+    assert.equal(new URL(firstLogin.location).pathname, '/');
+    assert.match(firstLogin.session, /HttpOnly/);
+    const githubUserId = jwt.verify(jwtFrom(firstLogin.session), process.env.JWT_SECRET).userId;
+    ids.push(githubUserId);
+    // Same as the browser: session cookie plus the frontend Origin required for writes.
+    const githubHeaders = {
+        Cookie: firstLogin.session.split(';')[0],
+        Origin: 'http://localhost:5173',
+        'Content-Type': 'application/json',
+    };
+    const changedEmail = `${randomUUID()}@integration.test`;
+    assert.equal(
+        (
+            await fetch(`${base}/auth/me`, {
+                method: 'PUT',
+                headers: githubHeaders,
+                body: JSON.stringify({ email: changedEmail }),
+            })
+        ).status,
+        200,
+    );
+    const repeatJwt = jwtFrom((await githubLogin()).session);
+    assert.equal(jwt.verify(repeatJwt, process.env.JWT_SECRET).userId, githubUserId);
+    assert.equal(await prisma.user.count({ where: { email: process.env.TEST_GITHUB_EMAIL } }), 0);
+    assert.equal(
+        (await prisma.user.findUnique({ where: { id: githubUserId } })).email,
+        changedEmail,
+    );
+
+    assert.equal(
+        (await fetch(`${base}/auth/delete-account`, { method: 'DELETE', headers })).status,
+        200,
+    );
+    assert.equal(await prisma.user.count({ where: { id: user.id } }), 0);
+    for (const model of ['widgetConfig', 'oAuthToken', 'serviceConnection'])
+        assert.equal(await prisma[model].count({ where: { userId: user.id } }), 0);
+    assert.equal(await prisma.user.count({ where: { id: other.id } }), 1);
+    assert.equal((await fetch(`${base}/auth/download-data`, { headers })).status, 404);
+    console.log(
+        'PASS: encrypted token storage, readable secret-free export, GitHub signup/age gate/email editing/re-login, and PostgreSQL cascades.',
+    );
+}
+main()
+    .catch((error) => {
+        console.error(error);
+        process.exitCode = 1;
+    })
+    .finally(async () => {
+        if (child && child.exitCode === null) {
+            await new Promise((resolve) => {
+                child.once('exit', resolve);
+                child.kill('SIGTERM');
+            });
+        }
+        await prisma.user.deleteMany({ where: { id: { in: ids } } });
+        await prisma.$disconnect();
+    });
