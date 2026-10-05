@@ -2,7 +2,7 @@ import type { Request } from 'express';
 import { fromNodeHeaders } from 'better-auth/node';
 import { auth } from '../auth.ts';
 import registry from '../services/registry.ts';
-import type { ServiceDefinition } from '../services/types.ts';
+import type { ServiceCredentials, ServiceDefinition } from '../services/types.ts';
 import { decryptJson, encryptJson } from '../utils/encryption.ts';
 import asyncHandler from '../utils/asyncHandler.ts';
 import { accountAccessToken, linkedAccounts } from '../utils/oauthAccounts.ts';
@@ -112,7 +112,6 @@ export const connectService = asyncHandler(async (req, res) => {
         },
     });
 
-    await service.clearCache?.();
     res.json({ success: true, verifiedAt: connection.verifiedAt, keyHint: connection.keyHint });
 });
 
@@ -130,10 +129,9 @@ export const disconnectService = asyncHandler(async (req, res) => {
     const service = registry.getService(String(req.params.serviceName));
 
     if (!service) return res.status(404).json({ error: 'Service not found' });
-    if (service.configurable === false)
-        return res.status(400).json({ error: 'Service is not configurable' });
+    if (!service.connection) return res.status(400).json({ error: 'Service is not configurable' });
 
-    const provider = service.connection?.provider;
+    const provider = service.connection.provider;
     if (provider) {
         // Every account connected to the service (they are not ways to sign in).
         const accounts = await linkedAccounts(authUser(req).userId, provider);
@@ -147,7 +145,6 @@ export const disconnectService = asyncHandler(async (req, res) => {
         });
     }
 
-    await service.clearCache?.();
     res.status(204).send();
 });
 
@@ -163,7 +160,6 @@ export const disconnectAccount = asyncHandler(async (req, res) => {
         return res.status(404).json({ error: 'Account not found' });
 
     await unlinkAccounts(req, [accountId]);
-    await service.clearCache?.();
     res.status(204).send();
 });
 
@@ -187,9 +183,7 @@ export const searchService = asyncHandler(async (req, res) => {
             .json({ error: `${service.displayName || service.name} is not connected` });
 
     const results = await service.search(String(req.query.q || ''), {
-        credentials: decryptJson(
-            connection.encryptedCredentials,
-        ) as import('../services/types.ts').ServiceCredentials,
+        credentials: decryptJson(connection.encryptedCredentials) as ServiceCredentials,
         cacheScope: `${authUser(req).userId}:${connection.id}`,
         userId: authUser(req).userId,
     });

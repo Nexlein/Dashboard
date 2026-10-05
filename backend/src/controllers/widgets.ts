@@ -9,6 +9,8 @@ import { authUser } from '../middleware/auth.ts';
 import { accountAccessToken, linkedAccounts } from '../utils/oauthAccounts.ts';
 
 const MIN_REFRESH_RATE_SECONDS = 60;
+/** Service error statuses that mean the same for the client; any other one becomes 502. */
+const FORWARDED_ERROR_STATUSES = new Set([400, 404, 409, 429, 503]);
 
 const layoutSchema = z.object({
     x: z.number().int(),
@@ -167,8 +169,7 @@ export const addWidget = asyncHandler(async (req, res) => {
                 await service.execute!(widgetName, params, {
                     userId: authUser(req).userId,
                     refreshRate: Math.max(refreshRate, MIN_REFRESH_RATE_SECONDS),
-                    credentials: access.credentials,
-                    ...(access.cacheScope && { cacheScope: access.cacheScope }),
+                    ...access,
                 });
         } catch (execError) {
             return res
@@ -240,7 +241,11 @@ export const getWidgetData = asyncHandler(async (req, res) => {
     } catch (execError) {
         const details = execError as { statusCode?: number; retryAfter?: number };
         if (details.retryAfter) res.set('Retry-After', String(details.retryAfter));
-        return res.status(details.statusCode || 502).json({
+        // Provider statuses such as 401 would read as this API's own session errors.
+        const status = FORWARDED_ERROR_STATUSES.has(details.statusCode ?? 0)
+            ? details.statusCode!
+            : 502;
+        return res.status(status).json({
             error: errorMessage(execError, 'Failed to fetch widget data'),
             ...(details.retryAfter && { retryAfter: details.retryAfter }),
         });

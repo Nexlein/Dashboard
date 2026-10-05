@@ -5,6 +5,8 @@ import app from '../src/app.ts';
 import stocks from '../src/services/stocks.ts';
 import { StockPendingError } from '../src/services/stockProvider.ts';
 import weatherService from '../src/services/weather.ts';
+import { HttpError } from '../src/utils/httpError.ts';
+import { getCache, setCache } from '../src/utils/redisCache.ts';
 
 // Mock Prisma Client
 // The shared client from utils/prisma.ts: plain stubs, hoisted for vi.mock.
@@ -333,6 +335,29 @@ describe('API Endpoints', () => {
             }
         });
 
+        it("does not pass a provider's 401 on as a session error", async () => {
+            prisma.widgetConfig.findUnique.mockResolvedValue({
+                ...mockWidget,
+                serviceName: 'stocks',
+                widgetName: 'stock_market',
+                params: { symbols: 'AAPL', period: '1M' },
+            });
+            prisma.serviceConnection.findUnique.mockResolvedValue({
+                id: 9,
+                encryptedCredentials: encryptJson({ apiKey: 'test-key' }),
+            });
+            const execute = vi
+                .spyOn(stocks, 'execute')
+                .mockRejectedValue(new HttpError('Provider token revoked', 401));
+            try {
+                const res = await request(app).get('/widgets/1/data').set('Origin', FRONTEND);
+                expect(res.statusCode).toBe(502);
+                expect(res.body.error).toBe('Provider token revoked');
+            } finally {
+                execute.mockRestore();
+            }
+        });
+
         it('answers 501 for a widget whose service fetches no data', async () => {
             prisma.widgetConfig.findUnique.mockResolvedValue({
                 ...mockWidget,
@@ -617,6 +642,22 @@ describe('API Endpoints', () => {
             );
             expect(res.body).not.toHaveProperty('encryptedCredentials');
             verify.mockRestore();
+        });
+
+        it("keeps other users' cache and rate-limit entries when a key is saved or removed", async () => {
+            vi.spyOn(weatherService, 'verifyCredentials').mockResolvedValue();
+            prisma.serviceConnection.upsert.mockResolvedValue(connection);
+            prisma.serviceConnection.deleteMany.mockResolvedValue({ count: 1 });
+            await setCache('2:weather:paris', { temp: 20 }, 60_000);
+
+            await request(app)
+                .put('/services/weather/connection')
+                .set('Origin', FRONTEND)
+                .send({ apiKey: 'test-api-key' });
+            await request(app).delete('/services/weather/connection').set('Origin', FRONTEND);
+
+            expect(await getCache('2:weather:paris')).toEqual({ temp: 20 });
+            vi.mocked(weatherService.verifyCredentials).mockRestore();
         });
 
         it('disconnects a GitHub service account through Better Auth', async () => {

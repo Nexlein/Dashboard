@@ -28,8 +28,6 @@ export type ServiceDefinition = {
     name: string;
     displayName?: string;
     description?: string;
-    /** False for services that work without a user connection. */
-    configurable?: boolean;
     connection?: {
         type: 'apiKey' | 'oauth';
         label: string;
@@ -45,8 +43,8 @@ export type ServiceDefinition = {
     describeAccount?(credentials: ServiceCredentials): Promise<ConnectedAccountInfo>;
     /** Throws when the credentials are rejected by the provider. */
     verifyCredentials?(credentials: ServiceCredentials): Promise<unknown>;
+    /** Searches the provider (e.g. stock symbols) with the user's connection. */
     search?(query: string, context: ServiceContext): Promise<unknown>;
-    clearCache?(): Promise<unknown>;
     chat?(
         params: WidgetParams,
         context: ServiceContext,
