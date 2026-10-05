@@ -100,8 +100,9 @@ export function ConnectedAccounts({ service, setError }: ConnectedAccountsProps)
                     : `Connect a ${service.displayName} account`}
             </Button>
             <p className="text-xs text-muted-foreground">
-                Connect each account whose data your widgets show. This is separate from signing in
-                with {service.displayName}.
+                Connect each account whose data your widgets show: {service.displayName} asks which
+                account to use, and lets you sign in to another one. This is separate from signing
+                in to the Dashboard with {service.displayName}.
             </p>
         </div>
     );

@@ -268,8 +268,9 @@ describe('GitHub as a service, apart from GitHub sign-in', () => {
             body: REGISTRATION,
         });
 
-        const scope = new URL(start.body.url).searchParams.get('scope')!;
-        expect(scope.split(' ')).not.toContain('repo');
+        const authorize = new URL(start.body.url).searchParams;
+        expect(authorize.get('scope')!.split(' ')).not.toContain('repo');
+        expect(authorize.get('prompt')).toBeNull();
         expect(githubService((await agent.get('/services')).body).connected).toBe(false);
     });
 
@@ -279,8 +280,10 @@ describe('GitHub as a service, apart from GitHub sign-in', () => {
         const second = await connectGitHubService(agent);
 
         expect(first.flow.location).toBe(`${FRONTEND}/services?linked=github`);
-        const scope = new URL(first.flow.start.body.url).searchParams.get('scope')!;
-        expect(scope.split(' ')).toContain('repo');
+        const authorize = new URL(first.flow.start.body.url).searchParams;
+        expect(authorize.get('scope')!.split(' ')).toContain('repo');
+        // GitHub shows its account picker, so another GitHub account can be chosen.
+        expect(authorize.get('prompt')).toBe('select_account');
         const service = githubService((await agent.get('/services')).body);
         expect(service.connected).toBe(true);
         expect(service.accounts).toEqual([

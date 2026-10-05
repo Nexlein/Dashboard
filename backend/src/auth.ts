@@ -35,6 +35,9 @@ function githubServiceProvider(clientId: string, clientSecret: string) {
         authorizationUrl: 'https://github.com/login/oauth/authorize',
         tokenUrl: 'https://github.com/login/oauth/access_token',
         scopes: ['read:user', 'user:email', 'repo'],
+        // GitHub would otherwise reuse the account the browser is signed in to: show the account
+        // picker, where the user can also sign in to another GitHub account to connect it.
+        prompt: 'select_account' as const,
         // Connected from the Services page only: never a way to create an account.
         disableSignUp: true,
         getToken: async (data: Parameters<typeof githubApi.validateAuthorizationCode>[0]) => {
