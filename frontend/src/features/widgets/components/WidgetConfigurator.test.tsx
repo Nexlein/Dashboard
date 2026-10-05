@@ -25,9 +25,11 @@ describe('WidgetConfigurator', () => {
         mockApi({ 'GET /services': { body: [makeService()] } });
         const dialog = await openDialog();
 
+        expect(within(dialog).getByRole('combobox', { name: 'Widget Type' })).toBeDisabled();
         await choose(dialog, 'Service', 'Crypto');
 
         expect(await within(dialog).findByText('CoinGecko is not connected')).toBeInTheDocument();
+        expect(within(dialog).getByRole('combobox', { name: 'Widget Type' })).toBeDisabled();
         expect(within(dialog).getByRole('button', { name: 'Add to Dashboard' })).toBeDisabled();
     });
 
@@ -63,6 +65,36 @@ describe('WidgetConfigurator', () => {
             params: { coin: 'bitcoin', currency: 'eur' },
             refreshRate: 120,
             layout: { x: 0, y: 0, w: 3, h: 2 },
+        });
+    });
+
+    it('creates a single-company profile with visible period choices and resets parameters when switching types', async () => {
+        const fetchMock = mockApi({
+            'GET /services': {
+                body: [
+                    makeService({ name: 'stocks', displayName: 'Twelve Data', connected: true }),
+                ],
+            },
+            'POST /widgets': (init) => ({ id: 99, ...JSON.parse(String(init.body)) }),
+        });
+        const dialog = await openDialog();
+        await choose(dialog, 'Service', 'Stock Market');
+        await choose(dialog, 'Widget Type', 'Stock Comparison Chart');
+        fireEvent.click(within(dialog).getByRole('button', { name: '+ Apple (AAPL)' }));
+        fireEvent.click(within(dialog).getByRole('radio', { name: '5 years' }));
+        await choose(dialog, 'Widget Type', 'Stock Profile');
+        expect(within(dialog).queryByRole('button', { name: 'Remove AAPL' })).toBeNull();
+        expect(within(dialog).getByRole('radio', { name: '1 month' })).toBeChecked();
+        fireEvent.click(within(dialog).getByRole('button', { name: '+ NVIDIA (NVDA)' }));
+        expect(within(dialog).getByLabelText('Search stocks')).toBeDisabled();
+        fireEvent.click(within(dialog).getByRole('radio', { name: '5 years' }));
+        fireEvent.click(within(dialog).getByRole('button', { name: 'Add to Dashboard' }));
+        await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+        const post = fetchMock.mock.calls.find(([, init]) => init?.method === 'POST');
+        expect(JSON.parse(String(post?.[1]?.body))).toMatchObject({
+            widgetName: 'stock_profile',
+            params: { symbols: 'NVDA', period: '5Y' },
+            layout: { x: 0, y: 0, w: 4, h: 4 },
         });
     });
 

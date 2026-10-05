@@ -1,20 +1,12 @@
 import { useState } from 'react';
-import {
-    Bitcoin,
-    CheckCircle2,
-    CloudSun,
-    ExternalLink,
-    KeyRound,
-    Loader2,
-    Unplug,
-} from 'lucide-react';
+import { CheckCircle2, ExternalLink, KeyRound, Loader2, Unplug } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Github } from '@/components/ui/Github';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { type ServiceConnection } from '@/features/services/lib/services';
 import { ConnectedAccounts } from '@/features/services/components/ConnectedAccounts';
+import { ServiceLogo } from './ServiceLogo';
 
 interface ServiceCardProps {
     service: ServiceConnection;
@@ -62,15 +54,7 @@ export function ServiceCard({ service, onConnect, onDisconnect, setError }: Serv
         <Card>
             <CardHeader className="flex flex-row items-start justify-between gap-4 border-b">
                 <div className="flex items-center gap-3">
-                    <span className="flex size-11 items-center justify-center rounded-xl bg-sky-500/10 text-sky-500">
-                        {service.name === 'github' ? (
-                            <Github className="size-6" />
-                        ) : service.name === 'crypto' ? (
-                            <Bitcoin className="size-6" />
-                        ) : (
-                            <CloudSun className="size-6" />
-                        )}
-                    </span>
+                    <ServiceLogo name={service.name} displayName={service.displayName} />
                     <div>
                         <CardTitle>{service.displayName}</CardTitle>
                         <p className="mt-1 text-sm text-muted-foreground">

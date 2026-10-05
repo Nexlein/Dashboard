@@ -23,6 +23,10 @@ describe('ServiceCard with an API key service', () => {
         const { onConnect } = renderCard();
         const input = screen.getByLabelText('CoinGecko Demo API key');
         const connect = screen.getByRole('button', { name: 'Connect' });
+        expect(screen.getByRole('img', { name: 'CoinGecko logo' })).toHaveAttribute(
+            'src',
+            'https://www.coingecko.com/favicon.ico',
+        );
         expect(connect).toBeDisabled();
 
         fireEvent.change(input, { target: { value: '  demo-key  ' } });
