@@ -16,7 +16,7 @@ function githubCookieOptions(req) {
     return {
         httpOnly: true,
         sameSite: 'lax',
-        secure: req.secure || process.env.NODE_ENV === 'production',
+        secure: req.secure, // same rule as the session cookie (utils/session.js)
         path: '/auth/github/callback',
     };
 }

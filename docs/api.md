@@ -46,7 +46,7 @@ Returns the application's supported services and widgets in the format required 
 ## Authentication
 
 Login (password or GitHub) sets an **httpOnly session cookie**, `dashboard_session`
-(`SameSite=Lax`, `Secure` in production, expiring with the session). Page scripts cannot
+(`SameSite=Lax`, `Secure` when the request came over HTTPS, expiring with the session). Page scripts cannot
 read it; browsers send it automatically when the request uses `credentials: 'include'`.
 Endpoints marked "authenticated" accept that cookie, or an `Authorization: Bearer <JWT>`
 header for API clients and tests.

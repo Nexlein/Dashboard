@@ -24,13 +24,14 @@ function sessionCookie(res) {
     return (res.headers['set-cookie'] || []).find((c) => c.startsWith('dashboard_session='));
 }
 
-async function login() {
+async function login(headers = {}) {
     prisma.user.findUnique.mockResolvedValue({
         ...user,
         password: await bcrypt.hash('password1234', 4),
     });
     const res = await request(app)
         .post('/auth/login')
+        .set(headers)
         .send({ email: user.email, password: 'password1234' });
     return { res, cookie: sessionCookie(res).split(';')[0] };
 }
@@ -53,12 +54,19 @@ describe('session cookie', () => {
         expect(jwt.verify(token, process.env.JWT_SECRET)).toMatchObject({ userId: 7 });
     });
 
-    it('is marked Secure in production', async () => {
+    it('is marked Secure when the request came over HTTPS (behind the proxy)', async () => {
+        const { res } = await login({ 'X-Forwarded-Proto': 'https' });
+        expect(sessionCookie(res)).toMatch(/Secure/);
+    });
+
+    it('is not marked Secure over plain HTTP, even in production', async () => {
+        // Browsers drop Secure cookies received over HTTP (localhost excepted): a deployment
+        // served over plain HTTP would make every login fail.
         const previous = process.env.NODE_ENV;
         process.env.NODE_ENV = 'production';
         try {
             const { res } = await login();
-            expect(sessionCookie(res)).toMatch(/Secure/);
+            expect(sessionCookie(res)).not.toMatch(/Secure/);
         } finally {
             process.env.NODE_ENV = previous;
         }

@@ -8,7 +8,9 @@ function cookieOptions(req) {
     return {
         httpOnly: true,
         sameSite: 'lax',
-        secure: req.secure || process.env.NODE_ENV === 'production',
+        // Follow the request scheme (X-Forwarded-Proto behind nginx): browsers drop Secure
+        // cookies received over plain HTTP, which would break login on an HTTP deployment.
+        secure: req.secure,
         path: '/',
     };
 }

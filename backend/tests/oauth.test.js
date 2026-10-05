@@ -30,10 +30,11 @@ function authToken(userId = 1) {
     return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '1h' });
 }
 
-async function startLink(userId = 1) {
+async function startLink(userId = 1, headers = {}) {
     const response = await request(app)
         .get('/auth/github?format=json')
         .set('Authorization', `Bearer ${authToken(userId)}`)
+        .set(headers)
         .expect(200);
     const url = new URL(response.body.authorizationUrl);
     return {
@@ -109,12 +110,17 @@ describe('GitHub account linking', () => {
         expect(response.headers['cache-control']).toBe('no-store');
     });
 
-    it('sets Secure on the cookie in production', async () => {
+    it('sets Secure on the cookie when the request came over HTTPS', async () => {
+        const link = await startLink(1, { 'X-Forwarded-Proto': 'https' });
+        expect(link.response.headers['set-cookie'][0]).toContain('Secure');
+    });
+
+    it('omits Secure over plain HTTP, even in production, so browsers keep the cookie', async () => {
         const previous = process.env.NODE_ENV;
         process.env.NODE_ENV = 'production';
         try {
             const link = await startLink();
-            expect(link.response.headers['set-cookie'][0]).toContain('Secure');
+            expect(link.response.headers['set-cookie'][0]).not.toContain('Secure');
         } finally {
             process.env.NODE_ENV = previous;
         }
