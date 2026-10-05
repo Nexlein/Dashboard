@@ -29,6 +29,38 @@ individually toggleable normalized curves, and 1W, 1M, 3M, and 1Y periods.
 The Stock Market widget searches Twelve Data symbols, compares up to eight stocks
 with individually toggleable normalized curves, and supports 1W, 1M, 1Y, 5Y, and ALL.
 
+### Stock Market delivery and accompanying changes
+
+The Stock Market branch also includes the service branding, widget configuration,
+and small dashboard fixes listed below.
+
+| Area | Features and fixes |
+| --- | --- |
+| Twelve Data connection | Verify and encrypt each user's personal API key; register the service and its widgets; search common-stock symbols through an authenticated endpoint using that user's connection. |
+| Stock comparison | Compare one to eight stocks using real quotes, historical data, individual curve toggles, and company logos. Use visible 1W, 1M, 1Y, 5Y, and ALL buttons instead of a period dropdown. Period controls do not drag the dashboard card. |
+| Historical charts | Repair the legacy ALL cache format that could leave a chart empty; normalize, filter, and sort historical points. Request five calendar years for 5Y and weekly history from 1970 for ALL; the actual first date depends on the data available for each stock. |
+| Company profile | Add a single-company Stock Profile with its logo, current price, daily change relative to the previous close, historical price curve, period return, sampled closing-price minimum/maximum, and date/price hover details. |
+| Company logos | Fetch real logos only for selected companies, share the cache between comparison and profile widgets, cache successful results for seven days and missing logos for one hour, and fall back to initials without blocking prices. |
+| Provider quotas | Coordinate provider requests across backend replicas, follow provider credit headers, and load prices/history before optional logos. Validate widget creation locally to avoid fetching the same data twice. Cache quotes for at least five minutes and histories by period. Automatically retry deferred requests and keep an existing chart visible with its actual period identified. Individual unavailable stocks do not prevent the other selected stocks from displaying. |
+| Service branding | Share service logos between Services, dashboard widget titles, and the Add Widget service selector. Replace the blurry OpenWeather logo with an SVG and align service names consistently to the left. |
+| Widget configuration | Show Widget Type as soon as Add Widget opens, disable it until a usable service is selected, and reset parameters to the chosen widget type's defaults. Add single-company and multiple-company stock search fields and visible period choices to creation and editing. |
+| Service access | Derive connection status from each service's connection requirements, keep GitHub's service name separate from linked account details, normalize API keys, and invalidate service caches on connection changes. Load API-key or OAuth credentials according to the service definition. |
+| Dashboard interactions | Use a non-modal widget action menu and reset a widget's error boundary when its configuration changes. Avoid scrolling the entire dashboard when the chatbot first renders; scroll when new messages arrive. |
+| Local Docker setup | Set the frontend URL to `http://localhost:8081` and keep Ollama reachable through the internal Docker network without publishing its host port. |
+| Documentation and tests | Update the API, architecture, requirements, tooling, and testing guides; cover stock histories, quotas, logos, search access, configuration, and chart rendering with provider mocks and component tests. |
+
+Validation for this delivery: 188 backend tests, 103 frontend tests, and five
+shared tests pass, along with lint, backend type checking, and the production
+build. The Docker dashboard was checked with real stock data, including an
+eight-stock selection, and visually accepted by the user.
+
+Remaining scope: stock-specific Playwright automation has not been added.
+Search-result prioritization by exchange and persisting the selected exchange
+were deferred; the current configuration stores the ticker. Provider coverage
+and quotas still depend on the connected Twelve Data plan, so an initial load
+may span multiple quota windows. This branch does not implement the separate
+YouTube OAuth/widget work.
+
 ## Tech Stack
 
 - **Frontend**: React, Vite, TypeScript, TailwindCSS, shadcn/ui, React-Grid-Layout, TanStack Query
