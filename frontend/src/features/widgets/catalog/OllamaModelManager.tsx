@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Download, Check, Loader2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { fetchOllamaModels, pullOllamaModel } from '@/features/widgets/lib/ollama';
+import { fetchOllamaModels, isSameModel, pullOllamaModel } from '@/features/widgets/lib/ollama';
 import type { CustomConfigProps } from '@/features/widgets/lib/types';
 
 const RECOMMENDED_MODELS = [
@@ -67,12 +67,8 @@ export function OllamaModelManager({ selectedModel, onSelectModel }: CustomConfi
             {error && <p className="text-xs text-destructive">{error}</p>}
             <div className="space-y-2">
                 {RECOMMENDED_MODELS.map((m) => {
-                    // Check if installed (handle latest tag mismatch gracefully)
-                    const isInstalled = installedModels.some(
-                        (installed) =>
-                            installed === m.id ||
-                            installed === `${m.id}:latest` ||
-                            installed.startsWith(m.id),
+                    const isInstalled = installedModels.some((installed) =>
+                        isSameModel(installed, m.id),
                     );
                     const isPulling = pulling === m.id;
                     const isSelected = selectedModel === m.id || selectedModel === `${m.id}:latest`;
@@ -129,12 +125,7 @@ export function OllamaModelManager({ selectedModel, onSelectModel }: CustomConfi
                 {installedModels
                     .filter(
                         (installed) =>
-                            !RECOMMENDED_MODELS.some(
-                                (m) =>
-                                    installed === m.id ||
-                                    installed === `${m.id}:latest` ||
-                                    installed.startsWith(m.id),
-                            ),
+                            !RECOMMENDED_MODELS.some((m) => isSameModel(installed, m.id)),
                     )
                     .map((installed) => {
                         const isSelected =
