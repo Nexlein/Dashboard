@@ -12,9 +12,7 @@ const RECOMMENDED_MODELS = [
 ];
 
 export function OllamaModelManager({ selectedModel, onSelectModel }: CustomConfigProps) {
-    const [pulling, setPulling] = useState<string | false>(false);
-    const [error, setError] = useState<string | null>(null);
-
+    const [customModel, setCustomModel] = useState('');
     const queryClient = useQueryClient();
 
     const {
@@ -27,26 +25,19 @@ export function OllamaModelManager({ selectedModel, onSelectModel }: CustomConfi
         queryFn: fetchOllamaModels,
     });
 
-    // sync error state
-    if (queryError && !error) setError(queryError.message);
-
     const pullMutation = useMutation({
         mutationFn: pullOllamaModel,
-        onMutate: (modelId: string) => {
-            setPulling(modelId);
-            setError(null);
-        },
-        onSuccess: (modelId: string) => {
+        onSuccess: (modelId) => {
             queryClient.invalidateQueries({ queryKey: ['ollamaModels'] });
             onSelectModel(modelId);
-            const input = document.getElementById('customModelInput') as HTMLInputElement | null;
-            if (input) input.value = '';
+            setCustomModel('');
         },
-        onError: (err: Error) => setError(err.message),
-        onSettled: () => setPulling(false),
     });
 
     const pullModel = (modelId: string) => pullMutation.mutate(modelId);
+    const pulling = pullMutation.isPending ? pullMutation.variables : false;
+    // A new pull clears the previous pull error; a successful refetch clears the list error.
+    const error = pullMutation.error?.message ?? queryError?.message ?? null;
 
     return (
         <div className="space-y-3 mt-4 border rounded-md p-3 bg-muted/20">
@@ -55,6 +46,7 @@ export function OllamaModelManager({ selectedModel, onSelectModel }: CustomConfi
                 <Button
                     variant="ghost"
                     size="icon"
+                    aria-label="Refresh installed models"
                     onClick={() => {
                         void fetchModels();
                     }}
@@ -161,9 +153,11 @@ export function OllamaModelManager({ selectedModel, onSelectModel }: CustomConfi
             <div className="pt-3 mt-3 border-t flex items-center gap-2">
                 <input
                     type="text"
+                    aria-label="Custom model tag"
                     placeholder="Custom model tag (e.g. mistral)"
                     className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-xs shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                    id="customModelInput"
+                    value={customModel}
+                    onChange={(event) => setCustomModel(event.target.value)}
                 />
                 <Button
                     type="button"
@@ -172,11 +166,8 @@ export function OllamaModelManager({ selectedModel, onSelectModel }: CustomConfi
                     className="h-8 text-xs shrink-0"
                     disabled={!!pulling}
                     onClick={() => {
-                        const input = document.getElementById(
-                            'customModelInput',
-                        ) as HTMLInputElement | null;
-                        const val = input?.value.trim();
-                        if (val) pullModel(val);
+                        const tag = customModel.trim();
+                        if (tag) pullModel(tag);
                     }}
                 >
                     {pulling ? <Loader2 className="size-3 animate-spin" /> : 'Pull'}

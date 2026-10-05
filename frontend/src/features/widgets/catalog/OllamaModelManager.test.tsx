@@ -73,7 +73,7 @@ describe('OllamaModelManager', () => {
         });
         const { onSelectModel } = renderManager();
 
-        fireEvent.change(screen.getByPlaceholderText('Custom model tag (e.g. mistral)'), {
+        fireEvent.change(screen.getByLabelText('Custom model tag'), {
             target: { value: '  mistral  ' },
         });
         fireEvent.click(screen.getByRole('button', { name: 'Pull' }));
