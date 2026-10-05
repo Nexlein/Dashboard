@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { screen, fireEvent } from '@testing-library/react';
 import { render } from '../../../test-utils';
 import DashboardGrid from './DashboardGrid';
-import { toDashboardWidget } from '@/features/widgets/lib/widgets';
+import { toDashboardWidget, type DashboardWidget } from '@/features/widgets/lib/widgets';
 
 const mockUseWidgets = vi.fn();
 const mockRemoveWidgetMutate = vi.fn();
@@ -19,14 +19,14 @@ vi.mock('@/features/widgets/hooks/useWidgetLayoutManager', () => ({
 }));
 
 vi.mock('./WidgetRenderer', () => ({
-    default: ({ widget }: any) => (
+    default: ({ widget }: { widget: DashboardWidget }) => (
         <div data-testid={`widget-${widget.id}`}>Mocked {widget.widgetName} Content</div>
     ),
 }));
 
 vi.mock('react-grid-layout/legacy', () => ({
-    Responsive: ({ children }: any) => <div>{children}</div>,
-    WidthProvider: (Component: any) => Component,
+    Responsive: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+    WidthProvider: <P,>(Component: React.ComponentType<P>) => Component,
 }));
 
 describe('DashboardGrid Component', () => {

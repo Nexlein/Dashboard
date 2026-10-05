@@ -384,7 +384,7 @@ The same callback handles login and service linking. For a new user without both
 registration declarations, it redirects to `/register?error=github_registration_requirements`
 on the configured frontend without creating a user or saving tokens. After the user
 accepts both checkboxes, they can restart GitHub registration. Successful login
-redirects to `/login/oauth?token=...`. Linking retains its authenticated flow.
+redirects to `/login/oauth#token=...` (the JWT is in the URL fragment, which browsers never send to servers, so it stays out of logs and `Referer` headers). Linking retains its authenticated flow.
 
 ### Manual browser flow
 

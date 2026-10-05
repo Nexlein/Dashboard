@@ -1,6 +1,16 @@
-import { fetchClient } from '../../../lib/apiClient';
+import { fetchClient } from '@/lib/apiClient';
+import type { ServiceDefinition } from './types';
 
 export const MIN_REFRESH_RATE_SECONDS = 60;
+
+/** Services without a refresh timer (the chatbot) accept any value. */
+export function isRefreshRateValid(refreshTimer: string, serviceDef?: ServiceDefinition) {
+    if (serviceDef?.hasRefresh === false) return true;
+    const refreshRate = Number(refreshTimer);
+    return Number.isInteger(refreshRate) && refreshRate >= MIN_REFRESH_RATE_SECONDS;
+}
+
+export type WidgetParams = Record<string, unknown>;
 
 export type WidgetLayout = { x: number; y: number; w: number; h: number };
 
@@ -8,7 +18,7 @@ export type ApiWidget = {
     id: number;
     serviceName: string;
     widgetName: string;
-    params: Record<string, unknown>;
+    params: WidgetParams;
     refreshRate: number;
     layout: WidgetLayout;
 };
@@ -144,23 +154,28 @@ export async function updateWidgetConfig(
     });
 }
 
-export async function updateWidgetsLayout(layouts: { id: number; layout: WidgetLayout }[]) {
-    return fetchClient('/widgets/layout', {
+export async function updateWidgetsLayout(
+    layouts: { id: number; layout: WidgetLayout }[],
+): Promise<void> {
+    await fetchClient('/widgets/layout', {
         method: 'PUT',
         body: JSON.stringify({ layouts }),
     });
 }
 
-export async function removeWidgetConfig(widgetId: number) {
-    return fetchClient(`/widgets/${widgetId}`, {
+export async function removeWidgetConfig(widgetId: number): Promise<void> {
+    await fetchClient(`/widgets/${widgetId}`, {
         method: 'DELETE',
     });
 }
 
+/** Same roles as the backend chat schema. */
+export type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string };
+
 export async function sendWidgetChatMessage(
     widgetId: number,
-    messages: { role: string; content: string }[],
-) {
+    messages: ChatMessage[],
+): Promise<{ reply: string }> {
     return fetchClient(`/widgets/${widgetId}/chat`, {
         method: 'POST',
         body: JSON.stringify({ messages }),

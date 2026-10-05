@@ -13,7 +13,7 @@ import { useWidgets, useRemoveWidget } from '@/features/widgets/hooks/useWidgets
 import { useWidgetLayoutManager } from '@/features/widgets/hooks/useWidgetLayoutManager';
 import { useState } from 'react';
 import WidgetRenderer from './WidgetRenderer';
-import { ErrorBoundary } from '../../../components/ErrorBoundary';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Bitcoin, CloudSun, Edit2, EllipsisVertical, Trash2, Loader2 } from 'lucide-react';
 import { WidgetEditDialog } from './WidgetEditDialog';
 import type { DashboardWidget } from '@/features/widgets/lib/widgets';
@@ -48,7 +48,7 @@ export default function DashboardGrid() {
                 breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
                 cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
                 rowHeight={100}
-                onLayoutChange={(layout) => onLayoutChange(layout as any)}
+                onLayoutChange={onLayoutChange}
                 isDraggable={true}
                 isResizable={true}
             >

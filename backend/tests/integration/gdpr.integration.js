@@ -155,7 +155,7 @@ async function main() {
     assert.ok((await githubLogin()).includes('/register?error=github_registration_requirements'));
     assert.equal(await prisma.user.count({ where: { githubId: process.env.TEST_GITHUB_ID } }), 0);
     const firstLogin = await githubLogin('?cguAccepted=true&is16OrOlder=true');
-    const firstJwt = new URL(firstLogin).searchParams.get('token');
+    const firstJwt = new URLSearchParams(new URL(firstLogin).hash.slice(1)).get('token');
     const githubUserId = jwt.verify(firstJwt, process.env.JWT_SECRET).userId;
     ids.push(githubUserId);
     const githubHeaders = {
@@ -173,7 +173,7 @@ async function main() {
         ).status,
         200,
     );
-    const repeatJwt = new URL(await githubLogin()).searchParams.get('token');
+    const repeatJwt = new URLSearchParams(new URL(await githubLogin()).hash.slice(1)).get('token');
     assert.equal(jwt.verify(repeatJwt, process.env.JWT_SECRET).userId, githubUserId);
     assert.equal(await prisma.user.count({ where: { email: process.env.TEST_GITHUB_EMAIL } }), 0);
     assert.equal(

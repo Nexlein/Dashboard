@@ -1,0 +1,30 @@
+# Rendered at container start by the nginx image (envsubst on ${...} variables that are set),
+# see API_ORIGIN in docker-compose.yml. nginx variables such as $uri are left untouched.
+server {
+    listen 80;
+    root /usr/share/nginx/html;
+    server_tokens off;
+
+    gzip on;
+    gzip_types text/css application/javascript application/json image/svg+xml;
+    gzip_min_length 1024;
+
+    # Inherited by every location below: none of them sets add_header itself.
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' ${API_ORIGIN}; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+
+    # Vite emits content-hashed file names: cache them for a year.
+    location /assets/ {
+        expires 1y;
+        try_files $uri =404;
+    }
+
+    # The SPA shell must be revalidated so new deployments are picked up.
+    location / {
+        expires -1;
+        try_files $uri $uri/ /index.html;
+    }
+}

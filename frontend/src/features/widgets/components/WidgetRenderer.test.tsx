@@ -3,6 +3,7 @@ import { fireEvent, render as _originalRender, screen, waitFor } from '@testing-
 import WidgetRenderer from './WidgetRenderer';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { fetchWidgetData } from '@/features/widgets/lib/widgets';
+import { makeWidget } from '@/test/fixtures';
 
 const mockUseUpdateWidgetMutate = vi.fn();
 
@@ -10,7 +11,10 @@ vi.mock('@/features/widgets/hooks/useWidgets', () => ({
     useUpdateWidget: () => ({ mutate: mockUseUpdateWidgetMutate, isPending: false }),
 }));
 
-vi.mock('@/features/widgets/lib/widgets', () => ({ fetchWidgetData: vi.fn() }));
+vi.mock('@/features/widgets/lib/widgets', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('@/features/widgets/lib/widgets')>()),
+    fetchWidgetData: vi.fn(),
+}));
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 const customRender = (ui: React.ReactElement) => {
@@ -21,7 +25,7 @@ describe('WidgetRenderer', () => {
     beforeEach(() => vi.clearAllMocks());
 
     it('renders current weather returned by the backend', async () => {
-        fetchWidgetData.mockResolvedValue({
+        vi.mocked(fetchWidgetData).mockResolvedValue({
             location: { name: 'Paris', country: 'FR' },
             temperature: 19,
             feelsLike: 18,
@@ -33,12 +37,12 @@ describe('WidgetRenderer', () => {
 
         customRender(
             <WidgetRenderer
-                widget={{
+                widget={makeWidget({
                     id: 1,
                     serviceName: 'weather',
                     widgetName: 'current_weather',
                     refreshRate: 60,
-                }}
+                })}
             />,
         );
 
@@ -51,12 +55,12 @@ describe('WidgetRenderer', () => {
     it('does not request data for services that are not implemented', () => {
         customRender(
             <WidgetRenderer
-                widget={{
+                widget={makeWidget({
                     id: 2,
                     serviceName: 'unsupported-service',
                     widgetName: 'unsupported-widget',
                     refreshRate: 60,
-                }}
+                })}
             />,
         );
 
@@ -65,7 +69,7 @@ describe('WidgetRenderer', () => {
     });
 
     it('renders a crypto price with its market statistics', async () => {
-        fetchWidgetData.mockResolvedValue({
+        vi.mocked(fetchWidgetData).mockResolvedValue({
             type: 'crypto_price',
             coin: 'bitcoin',
             currency: 'eur',
@@ -78,12 +82,12 @@ describe('WidgetRenderer', () => {
 
         customRender(
             <WidgetRenderer
-                widget={{
+                widget={makeWidget({
                     id: 3,
                     serviceName: 'crypto',
                     widgetName: 'crypto_price',
                     refreshRate: 60,
-                }}
+                })}
             />,
         );
 
@@ -94,7 +98,7 @@ describe('WidgetRenderer', () => {
     });
 
     it('renders multiple crypto curves that can be toggled from the legend', async () => {
-        fetchWidgetData.mockResolvedValue({
+        vi.mocked(fetchWidgetData).mockResolvedValue({
             type: 'crypto_chart',
             currency: 'eur',
             days: 7,
@@ -125,13 +129,13 @@ describe('WidgetRenderer', () => {
 
         customRender(
             <WidgetRenderer
-                widget={{
+                widget={makeWidget({
                     id: 4,
                     serviceName: 'crypto',
                     widgetName: 'crypto_chart',
                     params: { coins: 'bitcoin,ethereum', currency: 'eur', days: '7' },
                     refreshRate: 60,
-                }}
+                })}
             />,
         );
 

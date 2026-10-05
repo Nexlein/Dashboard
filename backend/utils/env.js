@@ -14,6 +14,7 @@ const envSchema = z.object({
     JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters long'),
     JWT_EXPIRES_IN: z.string().default('24h'),
     SALT_ROUNDS: z.coerce.number().int().min(1).default(10),
+    GLOBAL_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(1000),
     AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(20),
     // Falls back to JWT_SECRET when unset (see utils/encryption.js).
     ENCRYPTION_KEY: optional(

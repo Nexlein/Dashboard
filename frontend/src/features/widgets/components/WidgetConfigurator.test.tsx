@@ -17,7 +17,7 @@ vi.mock('@/features/services/lib/services', () => ({
 describe('WidgetConfigurator', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        fetchServices.mockResolvedValue([]);
+        vi.mocked(fetchServices).mockResolvedValue([]);
     });
 
     it('renders the add widget button and opens modal', async () => {

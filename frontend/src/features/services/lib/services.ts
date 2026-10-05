@@ -1,4 +1,4 @@
-import { fetchClient } from '../../../lib/apiClient';
+import { fetchClient } from '@/lib/apiClient';
 
 export type ServiceConnection = {
     name: string;
@@ -19,21 +19,22 @@ export async function fetchServices(): Promise<ServiceConnection[]> {
 }
 
 export async function connectService(serviceName: string, apiKey: string) {
-    return fetchClient(`/services/${serviceName}/connection`, {
+    return fetchClient<ServiceConnection>(`/services/${serviceName}/connection`, {
         method: 'PUT',
         body: JSON.stringify({ apiKey }),
-    }) as Promise<ServiceConnection>;
+    });
 }
 
-export async function disconnectService(serviceName: string) {
-    return fetchClient(`/services/${serviceName}/connection`, {
-        method: 'DELETE',
-    });
+export async function disconnectService(serviceName: string): Promise<void> {
+    await fetchClient(`/services/${serviceName}/connection`, { method: 'DELETE' });
 }
 
 export async function getOAuthUrl(serviceName: string) {
-    const response = await fetchClient(`/auth/${serviceName}?format=json`, {
-        credentials: 'include',
-    });
+    const response = await fetchClient<{ authorizationUrl: string }>(
+        `/auth/${serviceName}?format=json`,
+        {
+            credentials: 'include',
+        },
+    );
     return response.authorizationUrl;
 }

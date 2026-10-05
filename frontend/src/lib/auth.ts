@@ -6,24 +6,24 @@ export { API_URL };
 type AuthResponse = { message: string; token?: string; userId?: number };
 
 export async function register(payload: RegisterFormData) {
-    return fetchClient('/auth/register', {
+    return fetchClient<AuthResponse>('/auth/register', {
         method: 'POST',
         body: JSON.stringify(payload),
-    }) as Promise<AuthResponse>;
+    });
 }
 
 export async function login(payload: LoginFormData) {
-    const response = (await fetchClient('/auth/login', {
+    const response = await fetchClient<AuthResponse>('/auth/login', {
         method: 'POST',
         body: JSON.stringify(payload),
-    })) as AuthResponse;
+    });
     if (!response.token) throw new Error('Le serveur n’a pas retourné de jeton de connexion.');
     localStorage.setItem(AUTH_TOKEN_KEY, response.token);
 }
 
 export async function getCurrentUser(): Promise<User> {
     if (!hasValidAuthToken()) throw new Error('Missing authentication token');
-    return fetchClient('/auth/me') as Promise<User>;
+    return fetchClient<User>('/auth/me');
 }
 
 export async function updateProfile(payload: UpdateMeFormData): Promise<User> {

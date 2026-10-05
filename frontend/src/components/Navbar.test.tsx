@@ -2,6 +2,10 @@ import { screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render } from '../test-utils';
 import Navbar from './Navbar';
+import { makeUser } from '../test/fixtures';
+
+const renderNavbar = (props: Partial<React.ComponentProps<typeof Navbar>> = {}) =>
+    render(<Navbar user={makeUser()} onLogout={vi.fn()} {...props} />);
 
 describe('Navbar Component', () => {
     beforeEach(() => {
@@ -10,17 +14,17 @@ describe('Navbar Component', () => {
     });
 
     it('renders Dashboard title', () => {
-        render(<Navbar />);
+        renderNavbar();
         expect(screen.getByText('Dashboard')).toBeInTheDocument();
     });
 
     it('renders the display name when available', () => {
-        render(<Navbar user={{ displayName: 'Test User', email: 'user@example.com' }} />);
+        renderNavbar({ user: makeUser({ displayName: 'Test User' }) });
         expect(screen.getByText('Test User')).toBeInTheDocument();
     });
 
     it('toggles dark mode when switch is clicked', () => {
-        render(<Navbar />);
+        renderNavbar();
 
         expect(document.documentElement).not.toHaveClass('dark');
 
@@ -35,7 +39,7 @@ describe('Navbar Component', () => {
 
     it('calls the logout handler', () => {
         const onLogout = vi.fn();
-        render(<Navbar onLogout={onLogout} />);
+        renderNavbar({ onLogout });
 
         fireEvent.click(screen.getByRole('button', { name: /ouvrir le menu du compte/i }));
         fireEvent.click(screen.getByRole('menuitem', { name: /se déconnecter/i }));

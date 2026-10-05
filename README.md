@@ -75,7 +75,8 @@ Requirements: Node.js 24 (see `.nvmrc`, `nvm use`) and Docker with Docker Compos
    `CORS_ORIGINS` lists the frontend origins allowed to call the API; the example
    includes Vite on ports 5173/5174 and the Docker frontend on port 8081.
    `AUTH_RATE_LIMIT_MAX` caps login/register attempts per IP every 15 minutes
-   (default 20). The backend validates these variables at startup and exits with
+   (default 20) and `GLOBAL_RATE_LIMIT_MAX` all requests per IP (default 1000); with
+   Redis the counters are shared by every backend replica. The backend validates these variables at startup and exits with
    an explicit message when one is invalid; empty values count as unset.
    Keep `backend/.env` private; commit only the example file.
 

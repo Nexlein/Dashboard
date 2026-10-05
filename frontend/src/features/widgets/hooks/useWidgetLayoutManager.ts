@@ -6,11 +6,11 @@ export function useWidgetLayoutManager() {
     const updateLayoutMutation = useUpdateLayout();
     const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    const onLayoutChange = (layout: Layout[]) => {
+    const onLayoutChange = (layout: Layout) => {
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
 
         timeoutRef.current = setTimeout(() => {
-            const formatted = (layout as any[]).map((l) => ({
+            const formatted = layout.map((l) => ({
                 id: parseInt(l.i, 10),
                 layout: { x: l.x, y: l.y, w: l.w, h: l.h },
             }));

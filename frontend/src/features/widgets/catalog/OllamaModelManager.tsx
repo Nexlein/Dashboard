@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Download, Check, Loader2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { fetchOllamaModels, pullOllamaModel } from '@/features/widgets/lib/ollama';
+import type { CustomConfigProps } from '@/features/widgets/lib/types';
 
 const RECOMMENDED_MODELS = [
     { id: 'llama3.2:1b', name: 'Llama 3.2 (1B) - Very Fast' },
@@ -10,13 +11,7 @@ const RECOMMENDED_MODELS = [
     { id: 'llama3', name: 'Llama 3 (8B) - Powerful' },
 ];
 
-export function OllamaModelManager({
-    selectedModel,
-    onSelectModel,
-}: {
-    selectedModel: string;
-    onSelectModel: (model: string) => void;
-}) {
+export function OllamaModelManager({ selectedModel, onSelectModel }: CustomConfigProps) {
     const [pulling, setPulling] = useState<string | false>(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -51,7 +46,7 @@ export function OllamaModelManager({
         onSettled: () => setPulling(false),
     });
 
-    const pullModel = (modelId) => pullMutation.mutate(modelId);
+    const pullModel = (modelId: string) => pullMutation.mutate(modelId);
 
     return (
         <div className="space-y-3 mt-4 border rounded-md p-3 bg-muted/20">

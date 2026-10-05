@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useUpdateWidget } from '@/features/widgets/hooks/useWidgets';
-import { MIN_REFRESH_RATE_SECONDS } from '@/features/widgets/lib/widgets';
+import { isRefreshRateValid, type DashboardWidget } from '@/features/widgets/lib/widgets';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -10,18 +10,20 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { REGISTRY } from '@/features/widgets/lib/registry';
+import { findWidgetDefinition, getServiceDefinition } from '@/features/widgets/lib/registry';
 import { WidgetForm } from './WidgetForm';
-
-function isRefreshRateValid(refreshTimer: string, serviceDef: any) {
-    if (serviceDef?.hasRefresh === false) return true;
-    const refreshRate = Number(refreshTimer);
-    return Number.isInteger(refreshRate) && refreshRate >= MIN_REFRESH_RATE_SECONDS;
-}
 
 // Mounted only while a widget is being edited (keyed by widget id), so the form
 // state is seeded from the widget once instead of being synced in an effect.
-export function WidgetEditDialog({ widget, open, onOpenChange }: any) {
+export function WidgetEditDialog({
+    widget,
+    open,
+    onOpenChange,
+}: {
+    widget: DashboardWidget;
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+}) {
     const updateWidgetMutation = useUpdateWidget();
     const [params, setParams] = useState(widget.params || {});
     const [refreshTimer, setRefreshTimer] = useState(widget.refreshRate?.toString() || '60');
@@ -30,10 +32,8 @@ export function WidgetEditDialog({ widget, open, onOpenChange }: any) {
     const service = widget.serviceName;
     const widgetType = widget.widgetName;
 
-    const serviceDef = REGISTRY[service];
-    const widgetDef = serviceDef?.widgets?.find(
-        (w: any) => w.id === widgetType || w.aliases?.includes(widgetType),
-    );
+    const serviceDef = getServiceDefinition(service);
+    const widgetDef = findWidgetDefinition(service, widgetType);
 
     const handleSave = async () => {
         if (!isRefreshRateValid(refreshTimer, serviceDef)) return;
@@ -48,8 +48,8 @@ export function WidgetEditDialog({ widget, open, onOpenChange }: any) {
                 },
             });
             onOpenChange(false);
-        } catch (err: any) {
-            setError(err.message || 'Failed to update widget');
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to update widget');
         }
     };
 

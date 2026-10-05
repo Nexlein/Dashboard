@@ -1,7 +1,8 @@
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { WidgetParameterField } from './WidgetParameterField';
-import { MIN_REFRESH_RATE_SECONDS } from '@/features/widgets/lib/widgets';
+import { MIN_REFRESH_RATE_SECONDS, type WidgetParams } from '@/features/widgets/lib/widgets';
+import type { ServiceDefinition, WidgetDefinition } from '@/features/widgets/lib/types';
 
 export function WidgetForm({
     serviceDef,
@@ -10,9 +11,14 @@ export function WidgetForm({
     setParams,
     refreshTimer,
     setRefreshTimer,
+}: {
+    serviceDef: ServiceDefinition;
+    widgetDef: WidgetDefinition;
+    params: WidgetParams;
+    setParams: (params: WidgetParams) => void;
+    refreshTimer: string;
+    setRefreshTimer: (value: string) => void;
 }) {
-    if (!serviceDef || !widgetDef) return null;
-
     const CustomConfigUi = widgetDef.customConfigUi;
     const hasRefresh = serviceDef.hasRefresh !== false;
 
@@ -23,7 +29,7 @@ export function WidgetForm({
                 <div className="grid gap-2 animate-in fade-in slide-in-from-top-2" key={param.id}>
                     <WidgetParameterField
                         param={param}
-                        value={params[param.id] || ''}
+                        value={String(params[param.id] ?? '')}
                         onChange={(value) => setParams({ ...params, [param.id]: value })}
                     />
                 </div>
@@ -33,10 +39,8 @@ export function WidgetForm({
             {CustomConfigUi && (
                 <div className="animate-in fade-in slide-in-from-top-2">
                     <CustomConfigUi
-                        selectedModel={params.model}
+                        selectedModel={String(params.model ?? '')}
                         onSelectModel={(model) => setParams({ ...params, model })}
-                        params={params}
-                        setParams={setParams}
                     />
                 </div>
             )}

@@ -1,9 +1,31 @@
 import { useMemo, useState } from 'react';
+import type { WidgetViewProps } from '@/features/widgets/lib/types';
+
+type PricePoint = { timestamp: number; price: number };
+
+export type CryptoChartData = {
+    currency: string;
+    days: number;
+    historyLimited: boolean;
+    series: {
+        coin: string;
+        name?: string;
+        symbol?: string;
+        image?: string | null;
+        currentPrice: number;
+        /** null when the first price of the period is 0. */
+        change: number | null;
+        prices: PricePoint[];
+    }[];
+};
+
+type ChartPoint = PricePoint & { change: number };
+type ChartBounds = { minTime: number; maxTime: number; minValue: number; maxValue: number };
 
 const WIDTH = 720;
 const HEIGHT = 250;
 const MARGIN = { top: 12, right: 16, bottom: 34, left: 48 };
-const COIN_META = {
+const COIN_META: Record<string, { symbol: string; color: string }> = {
     bitcoin: { symbol: 'BTC', color: '#f59e0b' },
     ethereum: { symbol: 'ETH', color: '#3b82f6' },
     solana: { symbol: 'SOL', color: '#22c55e' },
@@ -28,7 +50,7 @@ const PERIODS = [
     { value: '365', label: '1Y' },
 ];
 
-function coinMeta(coin, index) {
+function coinMeta(coin: string, index: number) {
     const colorIndex = [...coin].reduce((total, character) => total + character.charCodeAt(0), 0);
     return (
         COIN_META[coin] || {
@@ -38,7 +60,13 @@ function coinMeta(coin, index) {
     );
 }
 
-function CoinLogo({ series, className = 'size-5' }) {
+function CoinLogo({
+    series,
+    className = 'size-5',
+}: {
+    series: { coin: string; color: string; image?: string | null };
+    className?: string;
+}) {
     const [failed, setFailed] = useState(false);
 
     if (series.image && !failed) {
@@ -64,7 +92,7 @@ function CoinLogo({ series, className = 'size-5' }) {
     );
 }
 
-function currencyValue(value, currency) {
+function currencyValue(value: number, currency: string) {
     try {
         return new Intl.NumberFormat(undefined, {
             style: 'currency',
@@ -76,7 +104,7 @@ function currencyValue(value, currency) {
     }
 }
 
-function dateLabel(timestamp, days) {
+function dateLabel(timestamp: number, days: number) {
     return new Intl.DateTimeFormat(undefined, {
         ...(days <= 1
             ? { hour: '2-digit', minute: '2-digit' }
@@ -84,7 +112,7 @@ function dateLabel(timestamp, days) {
     }).format(new Date(timestamp));
 }
 
-function chartPath(points, bounds) {
+function chartPath(points: ChartPoint[], bounds: ChartBounds) {
     const plotWidth = WIDTH - MARGIN.left - MARGIN.right;
     const plotHeight = HEIGHT - MARGIN.top - MARGIN.bottom;
     const timeRange = Math.max(bounds.maxTime - bounds.minTime, 1);
@@ -99,8 +127,13 @@ function chartPath(points, bounds) {
         .join(' ');
 }
 
-export function CryptoChartWidget({ data, selectedPeriod, onPeriodChange, periodUpdating }) {
-    const [hiddenCoins, setHiddenCoins] = useState(() => new Set());
+export function CryptoChartWidget({
+    data,
+    selectedPeriod,
+    onPeriodChange,
+    periodUpdating,
+}: WidgetViewProps<CryptoChartData>) {
+    const [hiddenCoins, setHiddenCoins] = useState(() => new Set<string>());
     const activePeriod =
         String(selectedPeriod ?? data.days) === 'max' ? '365' : String(selectedPeriod ?? data.days);
     const normalizedSeries = useMemo(
@@ -143,7 +176,7 @@ export function CryptoChartWidget({ data, selectedPeriod, onPeriodChange, period
         return minTime + ratio * (maxTime - minTime);
     });
 
-    function toggleCoin(coin) {
+    function toggleCoin(coin: string) {
         setHiddenCoins((current) => {
             const next = new Set(current);
             if (next.has(coin)) next.delete(coin);
@@ -159,7 +192,8 @@ export function CryptoChartWidget({ data, selectedPeriod, onPeriodChange, period
         >
             <div className="grid shrink-0 auto-cols-[minmax(112px,1fr)] grid-flow-col overflow-x-auto rounded-lg border bg-muted/20">
                 {normalizedSeries.map((series) => {
-                    const positive = series.change >= 0;
+                    const change = series.change ?? 0;
+                    const positive = change >= 0;
                     return (
                         <div key={series.coin} className="min-w-0 border-r p-3 last:border-r-0">
                             <div className="flex items-center gap-2">
@@ -179,7 +213,7 @@ export function CryptoChartWidget({ data, selectedPeriod, onPeriodChange, period
                                     positive ? 'text-emerald-500' : 'text-red-500'
                                 }`}
                             >
-                                {positive ? '↑' : '↓'} {Math.abs(series.change).toFixed(2)}%
+                                {positive ? '↑' : '↓'} {Math.abs(change).toFixed(2)}%
                             </p>
                         </div>
                     );

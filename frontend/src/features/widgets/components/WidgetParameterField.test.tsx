@@ -1,8 +1,9 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { WidgetParameterField } from './WidgetParameterField';
+import type { WidgetParamDefinition } from '@/features/widgets/lib/types';
 
-const cryptoParam = {
+const cryptoParam: WidgetParamDefinition = {
     id: 'coins',
     label: 'Cryptocurrencies',
     type: 'coin-multiselect',

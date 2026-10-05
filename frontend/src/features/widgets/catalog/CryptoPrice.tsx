@@ -1,4 +1,16 @@
-function formatCurrency(value, currency, compact = false) {
+import type { WidgetViewProps } from '@/features/widgets/lib/types';
+
+export type CryptoPriceData = {
+    coin: string;
+    currency: string;
+    price: number;
+    marketCap: number | null;
+    volume24h: number | null;
+    change24h: number | null;
+    lastUpdatedAt: number | null;
+};
+
+function formatCurrency(value: number | null, currency: string, compact = false) {
     if (typeof value !== 'number') return '—';
 
     try {
@@ -13,7 +25,7 @@ function formatCurrency(value, currency, compact = false) {
     }
 }
 
-export function CryptoPrice({ data }) {
+export function CryptoPrice({ data }: WidgetViewProps<CryptoPriceData>) {
     const change = typeof data.change24h === 'number' ? data.change24h : null;
     const isPositive = change !== null && change >= 0;
 
