@@ -8,7 +8,7 @@
 - **Server State**: TanStack Query fetches, caches and refreshes widgets and services (`refetchInterval` drives widget auto-refresh). The theme preference is a small React context.
 - **UI Components**: `shadcn/ui` (Radix / Base UI primitives) for accessible, unstyled building blocks.
 - **Vite**: Fast dev server and builds, with route-level code splitting (`React.lazy`).
-- **Tailwind CSS**: Rapid UI development and native Dark/Light mode support.
+- **Tailwind CSS 4**: Rapid UI development and native Dark/Light mode support. Configured in CSS (`frontend/src/index.css`: `@theme` maps the design tokens to utilities) and compiled by the `@tailwindcss/vite` plugin; there is no `tailwind.config.js` or PostCSS setup. The shadcn/ui components use Tailwind 4 syntax (`data-open:`, `outline-hidden`...), so they need this version.
 
 ## Backend: Node.js (Express, TypeScript)
 
