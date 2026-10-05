@@ -17,9 +17,7 @@ process.env.TEST_GITHUB_ID = String(randomInt(1000000, 1000000000));
 process.env.TEST_GITHUB_EMAIL = `${randomUUID()}@integration.test`;
 const { PrismaClient } = require('@prisma/client');
 const jwt = require('jsonwebtoken');
-const { encryptParams, encryptJson } = require('../../utils/encryption');
-const { decrypt } = require('../../utils/tokenEncryption');
-const { migrateOAuthTokens } = require('../../utils/migrateOAuthTokens');
+const { encryptJson, encryptString, decryptString } = require('../../utils/encryption');
 const prisma = new PrismaClient();
 let child;
 const ids = [];
@@ -34,7 +32,7 @@ async function main() {
                 create: {
                     serviceName: 'weather',
                     widgetName: 'current_weather',
-                    params: encryptParams({ city: 'Paris' }),
+                    params: encryptJson({ city: 'Paris' }),
                     refreshRate: 60,
                     layout: { x: 0, y: 0, w: 3, h: 2 },
                 },
@@ -42,8 +40,8 @@ async function main() {
             tokens: {
                 create: {
                     provider: 'github',
-                    accessToken: 'legacy-access',
-                    refreshToken: 'legacy-refresh',
+                    accessToken: encryptString('stored-access'),
+                    refreshToken: encryptString('stored-refresh'),
                 },
             },
             serviceConnections: {
@@ -94,10 +92,8 @@ async function main() {
     const stored = await prisma.oAuthToken.findUnique({
         where: { userId_provider: { userId: user.id, provider: 'github' } },
     });
-    assert.ok(stored.accessToken.startsWith('v1:'));
-    assert.equal(decrypt(stored.accessToken), 'legacy-access');
-    assert.equal(decrypt(stored.refreshToken), 'legacy-refresh');
-    assert.equal(await migrateOAuthTokens(prisma), 0);
+    assert.equal(decryptString(stored.accessToken), 'stored-access');
+    assert.equal(decryptString(stored.refreshToken), 'stored-refresh');
 
     const base = `http://127.0.0.1:${port}`;
     const headers = {
@@ -195,7 +191,7 @@ async function main() {
     assert.equal(await prisma.user.count({ where: { id: other.id } }), 1);
     assert.equal((await fetch(`${base}/auth/download-data`, { headers })).status, 404);
     console.log(
-        'PASS: startup migration, idempotence, readable secret-free export, GitHub signup/age gate/email editing/re-login, and PostgreSQL cascades.',
+        'PASS: encrypted token storage, readable secret-free export, GitHub signup/age gate/email editing/re-login, and PostgreSQL cascades.',
     );
 }
 main()

@@ -1,5 +1,5 @@
 const { z } = require('zod');
-const { encryptParams, decryptParams, decryptJson } = require('../utils/encryption');
+const { encryptJson, decryptJson } = require('../utils/encryption');
 const registry = require('../services/registry');
 const asyncHandler = require('../utils/asyncHandler');
 
@@ -62,7 +62,7 @@ exports.getWidgets = asyncHandler(async (req, res) => {
     const widgets = await prisma.widgetConfig.findMany({ where: { userId: req.user.userId } });
     const decryptedWidgets = widgets.map((w) => ({
         ...w,
-        params: decryptParams(w.params),
+        params: decryptJson(w.params),
         refreshRate: Math.max(w.refreshRate, MIN_REFRESH_RATE_SECONDS),
     }));
     res.json(decryptedWidgets);
@@ -113,7 +113,7 @@ exports.addWidget = asyncHandler(async (req, res) => {
             userId: req.user.userId,
             serviceName,
             widgetName,
-            params: encryptParams(params),
+            params: encryptJson(params),
             refreshRate: Math.max(refreshRate, MIN_REFRESH_RATE_SECONDS),
             layout,
         },
@@ -165,7 +165,7 @@ exports.getWidgetData = asyncHandler(async (req, res) => {
                 .json({ error: `${service.displayName || widget.serviceName} is not connected` });
     }
 
-    const params = decryptParams(widget.params);
+    const params = decryptJson(widget.params);
     let data;
     try {
         data = await service.execute(widget.widgetName, params, {
@@ -196,13 +196,13 @@ exports.updateWidget = asyncHandler(async (req, res) => {
     const updated = await prisma.widgetConfig.update({
         where: { id: widgetId },
         data: {
-            ...(params && { params: encryptParams(params) }),
+            ...(params && { params: encryptJson(params) }),
             ...(refreshRate !== undefined && { refreshRate }),
             ...(layout && { layout }),
         },
     });
 
-    res.json({ ...updated, params: decryptParams(updated.params) });
+    res.json({ ...updated, params: decryptJson(updated.params) });
 });
 
 exports.deleteWidget = asyncHandler(async (req, res) => {
@@ -233,7 +233,7 @@ exports.chatWidget = asyncHandler(async (req, res) => {
 
     try {
         const data = await service.chat(
-            decryptParams(widget.params),
+            decryptJson(widget.params),
             { userId: req.user.userId },
             validated.data.messages,
         );

@@ -24,7 +24,7 @@ process.env.GITHUB_CALLBACK_URL = 'http://localhost:8080/auth/github/callback';
 const app = require('../app');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
-const { decrypt } = require('../utils/tokenEncryption');
+const { decryptString } = require('../utils/encryption');
 
 function authToken(userId = 1) {
     return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '1h' });
@@ -161,7 +161,7 @@ describe('GitHub account linking', () => {
             update: { accessToken: expect.any(String), refreshToken: null, expiresAt: null },
         });
         const saved = prisma.oAuthToken.upsert.mock.calls[0][0];
-        expect(decrypt(saved.create.accessToken)).toBe('github-access-token');
+        expect(decryptString(saved.create.accessToken)).toBe('github-access-token');
         expect(saved.create.accessToken).not.toBe('github-access-token');
         const [url, options] = global.fetch.mock.calls[0];
         expect(url).toBe('https://github.com/login/oauth/access_token');

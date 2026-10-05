@@ -7,7 +7,7 @@ require('dotenv').config({
     path: path.join(__dirname, '../.env'),
 });
 
-const { encryptParams } = require('../utils/encryption');
+const { encryptJson } = require('../utils/encryption');
 
 const prisma = new PrismaClient();
 
@@ -55,7 +55,7 @@ async function main() {
             userId: user.id,
             serviceName: 'weather',
             widgetName: 'current_weather',
-            params: encryptParams({ city: 'Paris' }),
+            params: encryptJson({ city: 'Paris' }),
             refreshRate: 300, // 5 minutes
             layout: { x: 0, y: 0, w: 4, h: 2 },
         },
@@ -66,7 +66,7 @@ async function main() {
             userId: user.id,
             serviceName: 'github',
             widgetName: 'github-repo',
-            params: encryptParams({ repo: 'facebook/react' }),
+            params: encryptJson({ repo: 'facebook/react' }),
             refreshRate: 3600, // 1 hour
             layout: { x: 4, y: 0, w: 4, h: 2 },
         },

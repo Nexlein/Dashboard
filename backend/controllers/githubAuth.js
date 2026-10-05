@@ -1,6 +1,6 @@
 const crypto = require('node:crypto');
 const { getCache, setCache, deleteCache } = require('../utils/redisCache');
-const { encrypt } = require('../utils/tokenEncryption');
+const { encryptString } = require('../utils/encryption');
 const { getGitHubProfile, getVerifiedGitHubEmail } = require('../services/githubIdentity');
 const asyncHandler = require('../utils/asyncHandler');
 const { normalizeEmail, signAuthToken } = require('../utils/authToken');
@@ -159,8 +159,8 @@ exports.githubCallback = asyncHandler(async (req, res) => {
     }
     const accessToken = data.access_token;
     const tokenData = {
-        accessToken: encrypt(data.access_token),
-        refreshToken: data.refresh_token ? encrypt(data.refresh_token) : null,
+        accessToken: encryptString(data.access_token),
+        refreshToken: data.refresh_token ? encryptString(data.refresh_token) : null,
         expiresAt: data.expires_in ? new Date(Date.now() + data.expires_in * 1000) : null,
     };
     let userId = pendingLink.userId;

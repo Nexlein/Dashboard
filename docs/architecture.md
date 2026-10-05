@@ -58,7 +58,7 @@ flowchart TB
     - `controllers/`: request handlers (`auth`, `githubAuth`, `account` for GDPR, `widgets`, `services`, `admin`, `chatbot`, `health`), wrapped in `asyncHandler` so errors reach `middleware/errorHandler.js`.
     - `services/`: one module per external provider (weather, crypto, github, youtube, chatbot), `githubIdentity` for GitHub login, and the `registry` behind `/about.json`.
     - `middleware/`: authentication, admin check, error handler.
-    - `utils/`: the shared `PrismaClient` (`prisma.js`), environment validation (`env.js`), JWT helpers (`authToken.js`), encryption (`encryption.js` for widget parameters and credentials, `tokenEncryption.js` for OAuth tokens) and the Redis cache.
+    - `utils/`: the shared `PrismaClient` (`prisma.js`), environment validation (`env.js`), JWT helpers (`authToken.js`), encryption at rest (`encryption.js`: objects in JSON columns, OAuth tokens in text columns) and the Redis cache.
 
 ### 3. Caching & Load Balancing
 

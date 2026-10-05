@@ -26,7 +26,7 @@
 ## ORM: Prisma
 
 - **Type Safety**: Auto-generates client. Catch DB errors at compile time.
-- **Speed**: Schema syntax defines tables quickly; the schema is applied with `prisma db push`.
+- **Migrations**: Prisma Migrate keeps a versioned SQL history in `backend/prisma/migrations/`, applied automatically when the server starts.
 - **Connection**: Bridges Node.js Express backend directly to PostgreSQL container.
 
 ## Infrastructure: Docker Compose

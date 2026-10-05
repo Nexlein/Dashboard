@@ -32,4 +32,6 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY backend ./backend
 WORKDIR /app/backend
 EXPOSE 8080
-CMD ["node", "server.js"]
+# Apply pending migrations, then start. Prisma holds an advisory lock, so replicas
+# starting together apply each migration once.
+CMD ["sh", "-c", "npx prisma migrate deploy && exec node server.js"]

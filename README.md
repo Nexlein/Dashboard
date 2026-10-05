@@ -81,15 +81,12 @@ Requirements: Node.js 24 (see `.nvmrc`, `nvm use`) and Docker with Docker Compos
 
 2. **Run with Docker**
 
-   Prepare the database schema once, then start the stack:
-
    ```bash
-   docker compose up -d db
-   docker compose exec db pg_isready -U user -d dashboard
-   # Wait for "accepting connections" before applying the schema.
-   docker compose run --rm --build --no-deps server npx prisma db push
    docker compose up --build
    ```
+
+   The server waits for PostgreSQL to be healthy and applies pending database
+   migrations before accepting requests.
 
 3. **Database Seeding (Test Data)**
 
@@ -108,7 +105,7 @@ Requirements: Node.js 24 (see `.nvmrc`, `nvm use`) and Docker with Docker Compos
    - Backend API: [http://localhost:8080](http://localhost:8080)
    - `about.json`: [http://localhost:8080/about.json](http://localhost:8080/about.json)
 
-*The schema must exist before backend startup. OAuth token data is migrated automatically before the API accepts requests.*
+*Database migrations run automatically before the API accepts requests.*
 
 ### Run the backend outside Docker
 
@@ -118,17 +115,16 @@ itself runs inside Docker.
 
 ```bash
 docker compose up -d db redis
-docker compose exec db pg_isready -U user -d dashboard
 npm ci                          # from the repository root: installs every workspace
 npm run build -w shared
-(cd backend && npx prisma db push)
+npm run db:deploy -w backend    # apply database migrations
 npm run dev -w backend          # API on http://localhost:8080
 npm run dev -w frontend         # client on http://localhost:5173
 ```
 
-On the first database start, wait until `pg_isready` reports `accepting connections`
-before running `prisma db push`. Run either the Docker backend or the local backend
-on port 8080, not both at once.
+On the first database start, wait a few seconds for PostgreSQL to accept connections
+before applying migrations. Run either the Docker backend or the local backend on
+port 8080, not both at once.
 
 See the [manual browser flow](docs/api.md#manual-browser-flow) to test GitHub
 linking without a frontend.
@@ -147,50 +143,41 @@ npm run test:e2e   # Playwright; needs the database and backend/.env (starts bot
 Provider tests mock remote APIs and do not require real OpenWeather, GitHub, or
 CoinGecko credentials. See [Testing Guidelines](docs/testing.md) for details.
 
+To change the database, edit `backend/prisma/schema.prisma`, then create and apply a
+migration and commit the generated folder (CI fails when the schema and the migrations
+disagree):
+
+```bash
+npm run db:migrate -w backend -- --name add_widget_color
+```
+
+See [Database Schema](docs/db_schema.md#migrations) for the full workflow.
+
 Commits follow [Conventional Commits](https://www.conventionalcommits.org)
 (`feat:`, `fix:`, `test:`...), checked by commitlint. The pre-commit hook runs
 oxlint and Prettier on staged files. See [Tooling](docs/tooling.md).
 
-### OAuth encryption and upgrades
+### Encryption at rest
 
-OAuth tokens, widget parameters and API credentials use the same secret derivation
-(AES-256-GCM with scrypt). `ENCRYPTION_KEY` may be a long random string such as the
-64-character output of `openssl rand -hex 32`; when empty, the configured
-`JWT_SECRET` is used. There is no public fallback key for new encrypted data.
+OAuth tokens, widget parameters and service API keys are encrypted with AES-256-GCM
+(`backend/utils/encryption.js`). The key is derived with scrypt from `ENCRYPTION_KEY`,
+or from `JWT_SECRET` when `ENCRYPTION_KEY` is empty. Use a long random value such as
+the output of `openssl rand -hex 32`.
 
-Keep the chosen secret stable across restarts and identical across replicas.
-Changing it without re-encrypting existing data makes that data unreadable. If
-upgrading an existing installation that uses the JWT secret for encryption, keep
-that configuration during the upgrade rather than introducing a new key.
+Keep the secret stable across restarts and identical across replicas: changing it
+makes existing encrypted data unreadable. Database backups contain the encrypted
+values; protect the secret separately from them.
 
-Back up the database and stop old backend versions before upgrading. Every backend
-startup migrates existing plaintext access and refresh tokens to the versioned
-format before listening. It also upgrades tokens from the initial PR's unversioned
-ciphertext, using the original key for decryption only. The migration is batched,
-idempotent, and does not overwrite a concurrent refresh by another new replica.
-A wrong key or damaged token stops startup without deleting or replacing that token.
-Earlier successfully migrated batches remain valid and are skipped on retry.
+### Databases created before migrations
 
-To run the same migration explicitly after applying the schema:
+Databases created with `prisma db push` have no migration history, so
+`migrate deploy` would try to create existing tables. If the schema is up to date,
+mark the baseline migration as applied once:
 
 ```bash
 cd backend
-npm run migrate:oauth-tokens
+npx prisma migrate resolve --applied 20261004000000_init
 ```
 
-This release adds a nullable, unique `User.githubId` column. For an existing
-database, apply the additive, repeatable upgrade before starting the new backend:
-
-```bash
-cd backend
-npx prisma db push
-```
-
-For Docker, use `docker compose run --rm --build --no-deps server npx prisma db push`
-after stopping old backend instances. This adds only the nullable column and its
-unique index; it does not delete data or require `--accept-data-loss`. Fresh databases
-can use `npx prisma db push` as in the installation steps above. Existing accounts
-acquire their GitHub ID on their next GitHub login/linking or before changing their
-email. The OAuth token encryption migration itself does not change the schema.
-Retained database backups may still contain old plaintext tokens; handle their
-access and retention separately.
+For disposable development data, `npm run db:reset -w backend` drops the database
+and recreates it from the migrations instead.

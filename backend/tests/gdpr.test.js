@@ -19,8 +19,7 @@ const app = express();
 app.use(express.json());
 app.use('/auth', require('../routes/auth'));
 const prisma = PrismaClient.mock.results[0].value;
-const { encryptParams } = require('../utils/encryption');
-const { encrypt, decrypt } = require('../utils/tokenEncryption');
+const { encryptJson, encryptString, decryptString } = require('../utils/encryption');
 const authorization = `Bearer ${jwt.sign({ userId: 42 }, process.env.JWT_SECRET)}`;
 
 beforeEach(() => {
@@ -75,7 +74,9 @@ describe('Profile and data rights', () => {
             password: null,
             githubId: null,
         });
-        prisma.oAuthToken.findUnique.mockResolvedValue({ accessToken: encrypt('github-token') });
+        prisma.oAuthToken.findUnique.mockResolvedValue({
+            accessToken: encryptString('github-token'),
+        });
         jest.spyOn(global, 'fetch').mockResolvedValue({
             ok: true,
             json: async () => ({ id: 142 }),
@@ -99,7 +100,7 @@ describe('Profile and data rights', () => {
 
     test('keeps the old email when the legacy GitHub identity cannot be verified', async () => {
         prisma.user.findUnique.mockResolvedValue({ email: 'github@example.com', password: null });
-        prisma.oAuthToken.findUnique.mockResolvedValue({ accessToken: encrypt('expired') });
+        prisma.oAuthToken.findUnique.mockResolvedValue({ accessToken: encryptString('expired') });
         jest.spyOn(global, 'fetch').mockResolvedValue({
             ok: false,
             json: async () => ({ message: 'Bad credentials' }),
@@ -175,7 +176,7 @@ describe('Profile and data rights', () => {
             id: 42,
             email: 'user@example.com',
             widgets: [
-                { id: 1, params: encryptParams({ city: 'Paris' }) },
+                { id: 1, params: encryptJson({ city: 'Paris' }) },
                 { id: 2, params: { city: 'Lyon' } },
             ],
             tokens: [{ provider: 'github' }],
@@ -199,7 +200,7 @@ describe('Profile and data rights', () => {
     });
 
     test('fails the whole export when encrypted data is damaged', async () => {
-        const params = encryptParams({ city: 'Paris' });
+        const params = encryptJson({ city: 'Paris' });
         params.authTag = '0'.repeat(32);
         prisma.user.findUnique.mockResolvedValue({ id: 42, widgets: [{ params }] });
         const res = await request(app)
@@ -304,7 +305,7 @@ describe('Age confirmation', () => {
         const res = await githubCallback({ cguAccepted: 'true', is16OrOlder: 'true' });
         expect(res.headers.location).toContain('/login/oauth?token=');
         expect(prisma.user.create).toHaveBeenCalled();
-        expect(decrypt(prisma.oAuthToken.upsert.mock.calls[0][0].create.accessToken)).toBe(
+        expect(decryptString(prisma.oAuthToken.upsert.mock.calls[0][0].create.accessToken)).toBe(
             'github-access',
         );
     });

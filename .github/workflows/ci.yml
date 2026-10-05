@@ -3,8 +3,8 @@ name: CI Pipeline
 on:
     push:
         branches: [main, master]
+    # Every PR, including PRs stacked on another feature branch.
     pull_request:
-        branches: [main, master]
 
 concurrency:
     group: ${{ github.workflow }}-${{ github.ref }}
@@ -65,14 +65,20 @@ jobs:
                   JWT_SECRET: dummy_jwt_secret_with_at_least_32_characters
                   ENCRYPTION_KEY: dummy_encryption_key_with_at_least_32_chars
               run: npm test -w backend -- --coverage
+            - name: Apply migrations and check they match the schema
+              working-directory: backend
+              env:
+                  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/dashboard_gdpr_test
+              # migrate diff exits with 2 when schema.prisma has changes without a migration.
+              run: |
+                  npx prisma migrate deploy
+                  npx prisma migrate diff --from-schema-datasource prisma/schema.prisma --to-schema-datamodel prisma/schema.prisma --exit-code
             - name: Verify GDPR flows
               working-directory: backend
               env:
                   DATABASE_URL: postgresql://postgres:postgres@localhost:5432/dashboard_gdpr_test
                   TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/dashboard_gdpr_test
-              run: |
-                  npx prisma db push
-                  npm run test:gdpr-integration
+              run: npm run test:gdpr-integration
 
     test-frontend:
         runs-on: ubuntu-latest
@@ -111,7 +117,7 @@ jobs:
             - run: npm ci
             - run: npm run build -w shared
             - run: cp backend/.env.example backend/.env
-            - run: cd backend && npx prisma db push
+            - run: npm run db:deploy -w backend
               env:
                   DATABASE_URL: postgresql://postgres:postgres@localhost:5432/dashboard_e2e_test
             - run: npm exec -w e2e -- playwright install --with-deps chromium
