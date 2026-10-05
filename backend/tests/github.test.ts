@@ -75,6 +75,24 @@ describe('GitHub Service', () => {
             });
         });
 
+        it('encodes user-supplied path segments instead of letting them change the endpoint', async () => {
+            global.fetch.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ login: 'x', public_repos: 0, followers: 0, following: 0 }),
+            });
+
+            await githubService.execute(
+                'user_profile',
+                { username: '../user/emails' },
+                mockContext,
+            );
+
+            expect(global.fetch).toHaveBeenCalledWith(
+                'https://api.github.com/users/..%2Fuser%2Femails',
+                expect.anything(),
+            );
+        });
+
         it('executes latest_commits correctly', async () => {
             global.fetch.mockResolvedValueOnce({
                 ok: true,

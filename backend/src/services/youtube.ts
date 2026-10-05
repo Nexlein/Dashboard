@@ -1,3 +1,5 @@
+import type { ServiceDefinition } from './types.ts';
+
 export default {
     name: 'youtube',
     widgets: [
@@ -12,4 +14,4 @@ export default {
             params: [{ name: 'channel_id', type: 'string' }],
         },
     ],
-};
+} satisfies ServiceDefinition;

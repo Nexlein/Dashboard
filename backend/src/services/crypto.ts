@@ -1,18 +1,35 @@
+import { getCache, setCache, clearCache } from '../utils/redisCache.ts';
+import { HttpError } from '../utils/httpError.ts';
+import type {
+    ServiceContext,
+    ServiceCredentials,
+    ServiceDefinition,
+    WidgetParams,
+} from './types.ts';
+
 const COINGECKO_API_URL = 'https://api.coingecko.com/api/v3';
 const MAX_CACHE_TTL_MS = 5 * 60 * 1000;
 const MIN_REFRESH_RATE_SECONDS = 60;
 const MAX_CHART_COINS = 8;
 const COINGECKO_HISTORY_START = 1230768000; // 2009-01-01, before the first crypto market data.
-import { getCache, setCache, clearCache } from '../utils/redisCache.ts';
 
-class CryptoServiceError extends Error {
-    constructor(message, statusCode = 502) {
-        super(message);
-        this.statusCode = statusCode;
+// The parts of the CoinGecko responses this service reads.
+type SimplePrice = Record<string, Record<string, number | undefined> | undefined>;
+type MarketChart = { prices?: unknown[] };
+type CoinMarket = { id: string; name?: unknown; symbol?: unknown; image?: string };
+type CoinMetadata = { name: string; symbol: string; image: string | null };
+type ChartDays = number | 'max';
+
+class CryptoServiceError extends HttpError {
+    /** Status returned by CoinGecko, when the error comes from its answer. */
+    providerStatus?: number;
+
+    constructor(message: string, statusCode = 502) {
+        super(message, statusCode);
     }
 }
 
-function getApiKey(options) {
+function getApiKey(options: Pick<ServiceContext, 'credentials'>): string {
     const apiKey = options?.credentials?.apiKey;
     if (typeof apiKey !== 'string' || !apiKey.trim()) {
         throw new CryptoServiceError('CoinGecko is not connected. Configure it in Services.', 409);
@@ -20,10 +37,14 @@ function getApiKey(options) {
     return apiKey.trim();
 }
 
-async function fetchCoinGecko(path, params, apiKey) {
+async function fetchCoinGecko<T>(
+    path: string,
+    params: Record<string, string>,
+    apiKey: string,
+): Promise<T> {
     const query = new URLSearchParams(params);
     const url = `${COINGECKO_API_URL}${path}?${query}`;
-    let response;
+    let response: Response;
 
     try {
         response = await fetch(url, {
@@ -47,12 +68,12 @@ async function fetchCoinGecko(path, params, apiKey) {
         throw error;
     }
 
-    return response.json();
+    return (await response.json()) as T;
 }
 
-async function verifyCredentials(credentials) {
+async function verifyCredentials(credentials: ServiceCredentials) {
     const apiKey = getApiKey({ credentials });
-    const payload = await fetchCoinGecko(
+    const payload = await fetchCoinGecko<SimplePrice>(
         '/simple/price',
         { ids: 'bitcoin', vs_currencies: 'usd' },
         apiKey,
@@ -63,7 +84,7 @@ async function verifyCredentials(credentials) {
     }
 }
 
-function normalizedParam(value, field, maxLength) {
+function normalizedParam(value: unknown, field: string, maxLength: number): string {
     const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
     if (!normalized || normalized.length > maxLength || !/^[a-z0-9-]+$/.test(normalized)) {
         throw new CryptoServiceError(`${field} is invalid`, 400);
@@ -71,8 +92,8 @@ function normalizedParam(value, field, maxLength) {
     return normalized;
 }
 
-function normalizedCoins(value) {
-    const rawCoins = Array.isArray(value)
+function normalizedCoins(value: unknown): string[] {
+    const rawCoins: unknown[] = Array.isArray(value)
         ? value
         : typeof value === 'string'
           ? value.split(',')
@@ -88,10 +109,15 @@ function normalizedCoins(value) {
     return coins;
 }
 
-async function fetchChartHistory(coin, currency, days, apiKey) {
+async function fetchChartHistory(
+    coin: string,
+    currency: string,
+    days: ChartDays,
+    apiKey: string,
+): Promise<{ payload: MarketChart; historyLimited: boolean }> {
     if (days !== 'max') {
         return {
-            payload: await fetchCoinGecko(
+            payload: await fetchCoinGecko<MarketChart>(
                 `/coins/${coin}/market_chart`,
                 { vs_currency: currency, days: String(days), precision: 'full' },
                 apiKey,
@@ -102,7 +128,7 @@ async function fetchChartHistory(coin, currency, days, apiKey) {
 
     try {
         return {
-            payload: await fetchCoinGecko(
+            payload: await fetchCoinGecko<MarketChart>(
                 `/coins/${coin}/market_chart/range`,
                 {
                     vs_currency: currency,
@@ -117,9 +143,12 @@ async function fetchChartHistory(coin, currency, days, apiKey) {
     } catch (error) {
         // Demo plans can restrict full-range history. In that case, show the
         // deepest commonly available history rather than breaking the widget.
-        if (![400, 401, 403, 404, 422].includes(error.providerStatus)) throw error;
+        const providerStatus = (error as CryptoServiceError).providerStatus;
+        if (providerStatus === undefined || ![400, 401, 403, 404, 422].includes(providerStatus)) {
+            throw error;
+        }
         return {
-            payload: await fetchCoinGecko(
+            payload: await fetchCoinGecko<MarketChart>(
                 `/coins/${coin}/market_chart`,
                 { vs_currency: currency, days: '365', precision: 'full' },
                 apiKey,
@@ -129,9 +158,13 @@ async function fetchChartHistory(coin, currency, days, apiKey) {
     }
 }
 
-async function fetchCoinMetadata(coins, currency, apiKey) {
+async function fetchCoinMetadata(
+    coins: string[],
+    currency: string,
+    apiKey: string,
+): Promise<Map<string, CoinMetadata>> {
     try {
-        const payload = await fetchCoinGecko(
+        const payload = await fetchCoinGecko<CoinMarket[]>(
             '/coins/markets',
             {
                 vs_currency: currency,
@@ -143,10 +176,10 @@ async function fetchCoinMetadata(coins, currency, apiKey) {
 
         if (!Array.isArray(payload)) return new Map();
         return new Map(
-            payload.map((coin) => {
-                let image = null;
+            payload.map((coin): [string, CoinMetadata] => {
+                let image: string | null = null;
                 try {
-                    const imageUrl = new URL(coin.image);
+                    const imageUrl = new URL(coin.image ?? '');
                     if (imageUrl.protocol === 'https:') image = imageUrl.toString();
                 } catch {
                     // A missing logo should never prevent the chart from rendering.
@@ -169,7 +202,7 @@ async function fetchCoinMetadata(coins, currency, apiKey) {
     }
 }
 
-function normalizedDays(value) {
+function normalizedDays(value: unknown): ChartDays {
     if (value === 'max') return 'max';
 
     const days = Number(value);
@@ -179,7 +212,7 @@ function normalizedDays(value) {
     return days;
 }
 
-function cacheTtl(options) {
+function cacheTtl(options: Partial<ServiceContext>): number {
     const requestedRefreshRate = Number(options.refreshRate);
     const refreshRate = Number.isFinite(requestedRefreshRate)
         ? Math.max(requestedRefreshRate, MIN_REFRESH_RATE_SECONDS)
@@ -187,7 +220,11 @@ function cacheTtl(options) {
     return Math.min(refreshRate * 1000, MAX_CACHE_TTL_MS);
 }
 
-async function execute(widgetName, params = {}, options = {}) {
+async function execute(
+    widgetName: string,
+    params: WidgetParams = {},
+    options: Partial<ServiceContext> = {},
+): Promise<unknown> {
     if (!['crypto_price', 'crypto_chart'].includes(widgetName)) {
         throw new CryptoServiceError('Unsupported crypto widget', 400);
     }
@@ -215,7 +252,7 @@ async function execute(widgetName, params = {}, options = {}) {
                 );
                 const prices = (payload?.prices || [])
                     .filter(
-                        (point) =>
+                        (point): point is [number, number] =>
                             Array.isArray(point) &&
                             Number.isFinite(point[0]) &&
                             Number.isFinite(point[1]),
@@ -258,7 +295,7 @@ async function execute(widgetName, params = {}, options = {}) {
 
     if (cached) return cached;
 
-    const payload = await fetchCoinGecko(
+    const payload = await fetchCoinGecko<SimplePrice>(
         '/simple/price',
         {
             ids: coin,
@@ -323,4 +360,7 @@ export default {
     verifyCredentials,
     CryptoServiceError,
     clearCache,
+} satisfies ServiceDefinition & {
+    CryptoServiceError: typeof CryptoServiceError;
+    clearCache: typeof clearCache;
 };

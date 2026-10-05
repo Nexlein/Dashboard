@@ -1,11 +1,49 @@
 import { encryptString } from '../utils/encryption.ts';
+import { HttpError } from '../utils/httpError.ts';
 import prisma from '../utils/prisma.ts';
+import { getCache, setCache, clearCache } from '../utils/redisCache.ts';
+import type { ServiceContext, ServiceDefinition, WidgetParams } from './types.ts';
 
 const MAX_CACHE_TTL_MS = 5 * 60 * 1000;
 const MIN_REFRESH_RATE_SECONDS = 60;
-import { getCache, setCache, clearCache } from '../utils/redisCache.ts';
 
-async function refreshGitHubToken(userId, refreshToken) {
+// The parts of the GitHub responses this service reads.
+type TokenResponse = {
+    access_token?: string;
+    refresh_token?: string;
+    expires_in?: number;
+    error?: string;
+};
+type Repository = {
+    stargazers_count: number;
+    forks_count: number;
+    open_issues_count: number;
+    full_name: string;
+    description: string | null;
+};
+type Commit = {
+    sha: string;
+    html_url: string;
+    commit: { message: string; author: { name: string; date: string } };
+    author?: { avatar_url: string } | null;
+};
+type Profile = {
+    login: string;
+    name: string | null;
+    avatar_url: string;
+    public_repos: number;
+    followers: number;
+    following: number;
+    bio: string | null;
+};
+type GitHubCredentials = { accessToken: string; refreshToken?: string | null };
+
+/** A user-supplied path segment (owner, repository, branch, user name), URL-encoded. */
+function segment(value: unknown): string {
+    return encodeURIComponent(String(value ?? ''));
+}
+
+async function refreshGitHubToken(userId: number, refreshToken: string): Promise<string> {
     if (!process.env.GITHUB_CLIENT_ID || !process.env.GITHUB_CLIENT_SECRET) {
         throw new Error('GitHub client not configured');
     }
@@ -24,7 +62,7 @@ async function refreshGitHubToken(userId, refreshToken) {
         }),
     });
 
-    const data = await response.json();
+    const data = (await response.json()) as TokenResponse;
     if (!response.ok || data.error || !data.access_token) {
         throw new Error('Could not refresh GitHub token');
     }
@@ -45,9 +83,12 @@ async function refreshGitHubToken(userId, refreshToken) {
     return data.access_token;
 }
 
-async function fetchWithRefresh(url, context) {
+async function fetchWithRefresh(
+    url: string,
+    context: ServiceContext & { credentials: GitHubCredentials },
+): Promise<Response> {
     let accessToken = context.credentials.accessToken;
-    let headers = {
+    const headers = {
         Authorization: `Bearer ${accessToken}`,
         Accept: 'application/vnd.github.v3+json',
     };
@@ -70,9 +111,7 @@ async function fetchWithRefresh(url, context) {
     }
 
     if (!res.ok) {
-        const err = new Error(`GitHub API error: ${res.statusText}`);
-        err.statusCode = res.status;
-        throw err;
+        throw new HttpError(`GitHub API error: ${res.statusText}`, res.status);
     }
     return res;
 }
@@ -108,13 +147,12 @@ export default {
             params: [{ name: 'username', type: 'string' }],
         },
     ],
-    execute: async (widgetName, params, context) => {
-        const { credentials } = context;
-        if (!credentials || !credentials.accessToken) {
-            const error = new Error('GitHub account is not connected');
-            error.statusCode = 401;
-            throw error;
+    execute: async (widgetName: string, params: WidgetParams, context: ServiceContext) => {
+        const credentials = context.credentials as GitHubCredentials | null | undefined;
+        if (!credentials || typeof credentials.accessToken !== 'string') {
+            throw new HttpError('GitHub account is not connected', 401);
         }
+        const githubContext = { ...context, credentials };
 
         const cacheScope = context.cacheScope || 'unscoped';
         const cacheKey = `${cacheScope}:${widgetName}:${JSON.stringify(params)}`;
@@ -127,12 +165,11 @@ export default {
         if (cached) return cached;
 
         if (widgetName === 'repo_stats' || widgetName === 'github-repo') {
-            const { owner, repo } = params;
             const res = await fetchWithRefresh(
-                `https://api.github.com/repos/${owner}/${repo}`,
-                context,
+                `https://api.github.com/repos/${segment(params.owner)}/${segment(params.repo)}`,
+                githubContext,
             );
-            const data = await res.json();
+            const data = (await res.json()) as Repository;
             const result = {
                 stars: data.stargazers_count,
                 forks: data.forks_count,
@@ -145,12 +182,15 @@ export default {
         }
 
         if (widgetName === 'latest_commits' || widgetName === 'github-commits') {
-            const { owner, repo, branch } = params;
+            const query = new URLSearchParams({
+                sha: String(params.branch || 'main'),
+                per_page: '5',
+            });
             const res = await fetchWithRefresh(
-                `https://api.github.com/repos/${owner}/${repo}/commits?sha=${branch || 'main'}&per_page=5`,
-                context,
+                `https://api.github.com/repos/${segment(params.owner)}/${segment(params.repo)}/commits?${query}`,
+                githubContext,
             );
-            const data = await res.json();
+            const data = (await res.json()) as Commit[];
             const result = data.map((commit) => ({
                 sha: commit.sha,
                 message: commit.commit.message,
@@ -164,12 +204,11 @@ export default {
         }
 
         if (widgetName === 'user_profile' || widgetName === 'github-user') {
-            const { username } = params;
-            const url = username
-                ? `https://api.github.com/users/${username}`
+            const url = params.username
+                ? `https://api.github.com/users/${segment(params.username)}`
                 : 'https://api.github.com/user';
-            const res = await fetchWithRefresh(url, context);
-            const data = await res.json();
+            const res = await fetchWithRefresh(url, githubContext);
+            const data = (await res.json()) as Profile;
             const result = {
                 login: data.login,
                 name: data.name,
@@ -183,7 +222,7 @@ export default {
             return result;
         }
 
-        throw new Error('Unknown widget name');
+        throw new HttpError('Unknown widget name', 400);
     },
     clearCache,
-};
+} satisfies ServiceDefinition & { clearCache: typeof clearCache };

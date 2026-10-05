@@ -1,3 +1,6 @@
+import { HttpError } from '../utils/httpError.ts';
+import type { ChatMessage, ServiceDefinition, WidgetParams } from './types.ts';
+
 export default {
     name: 'chatbot',
     widgets: [
@@ -8,12 +11,10 @@ export default {
         },
     ],
     execute: async () => ({ status: 'ready' }),
-    chat: async (params, context, messages) => {
+    chat: async (params: WidgetParams, _context: unknown, messages: ChatMessage[]) => {
         const { model } = params;
-        if (!model) {
-            const error = new Error('Missing model parameter');
-            error.statusCode = 400;
-            throw error;
+        if (typeof model !== 'string' || !model) {
+            throw new HttpError('Missing model parameter', 400);
         }
 
         const url = 'http://ollama:11434/api/chat';
@@ -29,12 +30,10 @@ export default {
         });
 
         if (!res.ok) {
-            const error = new Error(`Ollama API Error: ${res.statusText}`);
-            error.statusCode = res.status;
-            throw error;
+            throw new HttpError(`Ollama API Error: ${res.statusText}`, res.status);
         }
 
-        const data = await res.json();
+        const data = (await res.json()) as { message: { content: string } };
         return { reply: data.message.content };
     },
-};
+} satisfies ServiceDefinition;

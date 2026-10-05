@@ -1,15 +1,45 @@
+import { getCache, setCache, clearCache } from '../utils/redisCache.ts';
+import { HttpError } from '../utils/httpError.ts';
+import type {
+    ServiceContext,
+    ServiceCredentials,
+    ServiceDefinition,
+    WidgetParams,
+} from './types.ts';
+
 const MAX_CACHE_TTL_MS = 5 * 60 * 1000;
 const MIN_REFRESH_RATE_SECONDS = 60;
-import { getCache, setCache, clearCache } from '../utils/redisCache.ts';
 
-class WeatherServiceError extends Error {
-    constructor(message, statusCode = 502) {
-        super(message);
-        this.statusCode = statusCode;
+// The parts of the OpenWeather responses this service reads.
+type GeoLocation = { name: string; country: string; state?: string; lat: number; lon: number };
+type Conditions = { weather?: { description: string; icon: string }[] };
+type CurrentPayload = Conditions & {
+    dt: number;
+    main: { temp: number; feels_like: number; humidity: number };
+    wind?: { speed: number };
+};
+type ForecastEntry = Conditions & {
+    dt: number;
+    pop?: number;
+    main: { temp_min: number; temp_max: number };
+};
+type ForecastPayload = { city?: { timezone?: number }; list?: ForecastEntry[] };
+type ForecastDay = {
+    date: string;
+    min: number;
+    max: number;
+    precipitationProbability: number;
+    representative: ForecastEntry;
+    distanceFromNoon: number;
+};
+
+class WeatherServiceError extends HttpError {
+    constructor(message: string, statusCode = 502) {
+        super(message, statusCode);
     }
 }
 
-function getApiKey(options) {
+function getApiKey(options: Pick<ServiceContext, 'credentials'>): string {
     const apiKey = options?.credentials?.apiKey;
     if (typeof apiKey !== 'string' || !apiKey.trim()) {
         throw new WeatherServiceError(
@@ -20,10 +50,14 @@ function getApiKey(options) {
     return apiKey.trim();
 }
 
-async function fetchOpenWeather(path, params, apiKey) {
+async function fetchOpenWeather<T>(
+    path: string,
+    params: Record<string, string>,
+    apiKey: string,
+): Promise<T> {
     const query = new URLSearchParams({ ...params, appid: apiKey });
     const url = `https://api.openweathermap.org${path}?${query}`;
-    let response;
+    let response: Response | undefined;
 
     for (let attempt = 0; attempt < 2; attempt += 1) {
         try {
@@ -36,28 +70,32 @@ async function fetchOpenWeather(path, params, apiKey) {
         }
     }
 
-    if (!response.ok) {
-        if (response.status === 401) {
+    if (!response?.ok) {
+        if (response?.status === 401) {
             throw new WeatherServiceError('Weather API key is invalid or not active yet', 503);
         }
-        if (response.status === 429) {
+        if (response?.status === 429) {
             throw new WeatherServiceError('Weather API rate limit reached', 503);
         }
         throw new WeatherServiceError('Weather provider request failed');
     }
 
-    return response.json();
+    return (await response.json()) as T;
 }
 
-async function resolveCity(city, apiKey) {
-    const locations = await fetchOpenWeather('/geo/1.0/direct', { q: city, limit: '1' }, apiKey);
+async function resolveCity(city: string, apiKey: string): Promise<GeoLocation> {
+    const locations = await fetchOpenWeather<GeoLocation[]>(
+        '/geo/1.0/direct',
+        { q: city, limit: '1' },
+        apiKey,
+    );
     if (!locations.length) {
         throw new WeatherServiceError('City not found', 404);
     }
     return locations[0];
 }
 
-function locationPayload(location) {
+function locationPayload(location: GeoLocation) {
     return {
         name: location.name,
         country: location.country,
@@ -65,8 +103,8 @@ function locationPayload(location) {
     };
 }
 
-function aggregateForecast(payload, location) {
-    const groups = new Map();
+function aggregateForecast(payload: ForecastPayload, location: GeoLocation) {
+    const groups = new Map<string, ForecastDay>();
     const timezone = payload.city?.timezone || 0;
 
     for (const entry of payload.list || []) {
@@ -111,8 +149,12 @@ function aggregateForecast(payload, location) {
     };
 }
 
-async function execute(widgetName, params = {}, options = {}) {
-    const aliases = {
+async function execute(
+    widgetName: string,
+    params: WidgetParams = {},
+    options: Partial<ServiceContext> = {},
+): Promise<unknown> {
+    const aliases: Record<string, string> = {
         'weather-current': 'current_weather',
         'weather-forecast': 'forecast',
     };
@@ -131,7 +173,7 @@ async function execute(widgetName, params = {}, options = {}) {
         ? Math.max(requestedRefreshRate, MIN_REFRESH_RATE_SECONDS)
         : MIN_REFRESH_RATE_SECONDS;
     const cacheTtlMs = Math.min(refreshRate * 1000, MAX_CACHE_TTL_MS);
-    const cached = await getCache(cacheKey);
+    const cached = await getCache<unknown>(cacheKey);
     if (cached) return cached;
 
     const location = await resolveCity(city, apiKey);
@@ -140,10 +182,14 @@ async function execute(widgetName, params = {}, options = {}) {
         lon: String(location.lon),
         units: 'metric',
     };
-    let data;
+    let data: unknown;
 
     if (normalizedWidgetName === 'current_weather') {
-        const payload = await fetchOpenWeather('/data/2.5/weather', commonParams, apiKey);
+        const payload = await fetchOpenWeather<CurrentPayload>(
+            '/data/2.5/weather',
+            commonParams,
+            apiKey,
+        );
         data = {
             type: 'current_weather',
             location: locationPayload(location),
@@ -156,7 +202,11 @@ async function execute(widgetName, params = {}, options = {}) {
             icon: payload.weather?.[0]?.icon || '',
         };
     } else {
-        const payload = await fetchOpenWeather('/data/2.5/forecast', commonParams, apiKey);
+        const payload = await fetchOpenWeather<ForecastPayload>(
+            '/data/2.5/forecast',
+            commonParams,
+            apiKey,
+        );
         data = aggregateForecast(payload, location);
     }
 
@@ -164,7 +214,7 @@ async function execute(widgetName, params = {}, options = {}) {
     return data;
 }
 
-async function verifyCredentials(credentials) {
+async function verifyCredentials(credentials: ServiceCredentials) {
     const apiKey = getApiKey({ credentials });
     await fetchOpenWeather('/geo/1.0/direct', { q: 'London', limit: '1' }, apiKey);
 }
@@ -194,4 +244,7 @@ export default {
     verifyCredentials,
     WeatherServiceError,
     clearCache,
+} satisfies ServiceDefinition & {
+    WeatherServiceError: typeof WeatherServiceError;
+    clearCache: typeof clearCache;
 };
