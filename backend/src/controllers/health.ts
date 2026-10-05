@@ -1,6 +1,7 @@
+import type { Request, Response } from 'express';
 import prisma from '../utils/prisma.ts';
 
-export const checkHealth = async (req, res) => {
+export const checkHealth = async (_req: Request, res: Response) => {
     try {
         await prisma.$queryRaw`SELECT 1`;
         res.status(200).json({

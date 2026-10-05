@@ -1,8 +1,9 @@
 import prisma from '../utils/prisma.ts';
+import { prismaErrorCode } from '../utils/prismaError.ts';
 import asyncHandler from '../utils/asyncHandler.ts';
 import { authUser } from '../middleware/auth.ts';
 
-export const getUsers = asyncHandler(async (req, res) => {
+export const getUsers = asyncHandler(async (_req, res) => {
     try {
         const users = await prisma.user.findMany({
             select: {
@@ -36,7 +37,8 @@ export const deleteUser = asyncHandler(async (req, res) => {
         await prisma.user.delete({ where: { id: userId } });
         res.status(204).send();
     } catch (error) {
-        if (error.code === 'P2025') return res.status(404).json({ error: 'User not found' });
+        if (prismaErrorCode(error) === 'P2025')
+            return res.status(404).json({ error: 'User not found' });
         res.status(500).json({ error: 'Internal server error' });
     }
 });

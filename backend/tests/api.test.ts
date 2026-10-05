@@ -399,6 +399,22 @@ describe('API Endpoints', () => {
             execute.mockRestore();
         });
 
+        it('answers 501 for a widget whose service fetches no data', async () => {
+            prisma.widgetConfig.findUnique.mockResolvedValue({
+                ...mockWidget,
+                serviceName: 'youtube',
+                widgetName: 'channel_stats',
+                params: {},
+            });
+
+            const res = await request(app)
+                .get('/widgets/1/data')
+                .set('Authorization', `Bearer ${token}`);
+
+            expect(res.statusCode).toBe(501);
+            expect(res.body.error).toBe('Widget data is not available for this service');
+        });
+
         it('requires the user to connect OpenWeather before creating a weather widget', async () => {
             prisma.serviceConnection.findUnique.mockResolvedValue(null);
 
@@ -578,10 +594,28 @@ describe('API Endpoints', () => {
                     displayName: 'OpenWeather',
                     connected: true,
                     keyHint: 't-key',
+                    credentialLabel: 'OpenWeather API key',
+                    documentationUrl: 'https://home.openweathermap.org/api_keys',
                 }),
             );
             expect(JSON.stringify(res.body)).not.toContain('encryptedCredentials');
         });
+
+        it.each([[{}], [{ apiKey: '   ' }], [{ apiKey: { nested: 'object' } }]])(
+            'rejects a missing or non-string API key %j',
+            async (body) => {
+                const verify = vi.spyOn(weatherService, 'verifyCredentials');
+
+                const res = await request(app)
+                    .put('/services/weather/connection')
+                    .set('Authorization', `Bearer ${token}`)
+                    .send(body);
+
+                expect(res.statusCode).toBe(400);
+                expect(verify).not.toHaveBeenCalled();
+                expect(prisma.serviceConnection.upsert).not.toHaveBeenCalled();
+            },
+        );
 
         it('verifies and securely saves an OpenWeather API key', async () => {
             const verify = vi.spyOn(weatherService, 'verifyCredentials').mockResolvedValue();

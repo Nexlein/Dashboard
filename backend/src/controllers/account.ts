@@ -1,6 +1,7 @@
 import { decryptJsonStrict } from '../utils/encryption.ts';
 import asyncHandler from '../utils/asyncHandler.ts';
 import prisma from '../utils/prisma.ts';
+import { prismaErrorCode } from '../utils/prismaError.ts';
 import { endSession } from '../utils/session.ts';
 import { authUser } from '../middleware/auth.ts';
 
@@ -55,7 +56,8 @@ export const deleteAccount = asyncHandler(async (req, res) => {
         endSession(req, res);
         res.json({ message: 'Account deleted successfully' });
     } catch (err) {
-        if (err.code === 'P2025') return res.status(404).json({ error: 'Resource not found' });
+        if (prismaErrorCode(err) === 'P2025')
+            return res.status(404).json({ error: 'Resource not found' });
         throw err;
     }
 });

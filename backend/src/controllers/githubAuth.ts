@@ -1,4 +1,6 @@
 import crypto from 'node:crypto';
+import type { CookieOptions, Request } from 'express';
+import type { Prisma } from '@prisma/client';
 import { getCache, setCache, deleteCache } from '../utils/redisCache.ts';
 import { encryptString } from '../utils/encryption.ts';
 import { getGitHubProfile, getVerifiedGitHubEmail } from '../services/githubIdentity.ts';
@@ -13,23 +15,40 @@ import { authUser } from '../middleware/auth.ts';
 const GITHUB_LINK_TTL = 10 * 60 * 1000;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function githubCookieOptions(req) {
+// What githubLink / githubLogin store under the state, read back by the callback.
+type PendingFlow = {
+    browserSecretHash: string;
+    expiresAt: number;
+    userId?: number;
+    registrationAccepted?: boolean;
+};
+type TokenResponse = {
+    access_token?: string;
+    refresh_token?: string;
+    expires_in?: number;
+    error?: string;
+};
+
+function githubConfig() {
+    const clientId = process.env.GITHUB_CLIENT_ID;
+    const clientSecret = process.env.GITHUB_CLIENT_SECRET;
+    const callbackUrl = process.env.GITHUB_CALLBACK_URL;
+    if (!clientId || !clientSecret || !callbackUrl) return null;
+    return { clientId, clientSecret, callbackUrl };
+}
+
+function githubCookieOptions(req: Request): CookieOptions {
     return {
         httpOnly: true,
         sameSite: 'lax',
-        secure: req.secure, // same rule as the session cookie (utils/session.js)
+        secure: req.secure, // same rule as the session cookie (utils/session.ts)
         path: '/auth/github/callback',
     };
 }
 
 export const githubLink = asyncHandler(async (req, res) => {
-    if (
-        !process.env.GITHUB_CLIENT_ID ||
-        !process.env.GITHUB_CLIENT_SECRET ||
-        !process.env.GITHUB_CALLBACK_URL
-    ) {
-        return res.status(503).json({ error: 'GitHub linking is not configured' });
-    }
+    const config = githubConfig();
+    if (!config) return res.status(503).json({ error: 'GitHub linking is not configured' });
     const userId = authUser(req).userId;
     const state = crypto.randomBytes(32).toString('hex');
     const browserSecret = crypto.randomBytes(32).toString('hex');
@@ -47,8 +66,8 @@ export const githubLink = asyncHandler(async (req, res) => {
         maxAge: GITHUB_LINK_TTL,
     });
     const params = new URLSearchParams({
-        client_id: process.env.GITHUB_CLIENT_ID,
-        redirect_uri: process.env.GITHUB_CALLBACK_URL,
+        client_id: config.clientId,
+        redirect_uri: config.callbackUrl,
         scope: 'user:email read:user repo',
         state,
     });
@@ -58,13 +77,8 @@ export const githubLink = asyncHandler(async (req, res) => {
 });
 
 export const githubLogin = asyncHandler(async (req, res) => {
-    if (
-        !process.env.GITHUB_CLIENT_ID ||
-        !process.env.GITHUB_CLIENT_SECRET ||
-        !process.env.GITHUB_CALLBACK_URL
-    ) {
-        return res.status(503).json({ error: 'GitHub login is not configured' });
-    }
+    const config = githubConfig();
+    if (!config) return res.status(503).json({ error: 'GitHub login is not configured' });
     const state = crypto.randomBytes(32).toString('hex');
     const browserSecret = crypto.randomBytes(32).toString('hex');
     await setCache(
@@ -82,8 +96,8 @@ export const githubLogin = asyncHandler(async (req, res) => {
         maxAge: GITHUB_LINK_TTL,
     });
     const params = new URLSearchParams({
-        client_id: process.env.GITHUB_CLIENT_ID,
-        redirect_uri: process.env.GITHUB_CALLBACK_URL,
+        client_id: config.clientId,
+        redirect_uri: config.callbackUrl,
         scope: 'user:email read:user repo',
         state,
     });
@@ -97,14 +111,14 @@ export const githubCallback = asyncHandler(async (req, res) => {
     if (typeof state !== 'string' || !/^[a-f0-9]{64}$/.test(state))
         return res.status(400).json({ error: 'Missing or invalid state' });
     let isLogin = true;
-    let pendingLink = await getCache(`github_login:${state}`);
+    let pendingLink = await getCache<PendingFlow>(`github_login:${state}`);
     if (!pendingLink) {
         isLogin = false;
-        pendingLink = await getCache(`github_link:${state}`);
+        pendingLink = await getCache<PendingFlow>(`github_link:${state}`);
     }
     if (!pendingLink) return res.status(400).json({ error: 'Unknown or already used state' });
     const cookieName = isLogin ? `github_login_${state}` : `github_link_${state}`;
-    const cookieOptions = isLogin ? githubCookieOptions(req) : githubCookieOptions(req);
+    const cookieOptions = githubCookieOptions(req);
     if (pendingLink.expiresAt <= Date.now()) {
         await deleteCache(isLogin ? `github_login:${state}` : `github_link:${state}`);
         res.clearCookie(cookieName, cookieOptions);
@@ -130,8 +144,10 @@ export const githubCallback = asyncHandler(async (req, res) => {
     if (typeof code !== 'string' || !code)
         return res.redirect(`${frontendUrl}/services?error=github_missing_code`);
 
-    let data;
+    let data: TokenResponse;
     try {
+        const config = githubConfig();
+        if (!config) throw new Error('GitHub OAuth is not configured');
         const response = await fetch('https://github.com/login/oauth/access_token', {
             method: 'POST',
             headers: {
@@ -139,14 +155,14 @@ export const githubCallback = asyncHandler(async (req, res) => {
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
             body: new URLSearchParams({
-                client_id: process.env.GITHUB_CLIENT_ID,
-                client_secret: process.env.GITHUB_CLIENT_SECRET,
+                client_id: config.clientId,
+                client_secret: config.clientSecret,
                 code,
-                redirect_uri: process.env.GITHUB_CALLBACK_URL,
+                redirect_uri: config.callbackUrl,
             }),
             signal: AbortSignal.timeout(10000),
         });
-        data = await response.json();
+        data = (await response.json()) as TokenResponse;
         if (
             !response.ok ||
             data.error ||
@@ -161,12 +177,12 @@ export const githubCallback = asyncHandler(async (req, res) => {
     }
     const accessToken = data.access_token;
     const tokenData = {
-        accessToken: encryptString(data.access_token),
+        accessToken: encryptString(accessToken),
         refreshToken: data.refresh_token ? encryptString(data.refresh_token) : null,
         expiresAt: data.expires_in ? new Date(Date.now() + data.expires_in * 1000) : null,
     };
     let userId = pendingLink.userId;
-    let newUserData;
+    let newUserData: Prisma.UserCreateInput | undefined;
     const userData = await getGitHubProfile(accessToken);
     const githubId = String(userData.id);
     if (isLogin) {
@@ -206,11 +222,13 @@ export const githubCallback = asyncHandler(async (req, res) => {
 
     try {
         userId = await prisma.$transaction(async (tx) => {
-            let accountId = userId;
+            let accountId: number;
             if (newUserData) {
                 const user = await tx.user.create({ data: newUserData });
                 accountId = user.id;
             } else {
+                if (userId === undefined) throw new Error('No account to link GitHub to');
+                accountId = userId;
                 await tx.user.update({ where: { id: accountId }, data: { githubId } });
             }
             await tx.oAuthToken.upsert({
@@ -228,6 +246,7 @@ export const githubCallback = asyncHandler(async (req, res) => {
 
     if (isLogin) {
         const user = await prisma.user.findUnique({ where: { id: userId } });
+        if (!user) return res.redirect(`${frontendUrl}/login?error=github_flow_failed`);
         // The session cookie carries the JWT: no token ever appears in a URL.
         startSession(req, res, user);
         res.redirect(`${frontendUrl}/`);

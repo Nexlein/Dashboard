@@ -1,3 +1,4 @@
+import type { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import { decryptString } from '../utils/encryption.ts';
 import { getGitHubProfile } from '../services/githubIdentity.ts';
@@ -7,10 +8,11 @@ import { normalizeEmail } from '../utils/authToken.ts';
 import { startSession, endSession } from '../utils/session.ts';
 import env from '../utils/env.ts';
 import prisma from '../utils/prisma.ts';
+import { prismaErrorCode } from '../utils/prismaError.ts';
 import { authUser } from '../middleware/auth.ts';
 
 // Password registration/login and the current user's profile.
-// GitHub OAuth lives in githubAuth.js, GDPR export/deletion in account.js.
+// GitHub OAuth lives in githubAuth.ts, GDPR export/deletion in account.ts.
 
 export const register = asyncHandler(async (req, res) => {
     const validated = registerSchema.safeParse(req.body);
@@ -51,7 +53,7 @@ export const login = asyncHandler(async (req, res) => {
     res.json({ message: 'Login successful' });
 });
 
-export const logout = (req, res) => {
+export const logout = (req: Request, res: Response) => {
     endSession(req, res);
     res.status(204).send();
 };
@@ -110,7 +112,8 @@ export const updateMe = asyncHandler(async (req, res) => {
             select: { id: true, email: true, displayName: true },
         });
     } catch (err) {
-        if (err.code === 'P2002') return res.status(409).json({ error: 'Email already taken' });
+        if (prismaErrorCode(err) === 'P2002')
+            return res.status(409).json({ error: 'Email already taken' });
         throw err;
     }
     res.json(user);

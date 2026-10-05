@@ -42,6 +42,8 @@ function open({ iv, authTag, data }: Sealed): string {
 }
 
 /** Encrypts an object for a JSON column. Non-objects are returned unchanged. */
+function encryptJson(value: Record<string, unknown>): EncryptedJson;
+function encryptJson<T>(value: T): T | EncryptedJson;
 function encryptJson<T>(value: T): T | EncryptedJson {
     if (!value || typeof value !== 'object') return value;
     return { _encrypted: true as const, ...seal(JSON.stringify(value)) };

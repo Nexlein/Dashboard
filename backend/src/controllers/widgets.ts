@@ -1,10 +1,12 @@
+import type { Response } from 'express';
 import { z } from 'zod';
 import { encryptJson, decryptJson } from '../utils/encryption.ts';
 import registry from '../services/registry.ts';
+import type { ServiceCredentials, WidgetParams } from '../services/types.ts';
 import asyncHandler from '../utils/asyncHandler.ts';
-
 import prisma from '../utils/prisma.ts';
 import { authUser } from '../middleware/auth.ts';
+
 const MIN_REFRESH_RATE_SECONDS = 60;
 
 const layoutSchema = z.object({
@@ -49,14 +51,26 @@ const chatSchema = z.object({
 });
 
 /** Returns the positive integer id from a route param, or null. */
-function parseWidgetId(raw) {
-    if (!/^\d+$/.test(raw)) return null;
+function parseWidgetId(raw: unknown): number | null {
+    if (typeof raw !== 'string' || !/^\d+$/.test(raw)) return null;
     const id = Number(raw);
     return Number.isSafeInteger(id) && id > 0 ? id : null;
 }
 
-function invalid(res, result) {
+function invalid(res: Response, result: { error: z.ZodError }) {
     return res.status(400).json({ error: result.error.issues[0].message });
+}
+
+/** Decrypts a stored JSON object (params, credentials); anything else becomes {}. */
+function decryptObject(stored: unknown): Record<string, unknown> {
+    const value = decryptJson(stored);
+    return value !== null && typeof value === 'object' && !Array.isArray(value)
+        ? (value as Record<string, unknown>)
+        : {};
+}
+
+function errorMessage(error: unknown, fallback: string): string {
+    return error instanceof Error && error.message ? error.message : fallback;
 }
 
 export const getWidgets = asyncHandler(async (req, res) => {
@@ -77,9 +91,7 @@ export const addWidget = asyncHandler(async (req, res) => {
     const service = registry.getService(serviceName);
     if (!service) return res.status(400).json({ error: `Unknown service: ${serviceName}` });
 
-    const widgetDef = service.widgets.find(
-        (w) => w.id === widgetName || w.name === widgetName || w.aliases?.includes(widgetName),
-    );
+    const widgetDef = service.widgets.find((w) => w.name === widgetName);
     if (!widgetDef)
         return res
             .status(400)
@@ -101,11 +113,15 @@ export const addWidget = asyncHandler(async (req, res) => {
             await service.execute(widgetName, params, {
                 userId: authUser(req).userId,
                 refreshRate: Math.max(refreshRate, MIN_REFRESH_RATE_SECONDS),
-                credentials: connection ? decryptJson(connection.encryptedCredentials) : null,
+                credentials: connection
+                    ? (decryptObject(connection.encryptedCredentials) as ServiceCredentials)
+                    : null,
                 ...(connection && { cacheScope: `${authUser(req).userId}:${connection.id}` }),
             });
         } catch (execError) {
-            return res.status(400).json({ error: execError.message || 'Widget validation failed' });
+            return res
+                .status(400)
+                .json({ error: errorMessage(execError, 'Widget validation failed') });
         }
     }
 
@@ -169,17 +185,23 @@ export const getWidgetData = asyncHandler(async (req, res) => {
                 .json({ error: `${service.displayName || widget.serviceName} is not connected` });
     }
 
-    const params = decryptJson(widget.params);
-    let data;
+    // Services that declare widgets without fetching any data (e.g. YouTube placeholders).
+    if (!service.execute)
+        return res.status(501).json({ error: 'Widget data is not available for this service' });
+
+    const params: WidgetParams = decryptObject(widget.params);
+    let data: unknown;
     try {
         data = await service.execute(widget.widgetName, params, {
             userId: authUser(req).userId,
             refreshRate: Math.max(widget.refreshRate, MIN_REFRESH_RATE_SECONDS),
-            credentials: connection ? decryptJson(connection.encryptedCredentials) : null,
+            credentials: connection ? decryptObject(connection.encryptedCredentials) : null,
             ...(connection && { cacheScope: `${authUser(req).userId}:${connection.id}` }),
         });
     } catch (execError) {
-        return res.status(502).json({ error: execError.message || 'Failed to fetch widget data' });
+        return res
+            .status(502)
+            .json({ error: errorMessage(execError, 'Failed to fetch widget data') });
     }
 
     res.json(data);
@@ -238,14 +260,14 @@ export const chatWidget = asyncHandler(async (req, res) => {
 
     try {
         const data = await service.chat(
-            decryptJson(widget.params),
+            decryptObject(widget.params),
             { userId: authUser(req).userId },
             validated.data.messages,
         );
         res.json(data);
     } catch (chatError) {
         // Ollama answered with an error status: forward it. Otherwise it is unreachable.
-        if (chatError.statusCode) throw chatError;
+        if ((chatError as { statusCode?: number }).statusCode) throw chatError;
         res.status(502).json({ error: 'Failed to communicate with chatbot' });
     }
 });

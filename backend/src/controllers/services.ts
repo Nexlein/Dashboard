@@ -38,7 +38,11 @@ export const getServices = asyncHandler(async (req, res) => {
                             },
                         });
                         if (res.ok) {
-                            const data = await res.json();
+                            const data = (await res.json()) as {
+                                login?: string;
+                                name?: string | null;
+                                bio?: string | null;
+                            };
                             if (data.login) {
                                 displayName = data.login;
                                 description = data.name || data.bio || 'GitHub Account';
@@ -59,7 +63,7 @@ export const getServices = asyncHandler(async (req, res) => {
                 connected: isConnected,
                 configurable: service.configurable !== false,
                 connectionType: service.connection?.type || 'apikey',
-                credentialLabel: service.connection?.credentialLabel,
+                credentialLabel: service.connection?.label ?? null,
                 documentationUrl: service.connection?.documentationUrl,
                 keyHint: connections.find((c) => c.serviceName === name)?.keyHint,
             };
@@ -70,17 +74,20 @@ export const getServices = asyncHandler(async (req, res) => {
 });
 
 export const connectService = asyncHandler(async (req, res) => {
-    const serviceName = req.params.serviceName;
-    const { apiKey } = req.body;
+    const serviceName = String(req.params.serviceName);
+    const { apiKey } = req.body as { apiKey?: unknown };
 
-    if (!apiKey) return res.status(400).json({ error: 'API key is required' });
+    if (typeof apiKey !== 'string' || !apiKey.trim())
+        return res.status(400).json({ error: 'API key is required' });
 
     const service = registry.getService(serviceName);
     if (!service) return res.status(404).json({ error: 'Service not found' });
     if (service.configurable === false)
         return res.status(400).json({ error: 'Service is not configurable' });
-    if (service.connection.type === 'oauth')
+    if (service.connection?.type === 'oauth')
         return res.status(400).json({ error: 'Use OAuth flow for this service' });
+    if (!service.verifyCredentials)
+        return res.status(400).json({ error: 'Service does not accept an API key' });
 
     await service.verifyCredentials({ apiKey }); // Throws error if invalid
 
@@ -105,14 +112,13 @@ export const connectService = asyncHandler(async (req, res) => {
 });
 
 export const disconnectService = asyncHandler(async (req, res) => {
-    const serviceName = req.params.serviceName;
-    const service = registry.getService(serviceName);
+    const service = registry.getService(String(req.params.serviceName));
 
     if (!service) return res.status(404).json({ error: 'Service not found' });
     if (service.configurable === false)
         return res.status(400).json({ error: 'Service is not configurable' });
 
-    if (service.connection.type === 'oauth') {
+    if (service.connection?.type === 'oauth') {
         await prisma.oAuthToken.deleteMany({
             where: { userId: authUser(req).userId, provider: service.name },
         });

@@ -15,7 +15,7 @@ const credentialsLimiter = createRateLimiter({
     message: 'Too many authentication attempts. Please try again later.',
 });
 
-router.use('/github', (req, res, next) => {
+router.use('/github', (_req, res, next) => {
     res.set('Cache-Control', 'no-store');
     res.set('Referrer-Policy', 'no-referrer');
     next();
