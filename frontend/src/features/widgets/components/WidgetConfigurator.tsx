@@ -131,7 +131,7 @@ export function WidgetConfigurator() {
             <DialogTrigger asChild>
                 <Button>Add Widget</Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-106.25">
                 <DialogHeader>
                     <DialogTitle>Add New Widget</DialogTitle>
                     <DialogDescription>

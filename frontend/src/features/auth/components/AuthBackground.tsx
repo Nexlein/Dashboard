@@ -7,11 +7,11 @@ export function AuthBackground() {
             aria-hidden="true"
             className="absolute inset-0 overflow-hidden bg-[radial-gradient(circle_at_top_left,#ffffff_0%,#f4f6f8_45%,#e8edf2_100%)]"
         >
-            <div className="auth-glow auth-glow-primary absolute -left-24 -top-28 size-[28rem] rounded-full bg-sky-300/25 blur-3xl" />
-            <div className="auth-glow auth-glow-secondary absolute -bottom-40 -right-20 size-[32rem] rounded-full bg-violet-300/20 blur-3xl" />
+            <div className="auth-glow auth-glow-primary absolute -left-24 -top-28 size-112 rounded-full bg-sky-300/25 blur-3xl" />
+            <div className="auth-glow auth-glow-secondary absolute -bottom-40 -right-20 size-128 rounded-full bg-violet-300/20 blur-3xl" />
 
-            <div className="auth-dashboard-scene absolute left-1/2 top-1/2 h-[760px] w-[1180px] -translate-x-1/2 -translate-y-1/2 rotate-[-3deg] overflow-hidden rounded-[2rem] border border-white/90 bg-white/75 shadow-[0_40px_120px_-30px_rgba(15,23,42,0.3)] backdrop-blur-xs">
-                <div className="flex h-[76px] items-center border-b border-slate-200/80 bg-white/85 px-8">
+            <div className="auth-dashboard-scene absolute left-1/2 top-1/2 h-190 w-295 -translate-x-1/2 -translate-y-1/2 -rotate-3 overflow-hidden rounded-4xl border border-white/90 bg-white/75 shadow-[0_40px_120px_-30px_rgba(15,23,42,0.3)] backdrop-blur-xs">
+                <div className="flex h-19 items-center border-b border-slate-200/80 bg-white/85 px-8">
                     <div className="flex items-center gap-3 text-lg font-semibold text-slate-800">
                         <span className="flex size-9 items-center justify-center rounded-xl bg-slate-900 text-white shadow-xs">
                             <LayoutDashboard className="size-4" />
@@ -76,7 +76,7 @@ export function AuthBackground() {
                             <span className="mb-2 text-sm text-slate-500">Ensoleillé</span>
                         </div>
                         <div className="mt-7 h-2 overflow-hidden rounded-full bg-slate-100">
-                            <div className="auth-shimmer h-full w-3/4 rounded-full bg-gradient-to-r from-amber-300 to-orange-400" />
+                            <div className="auth-shimmer h-full w-3/4 rounded-full bg-linear-to-r from-amber-300 to-orange-400" />
                         </div>
                     </div>
 

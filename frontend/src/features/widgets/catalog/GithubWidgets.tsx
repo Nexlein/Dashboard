@@ -40,15 +40,15 @@ export function GithubRepoWidget({ data }: WidgetViewProps<GithubRepoData>) {
                 {data.description || <span className="italic">No description provided.</span>}
             </p>
             <div className="grid grid-cols-3 gap-3 mt-auto">
-                <div className="flex flex-col items-center justify-center rounded-xl border bg-gradient-to-b from-amber-500/10 to-transparent p-3 text-amber-600 dark:text-amber-400">
+                <div className="flex flex-col items-center justify-center rounded-xl border bg-linear-to-b from-amber-500/10 to-transparent p-3 text-amber-600 dark:text-amber-400">
                     <Star className="size-5 mb-1.5" />
                     <span className="text-sm font-bold">{data.stars}</span>
                 </div>
-                <div className="flex flex-col items-center justify-center rounded-xl border bg-gradient-to-b from-blue-500/10 to-transparent p-3 text-blue-600 dark:text-blue-400">
+                <div className="flex flex-col items-center justify-center rounded-xl border bg-linear-to-b from-blue-500/10 to-transparent p-3 text-blue-600 dark:text-blue-400">
                     <GitFork className="size-5 mb-1.5" />
                     <span className="text-sm font-bold">{data.forks}</span>
                 </div>
-                <div className="flex flex-col items-center justify-center rounded-xl border bg-gradient-to-b from-emerald-500/10 to-transparent p-3 text-emerald-600 dark:text-emerald-400">
+                <div className="flex flex-col items-center justify-center rounded-xl border bg-linear-to-b from-emerald-500/10 to-transparent p-3 text-emerald-600 dark:text-emerald-400">
                     <CircleDot className="size-5 mb-1.5" />
                     <span className="text-sm font-bold">{data.open_issues}</span>
                 </div>
@@ -132,7 +132,7 @@ export function GithubCommitsWidget({ data }: WidgetViewProps<GithubCommitData[]
                                 alt={commit.author}
                                 className="h-8 w-8 shrink-0 rounded-full bg-muted object-cover ring-2 ring-background z-10"
                             />
-                            <div className="absolute top-8 bottom-[-16px] w-px bg-border group-last:hidden" />
+                            <div className="absolute top-8 -bottom-4 w-px bg-border group-last:hidden" />
                         </div>
                         <div className="min-w-0 flex-1 pb-1">
                             <a
