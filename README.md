@@ -78,6 +78,12 @@ Requirements: Node.js 24 (see `.nvmrc`, `nvm use`) and Docker with Docker Compos
    several GitHub accounts per user), and register both callback URLs in your GitHub OAuth
    App (GitHub matches them exactly): `http://localhost:8080/api/auth/callback/github` and
    `http://localhost:8080/api/auth/callback/github-service`.
+   To enable YouTube, enable YouTube Data API v3 in a Google OAuth web client,
+   set `YOUTUBE_CLIENT_ID` and `YOUTUBE_CLIENT_SECRET`, and register
+   `<BETTER_AUTH_URL>/api/auth/callback/youtube-service` as its redirect URI.
+   Link the account in Services. The three widgets are Channel Subscribers,
+   Latest Videos (up to five uploads), and Video Statistics (views, likes and comments).
+   The first two take a channel ID (`UC...`); the third takes an 11-character video ID.
    `CORS_ORIGINS` lists the frontend origins allowed to call the API; the example
    includes Vite on ports 5173/5174 and the Docker frontend on port 8081.
    `SMTP_*` configure the emails (verification and reset codes). With Gmail: turn on

@@ -4,3 +4,6 @@
  * and they never sign in (src/auth.ts).
  */
 export const GITHUB_SERVICE_PROVIDER = 'github-service';
+
+/** Read-only YouTube access for widgets; never a Dashboard sign-in provider. */
+export const YOUTUBE_SERVICE_PROVIDER = 'youtube-service';

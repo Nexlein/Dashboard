@@ -45,6 +45,8 @@ const envSchema = z.object({
     // the sign-in app above.
     GITHUB_SERVICE_CLIENT_ID: optional(z.string()),
     GITHUB_SERVICE_CLIENT_SECRET: optional(z.string()),
+    YOUTUBE_CLIENT_ID: optional(z.string()),
+    YOUTUBE_CLIENT_SECRET: optional(z.string()),
     // Outgoing email (verification and password-reset codes), any SMTP provider. Without
     // SMTP_HOST, development prints the emails in the console; production refuses to start.
     SMTP_HOST: optional(z.string()),

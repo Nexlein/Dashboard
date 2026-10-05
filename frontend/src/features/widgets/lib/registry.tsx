@@ -1,9 +1,14 @@
+import {
+    YouTubeLatestVideosWidget,
+    YouTubeVideoStatsWidget,
+} from '@/features/widgets/catalog/YouTubeWidgets';
 import { CurrentWeather, Forecast } from '@/features/widgets/catalog/WeatherWidgets';
 import {
     GithubRepoWidget,
     GithubProfileWidget,
     GithubCommitsWidget,
 } from '@/features/widgets/catalog/GithubWidgets';
+import { YouTubeSubscribersWidget } from '@/features/widgets/catalog/YouTubeSubscribersWidget';
 import { CryptoPrice } from '@/features/widgets/catalog/CryptoPrice';
 import { CryptoChartWidget } from '@/features/widgets/catalog/CryptoChartWidget';
 import { StockProfileWidget } from '@/features/widgets/catalog/StockProfileWidget';
@@ -111,6 +116,59 @@ export const REGISTRY: Record<string, ServiceDefinition> = {
                         optional: true,
                         type: 'text',
                         placeholder: 'e.g. nexlein',
+                    },
+                ],
+            },
+        ],
+    },
+    youtube: {
+        name: 'YouTube',
+        hasRefresh: true,
+        widgets: [
+            {
+                id: 'channel_stats',
+                name: 'Channel Subscribers',
+                component: YouTubeSubscribersWidget,
+                params: [
+                    {
+                        id: 'account',
+                        label: 'YouTube account',
+                        type: 'account',
+                        service: 'youtube',
+                    },
+                    { id: 'channel_id', label: 'Channel ID', type: 'text', placeholder: 'UC...' },
+                ],
+            },
+            {
+                id: 'latest_videos',
+                name: 'Latest Videos',
+                component: YouTubeLatestVideosWidget,
+                params: [
+                    {
+                        id: 'account',
+                        label: 'YouTube account',
+                        type: 'account',
+                        service: 'youtube',
+                    },
+                    { id: 'channel_id', label: 'Channel ID', type: 'text', placeholder: 'UC...' },
+                ],
+            },
+            {
+                id: 'video_stats',
+                name: 'Video Statistics',
+                component: YouTubeVideoStatsWidget,
+                params: [
+                    {
+                        id: 'account',
+                        label: 'YouTube account',
+                        type: 'account',
+                        service: 'youtube',
+                    },
+                    {
+                        id: 'video_id',
+                        label: 'Video ID (from the YouTube URL)',
+                        type: 'text',
+                        placeholder: 'e.g. dQw4w9WgXcQ',
                     },
                 ],
             },

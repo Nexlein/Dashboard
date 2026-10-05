@@ -1,3 +1,4 @@
+import { HttpError } from '../utils/httpError.ts';
 import type { Response } from 'express';
 import { z } from 'zod';
 import { encryptJson, decryptJson } from '../utils/encryption.ts';
@@ -173,7 +174,7 @@ export const addWidget = asyncHandler(async (req, res) => {
                 });
         } catch (execError) {
             return res
-                .status(400)
+                .status(execError instanceof HttpError ? execError.statusCode : 400)
                 .json({ error: errorMessage(execError, 'Widget validation failed') });
         }
     }
@@ -227,7 +228,7 @@ export const getWidgetData = asyncHandler(async (req, res) => {
     if ('error' in result) return res.status(result.status).json({ error: result.error });
     const { access } = result;
 
-    // Services that declare widgets without fetching any data (e.g. YouTube placeholders).
+    // Services that declare widgets without fetching any data.
     if (!service.execute)
         return res.status(501).json({ error: 'Widget data is not available for this service' });
 

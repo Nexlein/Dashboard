@@ -4,6 +4,7 @@ import request from 'supertest';
 import app from '../src/app.ts';
 import stocks from '../src/services/stocks.ts';
 import { StockPendingError } from '../src/services/stockProvider.ts';
+import registry from '../src/services/registry.ts';
 import weatherService from '../src/services/weather.ts';
 import registry from '../src/services/registry.ts';
 import { HttpError } from '../src/utils/httpError.ts';
@@ -380,10 +381,13 @@ describe('API Endpoints', () => {
         });
 
         it('answers 501 for a widget whose service fetches no data', async () => {
+            const service = vi
+                .spyOn(registry, 'getService')
+                .mockReturnValue({ name: 'placeholder', widgets: [] });
             prisma.widgetConfig.findUnique.mockResolvedValue({
                 ...mockWidget,
-                serviceName: 'youtube',
-                widgetName: 'channel_stats',
+                serviceName: 'placeholder',
+                widgetName: 'placeholder',
                 params: {},
             });
 
@@ -391,6 +395,7 @@ describe('API Endpoints', () => {
 
             expect(res.statusCode).toBe(501);
             expect(res.body.error).toBe('Widget data is not available for this service');
+            service.mockRestore();
         });
 
         it('requires the user to connect OpenWeather before creating a weather widget', async () => {
@@ -580,12 +585,12 @@ describe('API Endpoints', () => {
             const res = await request(app).get('/services').set('Origin', FRONTEND);
 
             expect(res.statusCode).toBe(200);
-            for (const name of ['weather', 'crypto', 'stocks', 'github']) {
+            for (const name of ['weather', 'crypto', 'stocks', 'github', 'youtube']) {
                 expect(res.body.find((service: { name: string }) => service.name === name)).toEqual(
                     expect.objectContaining({ connected: false, configurable: true }),
                 );
             }
-            for (const name of ['youtube', 'chatbot']) {
+            for (const name of ['chatbot']) {
                 expect(res.body.find((service: { name: string }) => service.name === name)).toEqual(
                     expect.objectContaining({ connected: true, configurable: false }),
                 );

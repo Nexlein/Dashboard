@@ -404,3 +404,36 @@ users (`?error=account_already_linked_to_different_user`).
 
 Tokens are stored encrypted (`account.encryptOAuthTokens`), read through Better Auth on the
 server (which refreshes them when they expire) and never returned to the page.
+
+
+### YouTube widgets and connected accounts
+
+Connect YouTube through `POST /api/auth/link-social` with `provider: "youtube-service"`
+while signed in, using trusted `callbackURL` and `errorCallbackURL` values and
+`disableRedirect: true`. Register `<BETTER_AUTH_URL>/api/auth/callback/youtube-service`
+in the Google OAuth web client. Set `YOUTUBE_CLIENT_ID` and `YOUTUBE_CLIENT_SECRET`;
+the old `YOUTUBE_CALLBACK_URL` and `/auth/youtube` endpoints are no longer used.
+Better Auth handles OAuth state, encrypted Account tokens and token refresh.
+YouTube service accounts cannot sign in or create Dashboard accounts.
+
+`GET /services` lists YouTube's connected accounts. Widgets accept an `account`
+parameter with the selected account ID (optional when only one is connected).
+`DELETE /services/youtube/accounts/:id` disconnects one account;
+`DELETE /services/youtube/connection` disconnects all YouTube accounts.
+
+Exactly three widget types are accepted for `serviceName: "youtube"`:
+
+| `widgetName` | Required target parameter | Data |
+| --- | --- | --- |
+| `channel_stats` | `channel_id` | `channelId`, `channelTitle`, `subscriberCount` |
+| `latest_videos` | `channel_id` | `channelId`, `channelTitle`, `videos: [{ videoId, title, publishedAt }]` |
+| `video_stats` | `video_id` | `videoId`, `title`, `channelTitle`, `viewCount`, `likeCount`, `commentCount` |
+
+Channel IDs start with `UC` followed by 22 ID characters; video IDs have 11 ID
+characters. Invalid IDs return `400`. Latest Videos reads up to five uploads,
+filters unavailable/private entries and can return an empty list. Missing resources
+return `404`. Unavailable likes/comments are `null`, not zero. Hidden subscriber
+counts or revoked YouTube access return `409`; upstream/quota errors return `502`.
+Results are cached separately by connected account, widget type and target ID,
+for 60 seconds to five minutes according to the refresh rate. Subscriber counts
+are YouTube's rounded public counts.

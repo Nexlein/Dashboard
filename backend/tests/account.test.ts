@@ -104,7 +104,9 @@ describe('GitHub as a service', () => {
 
     it('lists each connected account by its GitHub login, without its token', async () => {
         prisma.serviceConnection.findMany.mockResolvedValue([]);
-        prisma.account.findMany.mockResolvedValue([{ id: 12, accountId: '1' }]);
+        prisma.account.findMany.mockImplementation(async ({ where }) =>
+            where.providerId === 'github-service' ? [{ id: 12, accountId: '1' }] : [],
+        );
         vi.mocked(auth.api.getAccessToken).mockResolvedValue({
             accessToken: 'gho_secret',
         } as never);
@@ -123,7 +125,9 @@ describe('GitHub as a service', () => {
 
     it('keeps listing an account whose token GitHub revoked, so it can be removed', async () => {
         prisma.serviceConnection.findMany.mockResolvedValue([]);
-        prisma.account.findMany.mockResolvedValue([{ id: 12, accountId: '1' }]);
+        prisma.account.findMany.mockImplementation(async ({ where }) =>
+            where.providerId === 'github-service' ? [{ id: 12, accountId: '1' }] : [],
+        );
         vi.mocked(auth.api.getAccessToken).mockRejectedValue(new Error('refresh failed'));
 
         const res = await request(app).get('/services');
@@ -136,7 +140,9 @@ describe('GitHub as a service', () => {
     });
 
     it('removes one connected account, and only an account of this user', async () => {
-        prisma.account.findMany.mockResolvedValue([{ id: 12, accountId: '1' }]);
+        prisma.account.findMany.mockImplementation(async ({ where }) =>
+            where.providerId === 'github-service' ? [{ id: 12, accountId: '1' }] : [],
+        );
 
         const unknown = await request(app)
             .delete('/services/github/accounts/99')
@@ -193,7 +199,9 @@ describe('GitHub as a service', () => {
 
     it('asks to reconnect an account GitHub no longer accepts', async () => {
         githubWidget({ account: '12' });
-        prisma.account.findMany.mockResolvedValue([{ id: 12, accountId: '1' }]);
+        prisma.account.findMany.mockImplementation(async ({ where }) =>
+            where.providerId === 'github-service' ? [{ id: 12, accountId: '1' }] : [],
+        );
         vi.mocked(auth.api.getAccessToken).mockRejectedValue(new Error('refresh failed'));
 
         const res = await request(app).get('/widgets/5/data');

@@ -1,13 +1,13 @@
 import { betterAuth } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { APIError, createAuthMiddleware, getOAuthState } from 'better-auth/api';
-import { admin, emailOTP, genericOAuth } from 'better-auth/plugins';
+import { admin, emailOTP, genericOAuth, type GenericOAuthConfig } from 'better-auth/plugins';
 import { github } from 'better-auth/social-providers';
 import { profileSchema, registerSchema } from 'shared';
 import env from './utils/env.ts';
 import prisma from './utils/prisma.ts';
 import { allowedOrigins } from './utils/origins.ts';
-import { GITHUB_SERVICE_PROVIDER } from './utils/oauthProviders.ts';
+import { GITHUB_SERVICE_PROVIDER, YOUTUBE_SERVICE_PROVIDER } from './utils/oauthProviders.ts';
 import { sendOtpEmail } from './utils/otpEmails.ts';
 
 // Authentication is Better Auth: email/password with emailed one-time codes (email verification,
@@ -50,6 +50,43 @@ function githubServiceProvider(clientId: string, clientSecret: string) {
             const info = await githubApi.getUserInfo(tokens);
             if (!info) return null;
             return { ...info.user, id: String(info.data.id) };
+        },
+    };
+}
+
+function youtubeServiceProvider(clientId: string, clientSecret: string): GenericOAuthConfig {
+    return {
+        providerId: YOUTUBE_SERVICE_PROVIDER,
+        clientId,
+        clientSecret,
+        authorizationUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
+        tokenUrl: 'https://oauth2.googleapis.com/token',
+        scopes: ['openid', 'email', 'profile', 'https://www.googleapis.com/auth/youtube.readonly'],
+        accessType: 'offline',
+        prompt: 'select_account consent' as const,
+        disableSignUp: true,
+        // Resolve identity through Google's authenticated endpoint, not an unverified ID token.
+        getUserInfo: async (tokens) => {
+            const response = await fetch('https://openidconnect.googleapis.com/v1/userinfo', {
+                headers: { Authorization: `Bearer ${tokens.accessToken}` },
+                signal: AbortSignal.timeout(10000),
+            });
+            if (!response.ok) return null;
+            const profile = (await response.json()) as {
+                sub?: string;
+                email?: string;
+                name?: string;
+                picture?: string;
+                email_verified?: boolean;
+            };
+            if (!profile.sub || !profile.email) return null;
+            return {
+                id: profile.sub,
+                email: profile.email,
+                name: profile.name ?? profile.email,
+                image: profile.picture,
+                emailVerified: profile.email_verified === true,
+            };
         },
     };
 }
@@ -119,7 +156,7 @@ export const auth = betterAuth({
             allowDifferentEmails: true,
             // GitHub service accounts link even when their email is not verified: they are
             // not a way to sign in.
-            trustedProviders: [GITHUB_SERVICE_PROVIDER],
+            trustedProviders: [GITHUB_SERVICE_PROVIDER, YOUTUBE_SERVICE_PROVIDER],
         },
     },
     // utils/rateLimit.ts limits sign-in and sign-up instead (app.ts): its counters live in
@@ -156,10 +193,13 @@ export const auth = betterAuth({
     hooks: {
         before: createAuthMiddleware(async (ctx) => {
             const body = (ctx.body ?? {}) as Record<string, unknown>;
-            if (ctx.path === '/sign-in/social' && body.provider === GITHUB_SERVICE_PROVIDER) {
+            if (
+                ctx.path === '/sign-in/social' &&
+                [GITHUB_SERVICE_PROVIDER, YOUTUBE_SERVICE_PROVIDER].includes(String(body.provider))
+            ) {
                 throw APIError.from('BAD_REQUEST', {
                     code: 'NOT_A_SIGN_IN_PROVIDER',
-                    message: 'GitHub service accounts cannot be used to sign in.',
+                    message: 'Service accounts cannot be used to sign in.',
                 });
             }
             if (ctx.path === '/sign-up/email') {
@@ -237,18 +277,21 @@ export const auth = betterAuth({
         },
     },
     plugins: [
-        ...(env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET
-            ? [
-                  genericOAuth({
-                      config: [
+        genericOAuth({
+            config: [
+                ...(env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET
+                    ? [
                           githubServiceProvider(
                               env.GITHUB_SERVICE_CLIENT_ID ?? env.GITHUB_CLIENT_ID,
                               env.GITHUB_SERVICE_CLIENT_SECRET ?? env.GITHUB_CLIENT_SECRET,
                           ),
-                      ],
-                  }),
-              ]
-            : []),
+                      ]
+                    : []),
+                ...(env.YOUTUBE_CLIENT_ID && env.YOUTUBE_CLIENT_SECRET
+                    ? [youtubeServiceProvider(env.YOUTUBE_CLIENT_ID, env.YOUTUBE_CLIENT_SECRET)]
+                    : []),
+            ],
+        }),
         admin(),
         emailOTP({
             // Codes replace Better Auth's verification links.
