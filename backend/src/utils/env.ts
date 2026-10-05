@@ -41,9 +41,31 @@ const envSchema = z.object({
     REDIS_URL: optional(z.url('REDIS_URL must be a valid URL')),
     GITHUB_CLIENT_ID: optional(z.string()),
     GITHUB_CLIENT_SECRET: optional(z.string()),
+    // Optional second GitHub OAuth App for the GitHub service accounts (widgets); defaults to
+    // the sign-in app above.
+    GITHUB_SERVICE_CLIENT_ID: optional(z.string()),
+    GITHUB_SERVICE_CLIENT_SECRET: optional(z.string()),
+    // Outgoing email (verification and password-reset codes), any SMTP provider. Without
+    // SMTP_HOST, development prints the emails in the console; production refuses to start.
+    SMTP_HOST: optional(z.string()),
+    SMTP_PORT: z.coerce.number().int().positive().default(587),
+    // true for implicit TLS (usually port 465); otherwise STARTTLS is used when offered.
+    SMTP_SECURE: z
+        .enum(['true', 'false'])
+        .default('false')
+        .transform((v) => v === 'true'),
+    SMTP_USER: optional(z.string()),
+    SMTP_PASSWORD: optional(z.string()),
+    // Sender; defaults to SMTP_USER (Gmail rewrites any other address to the account's).
+    MAIL_FROM: optional(z.string()),
 });
 
-const _env = envSchema.safeParse(process.env);
+const _env = envSchema
+    .refine((env) => env.NODE_ENV !== 'production' || env.SMTP_HOST, {
+        message: 'SMTP_HOST is required in production: users must receive their codes',
+        path: ['SMTP_HOST'],
+    })
+    .safeParse(process.env);
 
 if (!_env.success) {
     console.error('❌ Invalid environment variables:');

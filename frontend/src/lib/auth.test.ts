@@ -7,7 +7,10 @@ import {
     login,
     logout,
     register,
+    requestPasswordReset,
+    resetPassword,
     startGitHubLogin,
+    verifyEmailCode,
 } from './auth';
 
 afterEach(() => {
@@ -152,10 +155,46 @@ describe('GitHub', () => {
             },
         });
 
-        await expect(getOAuthLinkUrl('github')).resolves.toBe('https://github.com/link');
+        await expect(getOAuthLinkUrl('github-service', 'github')).resolves.toBe(
+            'https://github.com/link',
+        );
         expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toMatchObject({
-            provider: 'github',
+            provider: 'github-service',
             callbackURL: 'http://localhost:5173/services?linked=github',
+        });
+    });
+});
+
+describe('emailed codes', () => {
+    it('sends the verification code and the password reset to Better Auth', async () => {
+        const fetchMock = mockApi({
+            'POST /api/auth/email-otp/verify-email': { body: { status: true, user: SESSION.user } },
+            'POST /api/auth/email-otp/request-password-reset': { body: { success: true } },
+            'POST /api/auth/email-otp/reset-password': { body: { success: true } },
+        });
+
+        await verifyEmailCode('ada@example.com', '123456');
+        await requestPasswordReset('ada@example.com');
+        await resetPassword('ada@example.com', '654321', 'new-password-123');
+
+        const bodies = fetchMock.mock.calls.map(([, init]) => JSON.parse(String(init?.body)));
+        expect(bodies).toEqual([
+            { email: 'ada@example.com', otp: '123456' },
+            { email: 'ada@example.com' },
+            { email: 'ada@example.com', otp: '654321', password: 'new-password-123' },
+        ]);
+    });
+
+    it('surfaces a rejected code', async () => {
+        mockApi({
+            'POST /api/auth/email-otp/verify-email': {
+                status: 400,
+                body: { code: 'INVALID_OTP', message: 'Invalid OTP' },
+            },
+        });
+        await expect(verifyEmailCode('ada@example.com', '000000')).rejects.toMatchObject({
+            message: 'Invalid OTP',
+            code: 'INVALID_OTP',
         });
     });
 });

@@ -39,7 +39,10 @@ describe('environment validation', () => {
             PORT: '8080',
             AUTH_RATE_LIMIT_MAX: 20,
             BETTER_AUTH_URL: 'http://localhost:8080',
+            SMTP_PORT: 587,
+            SMTP_SECURE: false,
         });
+        expect(env.MAIL_FROM).toBeUndefined();
     });
 
     it('treats empty optional values from .env.example as unset', () => {
@@ -54,6 +57,26 @@ describe('environment validation', () => {
         expect(status).toBe(0);
         expect(env.ENCRYPTION_KEY).toBeUndefined();
         expect(env.REDIS_URL).toBeUndefined();
+    });
+
+    it('requires SMTP in production, where users must receive their codes', () => {
+        // Production loads backend/.env: an empty value keeps a developer's SMTP_HOST out.
+        const without = loadEnv({ NODE_ENV: 'production', SMTP_HOST: '' });
+        expect(without.status).toBe(1);
+        expect(without.stderr).toContain('SMTP_HOST');
+
+        const withSmtp = loadEnv({
+            NODE_ENV: 'production',
+            SMTP_HOST: 'smtp.example.com',
+            SMTP_PORT: '465',
+            SMTP_SECURE: 'true',
+        });
+        expect(withSmtp.status).toBe(0);
+        expect(withSmtp.env).toMatchObject({
+            SMTP_HOST: 'smtp.example.com',
+            SMTP_PORT: 465,
+            SMTP_SECURE: true,
+        });
     });
 
     it.each([

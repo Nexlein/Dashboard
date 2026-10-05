@@ -112,6 +112,17 @@ describe('API Endpoints', () => {
         });
     });
 
+    describe('code endpoints rate limit', () => {
+        it('limits repeated code checks and code emails like sign-in', async () => {
+            for (let attempt = 0; attempt < 20; attempt += 1) {
+                await request(app).post('/api/auth/email-otp/verify-email').send({});
+            }
+            const response = await request(app).post('/api/auth/email-otp/reset-password').send({});
+
+            expect(response.statusCode).toBe(429);
+        });
+    });
+
     describe('sign-in rate limit', () => {
         it('limits repeated attempts before they reach Better Auth', async () => {
             for (let attempt = 0; attempt < 20; attempt += 1) {

@@ -7,11 +7,15 @@ import {
     FRONTEND,
     PASSWORD,
     browser,
+    lastCode,
+    mailsTo,
+    registerVerified,
     sessionCookie,
     signIn,
     signUp,
     uniqueEmail,
     userByEmail,
+    verifyEmail,
 } from './helpers.ts';
 
 describe('email sign-up', () => {
@@ -42,11 +46,31 @@ describe('email sign-up', () => {
         ).toBe(false);
     });
 
-    it('creates the account, records the CGU acceptance and signs in with an httpOnly cookie', async () => {
+    it('creates the account, records the CGU acceptance and emails a code instead of signing in', async () => {
         const email = uniqueEmail();
         const res = await signUp(browser(), { email: `  ${email.toUpperCase()} ` });
 
         expect(res.status).toBe(200);
+        expect(sessionCookie(res)).toBeUndefined();
+        expect(mailsTo(email)).toHaveLength(1);
+        expect(mailsTo(email)[0].subject).toContain('code de vérification');
+
+        const user = await userByEmail(email);
+        expect(user).toMatchObject({ email, name: 'Ada', role: 'user', emailVerified: false });
+        expect(user!.cguAcceptedAt).toBeInstanceOf(Date);
+        const credential = user!.accounts.find((a) => a.providerId === 'credential');
+        expect(credential!.password).toBeTruthy();
+        expect(credential!.password).not.toContain(PASSWORD);
+    });
+
+    it('signs in with an httpOnly cookie once the emailed code is entered', async () => {
+        const email = uniqueEmail();
+        await signUp(browser(), { email });
+
+        const res = await verifyEmail(browser(), email);
+
+        expect(res.status).toBe(200);
+        expect((await userByEmail(email))!.emailVerified).toBe(true);
         const cookie = sessionCookie(res);
         expect(cookie).toMatch(/HttpOnly/);
         expect(cookie).toMatch(/SameSite=Lax/);
@@ -55,13 +79,6 @@ describe('email sign-up', () => {
         // Page scripts never see the session token.
         expect(res.body.token).toBeUndefined();
         expect(JSON.stringify(res.body)).not.toContain(cookie!.split(';')[0].split('=')[1]);
-
-        const user = await userByEmail(email);
-        expect(user).toMatchObject({ email, name: 'Ada', role: 'user', emailVerified: false });
-        expect(user!.cguAcceptedAt).toBeInstanceOf(Date);
-        const credential = user!.accounts.find((a) => a.providerId === 'credential');
-        expect(credential!.password).toBeTruthy();
-        expect(credential!.password).not.toContain(PASSWORD);
     });
 
     it('ignores privileged fields sent by the client', async () => {
@@ -72,14 +89,16 @@ describe('email sign-up', () => {
         expect(await userByEmail(email)).toBeNull();
     });
 
-    it('refuses an email that is already registered', async () => {
-        const email = uniqueEmail();
-        await signUp(browser(), { email });
+    it('does not reveal whether an email is registered, and keeps the existing account', async () => {
+        const email = await registerVerified(browser());
 
-        const res = await signUp(browser(), { email });
+        const res = await signUp(browser(), { email, password: 'another-password-123' });
 
-        expect(res.status).toBe(422);
-        expect(res.body.code).toBe('USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL');
+        // Same answer as for a new address: sign-up cannot be used to list accounts.
+        expect(res.status).toBe(200);
+        expect(await prisma.user.count({ where: { email } })).toBe(1);
+        expect((await signIn(browser(), email)).status).toBe(200);
+        expect((await signIn(browser(), email, 'another-password-123')).status).toBe(401);
     });
 
     it('refuses a sign-up from a page that is not the frontend', async () => {
@@ -95,11 +114,23 @@ describe('email sign-up', () => {
 });
 
 describe('email sign-in and sessions', () => {
-    async function account() {
+    function account() {
+        return registerVerified(browser());
+    }
+
+    it('refuses to sign in before the email is verified, and sends a new code', async () => {
         const email = uniqueEmail();
         await signUp(browser(), { email });
-        return email;
-    }
+        const firstCode = lastCode(email);
+
+        const res = await signIn(browser(), email);
+
+        expect(res.status).toBe(403);
+        expect(res.body.code).toBe('EMAIL_NOT_VERIFIED');
+        expect(sessionCookie(res)).toBeUndefined();
+        expect(mailsTo(email)).toHaveLength(2);
+        expect(lastCode(email)).not.toBe(firstCode);
+    });
 
     it('refuses a wrong password', async () => {
         const res = await signIn(browser(), await account(), 'wrong-password');

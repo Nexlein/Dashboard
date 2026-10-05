@@ -47,8 +47,9 @@ app.use(
 );
 
 // Better Auth reads the raw request body itself: mount it before express.json().
+// Covers every request that checks a password or a code, or sends an email.
 app.use(
-    ['/api/auth/sign-in', '/api/auth/sign-up'],
+    ['/api/auth/sign-in', '/api/auth/sign-up', '/api/auth/email-otp', '/api/auth/forget-password'],
     createRateLimiter({
         name: 'auth',
         windowMs: 15 * 60 * 1000,

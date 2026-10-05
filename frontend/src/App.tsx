@@ -10,6 +10,7 @@ import { Loader2 } from 'lucide-react';
 
 const DashboardGrid = lazy(() => import('@/features/widgets/components/DashboardGrid'));
 const AuthPage = lazy(() => import('@/pages/AuthPage'));
+const ForgotPasswordPage = lazy(() => import('@/pages/ForgotPasswordPage'));
 const TermsPage = lazy(() => import('@/pages/TermsPage'));
 const ServicesPage = lazy(() => import('@/pages/ServicesPage'));
 const PrivacyPage = lazy(() => import('@/pages/PrivacyPage'));
@@ -101,6 +102,7 @@ export function AppRoutes() {
                     />
                     <Route path="/login" element={<AuthPage />} />
                     <Route path="/register" element={<AuthPage />} />
+                    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
                     <Route path="/cgu" element={<TermsPage />} />
                     <Route path="/privacy" element={<PrivacyPage />} />
                 </Routes>

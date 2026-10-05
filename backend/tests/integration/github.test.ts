@@ -3,12 +3,15 @@ import prisma from '../../src/utils/prisma.ts';
 import { encryptJson } from '../../src/utils/encryption.ts';
 import {
     FRONTEND,
+    GITHUB_SERVICE,
     browser,
+    connectGitHubService,
+    lastCode,
     fakeGitHub,
     githubFlow,
     githubProfile,
+    registerVerified,
     sessionCookie,
-    signIn,
     signUp,
     uniqueEmail,
     userByEmail,
@@ -175,11 +178,15 @@ describe('GitHub sign-in', () => {
         await githubFlow(first, { path: '/api/auth/sign-in/social', body: REGISTRATION });
         const user = await userByEmail(profile.email);
         const newEmail = uniqueEmail();
-        const update = await first
-            .put('/account/profile')
+        await first
+            .post('/api/auth/email-otp/request-email-change')
             .set('Origin', FRONTEND)
-            .send({ email: newEmail });
-        expect(update.status).toBe(200);
+            .send({ newEmail });
+        const change = await first
+            .post('/api/auth/email-otp/change-email')
+            .set('Origin', FRONTEND)
+            .send({ newEmail, otp: lastCode(newEmail) });
+        expect(change.status).toBe(200);
 
         const again = browser();
         const { location } = await githubFlow(again, { path: '/api/auth/sign-in/social' });
@@ -187,6 +194,19 @@ describe('GitHub sign-in', () => {
         expect(location).toBe(`${FRONTEND}/`);
         expect((await again.get('/api/auth/get-session')).body.user.id).toBe(String(user!.id));
         expect(await userByEmail(profile.email)).toBeNull();
+    });
+
+    it('signs a verified email account in when GitHub verified the same email', async () => {
+        const email = await registerVerified(browser());
+        fakeGitHub(githubProfile({ email }));
+        const agent = browser();
+
+        const { location } = await githubFlow(agent, { path: '/api/auth/sign-in/social' });
+
+        expect(location).toBe(`${FRONTEND}/`);
+        const user = await userByEmail(email);
+        expect(user!.accounts.map((a) => a.providerId).sort()).toEqual(['credential', 'github']);
+        expect(await prisma.user.count({ where: { email } })).toBe(1);
     });
 
     it('does not sign in to an email account that was never verified, even with a matching GitHub email', async () => {
@@ -204,8 +224,7 @@ describe('GitHub sign-in', () => {
     });
 
     it('does not take over an email account when GitHub did not verify that email', async () => {
-        const email = uniqueEmail();
-        await signUp(browser(), { email });
+        const email = await registerVerified(browser());
         fakeGitHub(githubProfile({ email, verified: false }));
 
         const { location } = await githubFlow(browser(), { path: '/api/auth/sign-in/social' });
@@ -216,55 +235,96 @@ describe('GitHub sign-in', () => {
     });
 });
 
-describe('GitHub as a service', () => {
+describe('GitHub as a service, apart from GitHub sign-in', () => {
     async function emailAccount() {
         const agent = browser();
-        const email = uniqueEmail();
-        await signUp(agent, { email });
-        await signIn(agent, email);
-        return { agent, email };
+        const email = await registerVerified(agent);
+        return { agent, email, user: (await userByEmail(email))! };
     }
 
-    it('links GitHub to a signed-in account even with another email, and feeds the widgets', async () => {
-        const { agent, email } = await emailAccount();
-        const github = fakeGitHub(githubProfile());
-        const before = await agent.get('/services');
-        expect(before.body.find((s: { name: string }) => s.name === 'github').connected).toBe(
-            false,
-        );
+    type ListedService = { name: string; connected: boolean; accounts?: unknown[] };
+    const githubService = (body: ListedService[]) => body.find((s) => s.name === 'github')!;
 
-        const { location } = await githubFlow(agent, {
-            path: '/api/auth/link-social',
-            body: { callbackURL: `${FRONTEND}/services?linked=github` },
-        });
-        expect(location).toBe(`${FRONTEND}/services?linked=github`);
-
-        const services = await agent.get('/services');
-        expect(services.body.find((s: { name: string }) => s.name === 'github').connected).toBe(
-            true,
-        );
-
-        const user = await userByEmail(email);
-        const widget = await prisma.widgetConfig.create({
+    function repoWidget(userId: number, params: Record<string, unknown>) {
+        return prisma.widgetConfig.create({
             data: {
-                userId: user!.id,
+                userId,
                 serviceName: 'github',
                 widgetName: 'repo_stats',
-                params: encryptJson({ owner: 'octo', repo: 'repo' }),
+                params: encryptJson({ owner: 'octo', repo: 'repo', ...params }),
                 refreshRate: 60,
                 layout: { x: 0, y: 0, w: 2, h: 2 },
             },
         });
+    }
+
+    it('signs in with GitHub for identity only: no repository access, service not connected', async () => {
+        const profile = githubProfile();
+        fakeGitHub(profile);
+        const agent = browser();
+
+        const { start } = await githubFlow(agent, {
+            path: '/api/auth/sign-in/social',
+            body: REGISTRATION,
+        });
+
+        const authorize = new URL(start.body.url).searchParams;
+        expect(authorize.get('scope')!.split(' ')).not.toContain('repo');
+        expect(authorize.get('prompt')).toBeNull();
+        expect(githubService((await agent.get('/services')).body).connected).toBe(false);
+    });
+
+    it('connects several GitHub accounts, each widget using the one it names', async () => {
+        const { agent, user } = await emailAccount();
+        const first = await connectGitHubService(agent);
+        const second = await connectGitHubService(agent);
+
+        expect(first.flow.location).toBe(`${FRONTEND}/services?linked=github`);
+        const authorize = new URL(first.flow.start.body.url).searchParams;
+        expect(authorize.get('scope')!.split(' ')).toContain('repo');
+        // GitHub shows its account picker, so another GitHub account can be chosen.
+        expect(authorize.get('prompt')).toBe('select_account');
+        const service = githubService((await agent.get('/services')).body);
+        expect(service.connected).toBe(true);
+        expect(service.accounts).toEqual([
+            expect.objectContaining({ id: first.account.id, login: `octo-${first.profile.id}` }),
+            expect.objectContaining({ id: second.account.id, login: `octo-${second.profile.id}` }),
+        ]);
+        expect(JSON.stringify(service)).not.toContain(first.github.accessToken);
+
+        const widget = await repoWidget(user.id, { account: String(first.account.id) });
         const data = await agent.get(`/widgets/${widget.id}/data`);
 
         expect(data.status).toBe(200);
         expect(data.body.stars).toBe(7);
-        // The widget used the decrypted token of the linked account.
+        // The first account's token, decrypted by Better Auth, not the second one's.
+        const repoRequest = second.github.requests.find((r) => r.url.includes('/repos/octo/repo'));
+        expect(repoRequest!.authorization).toBe(`Bearer ${first.github.accessToken}`);
+    });
+
+    it('asks which account to use when several are connected', async () => {
+        const { agent, user } = await emailAccount();
+        await connectGitHubService(agent);
+        await connectGitHubService(agent);
+
+        const res = await agent.get(`/widgets/${(await repoWidget(user.id, {})).id}/data`);
+
+        expect(res.status).toBe(400);
+        expect(res.body.error).toBe('Choose which GitHub account to use');
+    });
+
+    it('uses the only connected account when the widget names none', async () => {
+        const { agent, user } = await emailAccount();
+        const { github } = await connectGitHubService(agent);
+
+        const res = await agent.get(`/widgets/${(await repoWidget(user.id, {})).id}/data`);
+
+        expect(res.status).toBe(200);
         const repoRequest = github.requests.find((r) => r.url.includes('/repos/octo/repo'));
         expect(repoRequest!.authorization).toBe(`Bearer ${github.accessToken}`);
     });
 
-    it('reports GitHub widgets as not connected until GitHub is linked', async () => {
+    it('reports GitHub widgets as not connected until an account is connected', async () => {
         const { agent } = await emailAccount();
 
         const res = await agent
@@ -281,46 +341,87 @@ describe('GitHub as a service', () => {
         expect(res.status).toBe(409);
     });
 
-    it('disconnects GitHub from an account that also has a password', async () => {
-        const { agent, email } = await emailAccount();
-        fakeGitHub(githubProfile());
-        await githubFlow(agent, { path: '/api/auth/link-social' });
+    it('never uses an account of another user', async () => {
+        const { agent, user } = await emailAccount();
+        const other = await emailAccount();
+        const { account } = await connectGitHubService(other.agent);
+        await connectGitHubService(agent);
 
-        const res = await agent.delete('/services/github/connection').set('Origin', FRONTEND);
+        const widget = await repoWidget(user.id, { account: String(account.id) });
+        const res = await agent.get(`/widgets/${widget.id}/data`);
 
-        expect(res.status).toBe(204);
-        const user = await userByEmail(email);
-        expect(user!.accounts.map((a) => a.providerId)).toEqual(['credential']);
+        expect(res.status).toBe(409);
+        const removal = await agent
+            .delete(`/services/github/accounts/${account.id}`)
+            .set('Origin', FRONTEND);
+        expect(removal.status).toBe(404);
+        expect(await prisma.account.count({ where: { id: account.id } })).toBe(1);
     });
 
-    it('keeps GitHub when it is the only way to sign in', async () => {
+    it('removes one connected account, or all of them, never the GitHub sign-in', async () => {
         const profile = githubProfile();
         fakeGitHub(profile);
         const agent = browser();
         await githubFlow(agent, { path: '/api/auth/sign-in/social', body: REGISTRATION });
+        const first = await connectGitHubService(agent);
+        await connectGitHubService(agent);
+        await connectGitHubService(agent);
+        const providers = async () =>
+            (await userByEmail(profile.email))!.accounts.map((a) => a.providerId).sort();
 
-        const res = await agent.delete('/services/github/connection').set('Origin', FRONTEND);
+        const one = await agent
+            .delete(`/services/github/accounts/${first.account.id}`)
+            .set('Origin', FRONTEND);
+        expect(one.status).toBe(204);
+        expect(await providers()).toEqual(['github', GITHUB_SERVICE, GITHUB_SERVICE]);
 
-        expect(res.status).toBe(409);
-        const user = await userByEmail(profile.email);
-        expect(user!.accounts.map((a) => a.providerId)).toEqual(['github']);
+        const all = await agent.delete('/services/github/connection').set('Origin', FRONTEND);
+        expect(all.status).toBe(204);
+        expect(await providers()).toEqual(['github']);
+    });
+
+    it('cannot sign in with a GitHub service account', async () => {
+        const { agent } = await emailAccount();
+        const { profile } = await connectGitHubService(agent);
+        fakeGitHub(profile);
+
+        const social = await browser()
+            .post('/api/auth/sign-in/social')
+            .set('Origin', FRONTEND)
+            .send({ provider: GITHUB_SERVICE, callbackURL: `${FRONTEND}/`, disableRedirect: true });
+
+        expect(social.status).toBe(400);
+        expect(social.body.code).toBe('NOT_A_SIGN_IN_PROVIDER');
+        expect(sessionCookie(social)).toBeUndefined();
+    });
+
+    it('does not connect one GitHub account to two Dashboard users', async () => {
+        const first = await emailAccount();
+        const { profile } = await connectGitHubService(first.agent);
+        const second = await emailAccount();
+
+        const { flow } = await connectGitHubService(second.agent, profile);
+
+        expect(flow.location).toContain('error=account_already_linked_to_different_user');
+        expect(
+            await prisma.account.count({
+                where: { userId: second.user.id, providerId: GITHUB_SERVICE },
+            }),
+        ).toBe(0);
     });
 });
 
 describe('tokens out of reach of page scripts', () => {
     it('no Better Auth endpoint returns the session token or the GitHub token', async () => {
         const agent = browser();
-        const email = uniqueEmail();
-        await signUp(agent, { email });
-        await signIn(agent, email);
-        const github = fakeGitHub(githubProfile());
-        await githubFlow(agent, { path: '/api/auth/link-social' });
+        const email = await registerVerified(agent);
+        const { github } = await connectGitHubService(agent);
         const user = await userByEmail(email);
         const sessionToken = (await prisma.session.findFirst({
             where: { userId: user!.id },
             orderBy: { createdAt: 'desc' },
         }))!.token;
-        const accountId = String(user!.accounts.find((a) => a.providerId === 'github')!.id);
+        const accountId = String(user!.accounts.find((a) => a.providerId === GITHUB_SERVICE)!.id);
 
         const post = (path: string, body: object) =>
             agent.post(`/api/auth${path}`).set('Origin', FRONTEND).send(body);

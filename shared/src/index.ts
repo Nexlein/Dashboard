@@ -35,15 +35,14 @@ export const loginSchema = z.object({
     password: z.string().min(1, 'Email and password required'),
 });
 
-export const updateMeSchema = z.object({
-    email: email.optional(),
+/** Profile edits (the email changes through an emailed code, see the API docs). */
+export const profileSchema = z.object({
     name: z
         .string()
         .max(50, 'Display name must be 50 characters or fewer')
-        .optional()
-        .transform((v) => (typeof v === 'string' ? v.trim() : v)),
+        .transform((v) => v.trim()),
 });
 
 export type RegisterFormData = z.infer<typeof registerSchema>;
 export type LoginFormData = z.infer<typeof loginSchema>;
-export type UpdateMeFormData = z.infer<typeof updateMeSchema>;
+export type ProfileFormData = z.infer<typeof profileSchema>;

@@ -26,6 +26,7 @@ services:
             - PORT=8080
             - DATABASE_URL=postgres://user:password@db:5432/dashboard
             - REDIS_URL=redis://redis:6379
+            # Emails use the SMTP_* settings of backend/.env (Gmail, see the README).
         restart: unless-stopped
         deploy:
             replicas: 3
@@ -36,6 +37,15 @@ services:
                 condition: service_started
         extra_hosts:
             - 'host.docker.internal:host-gateway'
+
+    # Test inbox for the e2e tests only (they read the emailed codes from it):
+    # docker compose --profile e2e up -d mailpit
+    mailpit:
+        profiles: [e2e]
+        image: axllent/mailpit:v1.31
+        ports:
+            - '8025:8025' # web inbox and API
+            - '1025:1025' # SMTP
 
     client:
         restart: unless-stopped

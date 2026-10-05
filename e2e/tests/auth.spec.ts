@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { SESSION_COOKIE, registerUser, uniqueEmail } from './helpers';
+import { SESSION_COOKIE, emailedCode, registerUser, uniqueEmail } from './helpers';
 
 test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => localStorage.setItem('cookie-consent', 'declined'));
@@ -22,7 +22,11 @@ test('registers, signs in and signs out through the UI', async ({ page }) => {
     await page.getByLabel(/16 ans ou plus/).check();
     await page.getByRole('button', { name: 'Créer mon compte' }).click();
 
-    // Registering signs in.
+    // The account signs in once the emailed code is entered.
+    await expect(page.getByText('Vérifiez votre adresse e-mail')).toBeVisible();
+    const code = await emailedCode(page.request, email, 'vérification');
+    await page.getByLabel('Code de vérification').fill(code);
+    await page.getByRole('button', { name: 'Vérifier' }).click();
     await expect(page).toHaveURL(/\/$/);
     await expect(page.getByRole('button', { name: 'Add Widget' })).toBeVisible();
 
@@ -76,4 +80,28 @@ test('keeps the session token out of reach of page scripts', async ({ page }) =>
     }, 'http://localhost:8080');
     expect(sessionBody).toContain(email);
     expect(sessionBody).not.toContain(token);
+});
+
+test('resets a forgotten password with the emailed code', async ({ page, request }) => {
+    const email = uniqueEmail('reset');
+    await registerUser(request, email, 'password1234');
+
+    await page.goto('/login');
+    await page.getByRole('link', { name: 'Mot de passe oublié ?' }).click();
+    // The sign-in page also has an "Adresse e-mail" field: wait for the new page.
+    await expect(page.getByRole('heading', { name: 'Mot de passe oublié' })).toBeVisible();
+    await page.getByLabel('Adresse e-mail').fill(email);
+    await page.getByRole('button', { name: 'Recevoir un code' }).click();
+
+    const code = await emailedCode(request, email, 'mot de passe');
+    await page.getByLabel('Code reçu par e-mail').fill(code);
+    await page.getByLabel('Nouveau mot de passe').fill('a-new-password-123');
+    await page.getByRole('button', { name: 'Changer le mot de passe' }).click();
+
+    await expect(page).toHaveURL(/\/login$/);
+    await expect(page.getByRole('status')).toContainText('Mot de passe modifié');
+    await page.getByLabel('Adresse e-mail').fill(email);
+    await page.getByLabel('Mot de passe', { exact: true }).fill('a-new-password-123');
+    await page.getByRole('button', { name: 'Se connecter' }).click();
+    await expect(page.getByRole('button', { name: 'Add Widget' })).toBeVisible();
 });

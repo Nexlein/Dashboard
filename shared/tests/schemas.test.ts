@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { registerSchema, loginSchema, updateMeSchema } from '../src/index';
+import { registerSchema, loginSchema, profileSchema } from '../src/index';
 
 describe('Shared Schemas', () => {
     describe('registerSchema', () => {
@@ -67,22 +67,12 @@ describe('Shared Schemas', () => {
             expect(email.length).toBe(255);
             expect(loginSchema.safeParse({ email, password: 'x' }).success).toBe(false);
         });
-
-        it('stays optional on profile updates', () => {
-            expect(updateMeSchema.safeParse({}).success).toBe(true);
-            expect(updateMeSchema.safeParse({ email: ' new@example.com' }).data?.email).toBe(
-                'new@example.com',
-            );
-        });
     });
 
-    describe('updateMeSchema', () => {
-        it('should validate partial updates', () => {
-            const data = {
-                name: 'New Name',
-            };
-            const result = updateMeSchema.safeParse(data);
-            expect(result.success).toBe(true);
+    describe('profileSchema', () => {
+        it('trims the display name and limits it to 50 characters', () => {
+            expect(profileSchema.parse({ name: '  New Name ' })).toEqual({ name: 'New Name' });
+            expect(profileSchema.safeParse({ name: 'a'.repeat(51) }).success).toBe(false);
         });
     });
 });

@@ -50,7 +50,7 @@ flowchart TB
 
 - **Framework**: Node.js with Express, written in TypeScript. Node runs the `.ts` sources directly; `tsc` type-checks them in CI.
 - **Role**: Acts as the central orchestrator running as 3 scaled replicas.
-    - Handles authentication with [Better Auth](https://www.better-auth.com) (`src/auth.ts`, served under `/api/auth/*`): email/password, GitHub sign-in and linking, sessions, administration (admin plugin). The project adds the CGU and age checks at sign-up.
+    - Handles authentication with [Better Auth](https://www.better-auth.com) (`src/auth.ts`, served under `/api/auth/*`): email/password with emailed codes (verification, password reset, email change; sent by `utils/mailer.ts` over SMTP), GitHub sign-in, the GitHub accounts connected to the GitHub service (a separate provider: several per user, never used to sign in), sessions, administration (admin plugin). The project adds the CGU and age checks at sign-up.
     - Stores and verifies user-owned service connections (`/services`).
     - Serves the dynamic Service Registry (`/about.json`).
     - Proxies widget requests to external APIs.

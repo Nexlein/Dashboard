@@ -6,7 +6,7 @@ A customizable web dashboard that allows authenticated users to monitor digital 
 
 ## Key Features
 
-- **User Authentication**: [Better Auth](https://www.better-auth.com): email/password or GitHub sign-in, revocable sessions in an httpOnly cookie, CSRF protection, and an admin API.
+- **User Authentication**: [Better Auth](https://www.better-auth.com): email/password with an emailed verification code, forgotten-password reset by code, or GitHub sign-in; revocable sessions in an httpOnly cookie, CSRF protection, and an admin API.
 - **Service Integration**: Supports OAuth 2.0 linking for 3rd-party platforms.
 - **Dynamic Widgets**:
   - Each widget has configurable parameters.
@@ -71,11 +71,21 @@ Requirements: Node.js 24 (see `.nvmrc`, `nvm use`) and Docker with Docker Compos
    Set `BETTER_AUTH_SECRET` in `backend/.env` to a long random value. You can generate
    one with `openssl rand -hex 32`. `BETTER_AUTH_URL` is the API's public URL
    (`http://localhost:8080` by default). Fill in `GITHUB_CLIENT_ID` and
-   `GITHUB_CLIENT_SECRET` to enable GitHub sign-in and linking, and register this
-   callback in your GitHub OAuth App: `http://localhost:8080/api/auth/callback/github`.
+   `GITHUB_CLIENT_SECRET` to enable GitHub sign-in and the GitHub service (widgets, with
+   several GitHub accounts per user), and register both callback URLs in your GitHub OAuth
+   App (GitHub matches them exactly): `http://localhost:8080/api/auth/callback/github` and
+   `http://localhost:8080/api/auth/callback/github-service`.
    `CORS_ORIGINS` lists the frontend origins allowed to call the API; the example
    includes Vite on ports 5173/5174 and the Docker frontend on port 8081.
-   `AUTH_RATE_LIMIT_MAX` caps sign-in/sign-up attempts per IP every 15 minutes
+   `SMTP_*` configure the emails (verification and reset codes). With Gmail: turn on
+   2-Step Verification on the Google account, create an app password at
+   [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords), then set
+   `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=465`, `SMTP_SECURE=true`, `SMTP_USER` (the Gmail
+   address, also the sender) and `SMTP_PASSWORD` (the app password). Gmail sends about 500
+   emails a day. With `SMTP_HOST` empty, a backend started with `npm run dev` prints the
+   emails and their codes in its console; the Docker server (production mode) refuses to
+   start without it.
+   `AUTH_RATE_LIMIT_MAX` caps sign-in, sign-up and code requests per IP every 15 minutes
    (default 20) and `GLOBAL_RATE_LIMIT_MAX` all requests per IP (default 1000); with
    Redis the counters are shared by every backend replica. The backend validates these variables at startup and exits with
    an explicit message when one is invalid; empty values count as unset.
@@ -88,7 +98,8 @@ Requirements: Node.js 24 (see `.nvmrc`, `nvm use`) and Docker with Docker Compos
    ```
 
    The server waits for PostgreSQL to be healthy and applies pending database
-   migrations before accepting requests.
+   migrations before accepting requests. Emails use the `SMTP_*` settings of
+   `backend/.env`.
 
 3. **Database Seeding (Test Data)**
 
@@ -101,6 +112,9 @@ Requirements: Node.js 24 (see `.nvmrc`, `nvm use`) and Docker with Docker Compos
    **Available Test Accounts:**
    - **Admin:** `admin@dashboard.local` / `admin1234`
    - **User:** `user@dashboard.local` / `user1234` (comes pre-configured with a Weather and GitHub widget)
+
+   Both are already verified. A new account signs in after entering the code emailed at
+   registration.
 
 4. **Access the Application**
    - Frontend: [http://localhost:8081](http://localhost:8081)

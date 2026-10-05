@@ -44,6 +44,12 @@ export const REGISTRY: Record<string, ServiceDefinition> = {
                 component: GithubRepoWidget,
                 params: [
                     {
+                        id: 'account',
+                        label: 'GitHub account',
+                        type: 'account',
+                        service: 'github',
+                    },
+                    {
                         id: 'owner',
                         label: 'Owner (Organization/User)',
                         type: 'text',
@@ -63,6 +69,12 @@ export const REGISTRY: Record<string, ServiceDefinition> = {
                 name: 'Latest Commits',
                 component: GithubCommitsWidget,
                 params: [
+                    {
+                        id: 'account',
+                        label: 'GitHub account',
+                        type: 'account',
+                        service: 'github',
+                    },
                     { id: 'owner', label: 'Owner', type: 'text', placeholder: 'e.g. facebook' },
                     {
                         id: 'repo',
@@ -84,6 +96,12 @@ export const REGISTRY: Record<string, ServiceDefinition> = {
                 name: 'User Profile',
                 component: GithubProfileWidget,
                 params: [
+                    {
+                        id: 'account',
+                        label: 'GitHub account',
+                        type: 'account',
+                        service: 'github',
+                    },
                     {
                         id: 'username',
                         label: 'GitHub Username (leave empty for your profile)',
