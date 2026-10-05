@@ -36,7 +36,7 @@
   - `redis`: Centralized caching and state store (port 6379).
   - `db`: PostgreSQL 15 database (port 5433).
   - `mailpit` (profile `e2e`, not started by default): test inbox the e2e tests read the emailed codes from (web UI and API on port 8025, SMTP on 1025).
-  - `ollama`: local LLM server for the chatbot widget (port 11434).
+  - `ollama`: local LLM server for the chatbot widget, reachable by the backend on the internal Docker network.
 
 ## 6. Testing
 
