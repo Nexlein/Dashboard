@@ -54,5 +54,12 @@ export type ServiceDefinition = {
     name: string;
     /** false for widgets that fetch nothing on a timer (the chatbot). */
     hasRefresh: boolean;
+    /** The param the widgets' period buttons change (default `days`). */
+    periodParam?: string;
+    /**
+     * Provider with a small credit quota (Twelve Data): data is not refetched on focus, a
+     * 429 is retried after its Retry-After, and the last chart stays visible meanwhile.
+     */
+    quotaLimited?: boolean;
     widgets: WidgetDefinition[];
 };

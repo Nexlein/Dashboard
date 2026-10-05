@@ -17,6 +17,12 @@ export default function WidgetRenderer({ widget }: { widget: DashboardWidget }) 
     // Widgets without a refresh (the chatbot) render without loading any data.
     const isDataFetchingWidget = serviceDef?.hasRefresh ?? false;
 
+    const periodParam = serviceDef?.periodParam ?? 'days';
+    const quotaLimited = serviceDef?.quotaLimited ?? false;
+    // Same widget settings apart from the period: an earlier chart can stand in meanwhile.
+    const withoutPeriod = (params: DashboardWidget['params'] | undefined) =>
+        JSON.stringify({ ...params, [periodParam]: undefined });
+
     const {
         data,
         error: queryError,
@@ -27,58 +33,53 @@ export default function WidgetRenderer({ widget }: { widget: DashboardWidget }) 
         queryFn: () => fetchWidgetData(id),
         refetchInterval: (query) => {
             const error = query.state.error;
-            if (serviceName === 'stocks' && error instanceof ApiError && error.retryAfter) {
+            if (quotaLimited && error instanceof ApiError && error.retryAfter) {
                 return Math.max(1000, error.retryAfter * 1000);
             }
             return isDataFetchingWidget ? refreshRate * 1000 : false;
         },
-        staleTime: serviceName === 'stocks' ? refreshRate * 1000 : 0,
-        refetchOnWindowFocus: serviceName !== 'stocks',
-        placeholderData:
-            serviceName === 'stocks'
-                ? (previous, query) =>
-                      (query?.queryKey[2] as DashboardWidget['params'])?.symbols ===
-                      widget.params.symbols
-                          ? previous
-                          : undefined
-                : undefined,
+        staleTime: quotaLimited ? refreshRate * 1000 : 0,
+        refetchOnWindowFocus: !quotaLimited,
+        placeholderData: quotaLimited
+            ? (previous, query) =>
+                  withoutPeriod(query?.queryKey[2] as DashboardWidget['params']) ===
+                  withoutPeriod(widget.params)
+                      ? previous
+                      : undefined
+            : undefined,
         enabled: isDataFetchingWidget,
         retry: false,
     });
 
     const error = queryError?.message || null;
-    const waitingForCredits =
-        serviceName === 'stocks' && queryError instanceof ApiError && !!queryError.retryAfter;
-    const savedStockData =
-        serviceName === 'stocks'
-            ? queryClient
-                  .getQueryCache()
-                  .findAll({ queryKey: ['widget', id] })
-                  .filter(
-                      (query) =>
-                          (query.queryKey[2] as DashboardWidget['params'])?.symbols ===
-                              widget.params.symbols && query.state.data,
-                  )
-                  .sort((left, right) => right.state.dataUpdatedAt - left.state.dataUpdatedAt)[0]
-                  ?.state.data
-            : undefined;
-    const displayData = data ?? savedStockData;
-    const pendingPeriod =
-        serviceName === 'stocks' && (isPlaceholderData || (!!queryError && !!displayData));
+    const retryAfter =
+        quotaLimited && queryError instanceof ApiError ? queryError.retryAfter : undefined;
+    const savedData = quotaLimited
+        ? queryClient
+              .getQueryCache()
+              .findAll({ queryKey: ['widget', id] })
+              .filter(
+                  (query) =>
+                      withoutPeriod(query.queryKey[2] as DashboardWidget['params']) ===
+                          withoutPeriod(widget.params) && query.state.data,
+              )
+              .sort((left, right) => right.state.dataUpdatedAt - left.state.dataUpdatedAt)[0]?.state
+              .data
+        : undefined;
+    const displayData = data ?? savedData;
+    const pendingPeriod = quotaLimited && (isPlaceholderData || (!!queryError && !!displayData));
 
-    const periodUpdating =
-        updateWidgetMutation.isPending || (serviceName === 'stocks' && isFetching);
+    const periodUpdating = updateWidgetMutation.isPending || (quotaLimited && isFetching);
 
     const handlePeriodChange = useCallback(
         (period: string) => {
-            const periodKey = serviceName === 'stocks' ? 'period' : 'days';
-            if (String(widget.params?.[periodKey]) === String(period)) return;
+            if (String(widget.params?.[periodParam]) === String(period)) return;
             updateWidgetMutation.mutate({
                 id,
-                updates: { params: { ...widget.params, [periodKey]: period } },
+                updates: { params: { ...widget.params, [periodParam]: period } },
             });
         },
-        [widget.params, updateWidgetMutation, id, serviceName],
+        [widget.params, updateWidgetMutation, id, periodParam],
     );
 
     if (!serviceDef || !widgetDef) {
@@ -92,7 +93,7 @@ export default function WidgetRenderer({ widget }: { widget: DashboardWidget }) 
     const Component = widgetDef.component;
     const viewProps = {
         widget,
-        selectedPeriod: serviceName === 'stocks' ? widget.params?.period : widget.params?.days,
+        selectedPeriod: widget.params?.[periodParam],
         onPeriodChange: handlePeriodChange,
         periodUpdating,
     };
@@ -101,17 +102,17 @@ export default function WidgetRenderer({ widget }: { widget: DashboardWidget }) 
     // data type, so this is the one place where the untyped API response is handed over.
     if (!isDataFetchingWidget) return <Component {...viewProps} data={undefined as never} />;
 
-    if (waitingForCredits && !displayData) {
+    if (retryAfter && !displayData) {
         return (
             <div
                 className="flex h-full flex-col items-center justify-center gap-2 p-4 text-center"
                 role="status"
             >
                 <Loader2 className="size-5 animate-spin text-muted-foreground" />
-                <p className="text-sm font-medium">Loading stock data progressively</p>
+                <p className="text-sm font-medium">Loading data progressively</p>
                 <p className="text-xs text-muted-foreground">{error}</p>
                 <p className="text-xs text-muted-foreground">
-                    Automatic retry in {queryError.retryAfter} seconds.
+                    Automatic retry in {retryAfter} seconds.
                 </p>
             </div>
         );
@@ -152,8 +153,8 @@ export default function WidgetRenderer({ widget }: { widget: DashboardWidget }) 
                     className="shrink-0 rounded-md bg-muted px-2 py-1 text-[11px] text-muted-foreground"
                     role="status"
                 >
-                    {waitingForCredits
-                        ? `Waiting for API credits. Automatic retry in ${queryError.retryAfter} seconds.`
+                    {retryAfter
+                        ? `Waiting for API credits. Automatic retry in ${retryAfter} seconds.`
                         : queryError
                           ? `Refresh unavailable: ${error}`
                           : 'Loading the requested period…'}{' '}

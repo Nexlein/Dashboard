@@ -201,7 +201,7 @@ describe('WidgetRenderer', () => {
                 })}
             />,
         );
-        expect(await screen.findByText('Loading stock data progressively')).toBeInTheDocument();
+        expect(await screen.findByText('Loading data progressively')).toBeInTheDocument();
         expect(
             await screen.findByTestId('stock-profile', {}, { timeout: 3000 }),
         ).toBeInTheDocument();

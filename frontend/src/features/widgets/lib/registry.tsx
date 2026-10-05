@@ -190,6 +190,8 @@ export const REGISTRY: Record<string, ServiceDefinition> = {
     stocks: {
         name: 'Stock Market',
         hasRefresh: true,
+        periodParam: 'period',
+        quotaLimited: true,
         widgets: [
             {
                 id: 'stock_market',
