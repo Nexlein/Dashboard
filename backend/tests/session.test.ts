@@ -1,34 +1,31 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import request from 'supertest';
+import { setCookies, signToken, verifyToken } from './helpers.ts';
+import request, { type Response } from 'supertest';
 import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
 
-vi.mock('@prisma/client', () => {
-    const mockPrisma = {
-        user: { findUnique: vi.fn(), delete: vi.fn() },
-        widgetConfig: { updateMany: vi.fn() },
-        $transaction: vi.fn(),
-    };
-    return {
-        PrismaClient: vi.fn(function () {
-            return mockPrisma;
-        }),
-    };
-});
+// The client the app gets from new PrismaClient(): plain stubs, hoisted for vi.mock.
+const prisma = vi.hoisted(() => ({
+    user: { findUnique: vi.fn(), delete: vi.fn() },
+    widgetConfig: { updateMany: vi.fn() },
+    $transaction: vi.fn(),
+}));
+vi.mock('@prisma/client', () => ({
+    PrismaClient: vi.fn(function () {
+        return prisma;
+    }),
+}));
 
-import { PrismaClient } from '@prisma/client';
 import app from '../src/app.ts';
 // Runs before the imports below: the app reads these when it loads.
 vi.hoisted(() => {
     process.env.JWT_SECRET = 'session-test-secret-with-at-least-32-chars!';
 });
 
-const prisma = new PrismaClient();
 const FRONTEND = 'http://localhost:5173';
 const user = { id: 7, email: 'ada@example.com', displayName: 'Ada', isAdmin: false };
 
-function sessionCookie(res) {
-    return (res.headers['set-cookie'] || []).find((c) => c.startsWith('dashboard_session='));
+function sessionCookie(res: Response) {
+    return setCookies(res).find((c) => c.startsWith('dashboard_session='));
 }
 
 async function login(headers = {}) {
@@ -40,7 +37,7 @@ async function login(headers = {}) {
         .post('/auth/login')
         .set(headers)
         .send({ email: user.email, password: 'password1234' });
-    return { res, cookie: sessionCookie(res).split(';')[0] };
+    return { res, cookie: sessionCookie(res)?.split(';')[0] ?? '' };
 }
 
 beforeEach(() => vi.clearAllMocks());
@@ -57,8 +54,8 @@ describe('session cookie', () => {
         expect(cookie).toMatch(/Path=\//);
         expect(cookie).toMatch(/Expires=/);
         expect(cookie).not.toMatch(/Secure/);
-        const token = cookie.split(';')[0].split('=')[1];
-        expect(jwt.verify(token, process.env.JWT_SECRET)).toMatchObject({ userId: 7 });
+        const token = (cookie ?? '').split(';')[0].split('=')[1];
+        expect(verifyToken(token)).toMatchObject({ userId: 7 });
     });
 
     it('is marked Secure when the request came over HTTPS (behind the proxy)', async () => {
@@ -115,7 +112,7 @@ describe('session cookie', () => {
 });
 
 describe('CSRF protection for cookie-authenticated writes', () => {
-    const saveLayout = (cookie) =>
+    const saveLayout = (cookie: string) =>
         request(app).put('/widgets/layout').set('Cookie', cookie).send({ layouts: [] });
 
     it.each([
@@ -152,7 +149,7 @@ describe('CSRF protection for cookie-authenticated writes', () => {
 
     it('does not apply to Bearer requests, which browsers never send on their own', async () => {
         prisma.$transaction.mockResolvedValue([]);
-        const token = jwt.sign({ userId: 7, isAdmin: false }, process.env.JWT_SECRET);
+        const token = signToken({ userId: 7, isAdmin: false });
 
         const res = await request(app)
             .put('/widgets/layout')

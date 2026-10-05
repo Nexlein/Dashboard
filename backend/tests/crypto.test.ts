@@ -1,8 +1,9 @@
-import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
+import { stubFetch } from './helpers.ts';
 import cryptoService from '../src/services/crypto.ts';
 
 describe('Crypto service', () => {
-    const originalFetch = global.fetch;
+    let fetchMock: Mock;
     const connectionOptions = {
         credentials: { apiKey: 'demo-key' },
         cacheScope: 'user-1',
@@ -11,19 +12,15 @@ describe('Crypto service', () => {
 
     beforeEach(() => {
         cryptoService.clearCache();
-        global.fetch = vi.fn();
+        fetchMock = stubFetch();
     });
 
     afterEach(() => {
         vi.restoreAllMocks();
     });
 
-    afterAll(() => {
-        global.fetch = originalFetch;
-    });
-
     it('verifies a CoinGecko Demo API key with a price request', async () => {
-        global.fetch.mockResolvedValue({
+        fetchMock.mockResolvedValue({
             ok: true,
             status: 200,
             json: async () => ({ bitcoin: { usd: 67000 } }),
@@ -32,14 +29,14 @@ describe('Crypto service', () => {
         await expect(
             cryptoService.verifyCredentials({ apiKey: 'demo-key' }),
         ).resolves.toBeUndefined();
-        expect(global.fetch).toHaveBeenCalledWith(
+        expect(fetchMock).toHaveBeenCalledWith(
             expect.stringContaining('/simple/price?ids=bitcoin&vs_currencies=usd'),
             { headers: { 'x-cg-demo-api-key': 'demo-key' } },
         );
     });
 
     it('rejects an invalid CoinGecko API key', async () => {
-        global.fetch.mockResolvedValue({ ok: false, status: 401 });
+        fetchMock.mockResolvedValue({ ok: false, status: 401 });
 
         await expect(
             cryptoService.verifyCredentials({ apiKey: 'invalid-key' }),
@@ -54,11 +51,11 @@ describe('Crypto service', () => {
             message: 'CoinGecko is not connected. Configure it in Services.',
             statusCode: 409,
         });
-        expect(global.fetch).not.toHaveBeenCalled();
+        expect(fetchMock).not.toHaveBeenCalled();
     });
 
     it('returns current price and market statistics', async () => {
-        global.fetch.mockResolvedValue({
+        fetchMock.mockResolvedValue({
             ok: true,
             status: 200,
             json: async () => ({
@@ -88,7 +85,7 @@ describe('Crypto service', () => {
             change24h: 2.345,
             lastUpdatedAt: 1770000000,
         });
-        expect(global.fetch).toHaveBeenCalledWith(
+        expect(fetchMock).toHaveBeenCalledWith(
             expect.stringContaining(
                 '/simple/price?ids=bitcoin&vs_currencies=eur&include_market_cap=true',
             ),
@@ -97,7 +94,7 @@ describe('Crypto service', () => {
     });
 
     it('caches price data per user connection and market', async () => {
-        global.fetch.mockResolvedValue({
+        fetchMock.mockResolvedValue({
             ok: true,
             status: 200,
             json: async () => ({ bitcoin: { usd: 67000 } }),
@@ -115,11 +112,11 @@ describe('Crypto service', () => {
         );
 
         expect(second).toEqual(first);
-        expect(global.fetch).toHaveBeenCalledTimes(1);
+        expect(fetchMock).toHaveBeenCalledTimes(1);
     });
 
     it('returns a clear error for an unknown coin or currency', async () => {
-        global.fetch.mockResolvedValue({
+        fetchMock.mockResolvedValue({
             ok: true,
             status: 200,
             json: async () => ({}),
@@ -138,7 +135,7 @@ describe('Crypto service', () => {
     });
 
     it('returns normalized historical series for multiple cryptocurrencies', async () => {
-        global.fetch
+        fetchMock
             .mockResolvedValueOnce({
                 ok: true,
                 status: 200,
@@ -216,15 +213,15 @@ describe('Crypto service', () => {
                 },
             ],
         });
-        expect(global.fetch).toHaveBeenCalledTimes(3);
-        expect(global.fetch).toHaveBeenCalledWith(
+        expect(fetchMock).toHaveBeenCalledTimes(3);
+        expect(fetchMock).toHaveBeenCalledWith(
             expect.stringContaining('/coins/bitcoin/market_chart?vs_currency=eur&days=7'),
             { headers: { 'x-cg-demo-api-key': 'demo-key' } },
         );
     });
 
     it('supports a three-month comparison period', async () => {
-        global.fetch.mockResolvedValue({
+        fetchMock.mockResolvedValue({
             ok: true,
             status: 200,
             json: async () => ({
@@ -241,8 +238,8 @@ describe('Crypto service', () => {
             connectionOptions,
         );
 
-        expect(result.days).toBe(90);
-        expect(global.fetch).toHaveBeenCalledWith(
+        expect(result).toHaveProperty('days', 90);
+        expect(fetchMock).toHaveBeenCalledWith(
             expect.stringContaining('/coins/bitcoin/market_chart?vs_currency=eur&days=90'),
             { headers: { 'x-cg-demo-api-key': 'demo-key' } },
         );
@@ -263,11 +260,11 @@ describe('Crypto service', () => {
             message: 'Select between 1 and 8 cryptocurrencies',
             statusCode: 400,
         });
-        expect(global.fetch).not.toHaveBeenCalled();
+        expect(fetchMock).not.toHaveBeenCalled();
     });
 
     it('supports all available history for a comparison chart', async () => {
-        global.fetch.mockResolvedValue({
+        fetchMock.mockResolvedValue({
             ok: true,
             status: 200,
             json: async () => ({
@@ -284,16 +281,16 @@ describe('Crypto service', () => {
             connectionOptions,
         );
 
-        expect(result.days).toBe('max');
-        expect(result.historyLimited).toBe(false);
-        expect(global.fetch).toHaveBeenCalledWith(
+        expect(result).toHaveProperty('days', 'max');
+        expect(result).toHaveProperty('historyLimited', false);
+        expect(fetchMock).toHaveBeenCalledWith(
             expect.stringContaining('/coins/bitcoin/market_chart/range?vs_currency=usd&from='),
             { headers: { 'x-cg-demo-api-key': 'demo-key' } },
         );
     });
 
     it('falls back to one year when the Demo plan rejects full history', async () => {
-        global.fetch
+        fetchMock
             .mockResolvedValueOnce({ ok: false, status: 403 })
             .mockResolvedValueOnce({
                 ok: true,
@@ -317,10 +314,10 @@ describe('Crypto service', () => {
             connectionOptions,
         );
 
-        expect(result.days).toBe('max');
-        expect(result.historyLimited).toBe(true);
-        expect(global.fetch).toHaveBeenCalledTimes(3);
-        expect(global.fetch).toHaveBeenNthCalledWith(
+        expect(result).toHaveProperty('days', 'max');
+        expect(result).toHaveProperty('historyLimited', true);
+        expect(fetchMock).toHaveBeenCalledTimes(3);
+        expect(fetchMock).toHaveBeenNthCalledWith(
             2,
             expect.stringContaining('/coins/bitcoin/market_chart?vs_currency=usd&days=365'),
             { headers: { 'x-cg-demo-api-key': 'demo-key' } },

@@ -5,6 +5,8 @@ export default defineConfig({
         environment: 'node',
         setupFiles: ['./tests/setup.ts'],
         include: ['tests/**/*.test.ts'],
+        // Undo vi.stubGlobal (e.g. stubFetch) after every test.
+        unstubGlobals: true,
         coverage: {
             // Count every source file, not only the ones a test happens to load.
             include: ['src/**/*.ts'],

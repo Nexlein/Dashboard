@@ -1,28 +1,27 @@
-import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, afterAll, type Mock } from 'vitest';
+import { signToken, stubFetch } from './helpers.ts';
 import request from 'supertest';
-import jwt from 'jsonwebtoken';
 
-vi.mock('@prisma/client', () => {
-    const mockPrisma = {
-        $transaction: vi.fn((transaction) => transaction(mockPrisma)),
+// The client the app gets from new PrismaClient(): plain stubs, hoisted for vi.mock.
+const prisma = vi.hoisted(() => {
+    const client = {
+        $transaction: vi.fn((transaction: (tx: unknown) => unknown): unknown =>
+            transaction(client),
+        ),
         user: { update: vi.fn() },
-        oAuthToken: {
-            upsert: vi.fn(),
-        },
+        oAuthToken: { upsert: vi.fn() },
     };
-
-    return {
-        PrismaClient: vi.fn(function () {
-            return mockPrisma;
-        }),
-    };
+    return client;
 });
+vi.mock('@prisma/client', () => ({
+    PrismaClient: vi.fn(function () {
+        return prisma;
+    }),
+}));
 
 const originalEnv = { ...process.env };
 
 import app from '../src/app.ts';
-import { PrismaClient } from '@prisma/client';
-const prisma = new PrismaClient();
 import { decryptString } from '../src/utils/encryption.ts';
 // Runs before the imports below: the app reads these when it loads.
 vi.hoisted(() => {
@@ -33,7 +32,7 @@ vi.hoisted(() => {
 });
 
 function authToken(userId = 1) {
-    return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    return signToken({ userId }, { expiresIn: '1h' });
 }
 
 async function startLink(userId = 1, headers = {}) {
@@ -50,7 +49,10 @@ async function startLink(userId = 1, headers = {}) {
     };
 }
 
-function callback(link, query = { code: 'github-code' }) {
+function callback(
+    link: { state: string | null; cookie: string },
+    query: Record<string, string> = { code: 'github-code' },
+) {
     return request(app)
         .get('/auth/github/callback')
         .query({ state: link.state, ...query })
@@ -58,9 +60,11 @@ function callback(link, query = { code: 'github-code' }) {
 }
 
 describe('GitHub account linking', () => {
+    let fetchMock: Mock;
+
     beforeEach(() => {
         prisma.oAuthToken.upsert.mockReset().mockResolvedValue({ id: 1 });
-        vi.spyOn(global, 'fetch').mockImplementation(async (url) => ({
+        fetchMock = stubFetch().mockImplementation(async (url: unknown) => ({
             ok: true,
             json: async () =>
                 url === 'https://api.github.com/user'
@@ -89,7 +93,7 @@ describe('GitHub account linking', () => {
     it('requires a valid Dashboard token to start linking', async () => {
         await request(app).get('/auth/github').expect(401);
         await request(app).get('/auth/github').set('Authorization', 'Bearer invalid').expect(401);
-        expect(global.fetch).not.toHaveBeenCalled();
+        expect(fetchMock).not.toHaveBeenCalled();
     });
 
     it('preserves the redirect and sets a separate, temporary HttpOnly cookie', async () => {
@@ -138,7 +142,7 @@ describe('GitHub account linking', () => {
             .get('/auth/github/callback')
             .query({ state: link.state, code: 'github-code' })
             .expect(403);
-        expect(global.fetch).not.toHaveBeenCalled();
+        expect(fetchMock).not.toHaveBeenCalled();
         expect(prisma.oAuthToken.upsert).not.toHaveBeenCalled();
         await callback(link).expect(302);
     });
@@ -148,7 +152,7 @@ describe('GitHub account linking', () => {
         const second = await startLink(2);
         const wrongCookie = `github_link_${first.state}=${second.cookie.split('=')[1]}`;
         await callback({ ...first, cookie: wrongCookie }).expect(403);
-        expect(global.fetch).not.toHaveBeenCalled();
+        expect(fetchMock).not.toHaveBeenCalled();
         expect(prisma.oAuthToken.upsert).not.toHaveBeenCalled();
         await callback(first).expect(302);
         await callback(second).expect(302);
@@ -175,11 +179,11 @@ describe('GitHub account linking', () => {
         const saved = prisma.oAuthToken.upsert.mock.calls[0][0];
         expect(decryptString(saved.create.accessToken)).toBe('github-access-token');
         expect(saved.create.accessToken).not.toBe('github-access-token');
-        const [url, options] = global.fetch.mock.calls[0];
+        const [url, options] = fetchMock.mock.calls[0];
         expect(url).toBe('https://github.com/login/oauth/access_token');
         expect(options.body.get('code')).toBe('github-code');
         await callback(link).expect(400);
-        expect(global.fetch).toHaveBeenCalledTimes(2);
+        expect(fetchMock).toHaveBeenCalledTimes(2);
         expect(prisma.oAuthToken.upsert).toHaveBeenCalledTimes(1);
     });
 
@@ -201,7 +205,7 @@ describe('GitHub account linking', () => {
         ]) {
             await request(app).get('/auth/github/callback').query(query).expect(400);
         }
-        expect(global.fetch).not.toHaveBeenCalled();
+        expect(fetchMock).not.toHaveBeenCalled();
     });
 
     it('rejects an expired request even before its cleanup timer runs', async () => {
@@ -210,31 +214,31 @@ describe('GitHub account linking', () => {
         vi.spyOn(Date, 'now').mockReturnValue(now + 10 * 60 * 1000 + 1);
         const response = await callback(link).expect(400);
         expect(response.body.error).toBe('Unknown or already used state');
-        expect(global.fetch).not.toHaveBeenCalled();
+        expect(fetchMock).not.toHaveBeenCalled();
     });
 
     it('removes abandoned requests automatically after ten minutes', async () => {
-        vi.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] });
+        vi.useFakeTimers({ toNotFake: ['nextTick', 'setImmediate'] });
         const link = await startLink();
         vi.advanceTimersByTime(10 * 60 * 1000 + 1);
         const response = await callback(link).expect(400);
         expect(response.body.error).toBe('Unknown or already used state');
-        expect(global.fetch).not.toHaveBeenCalled();
+        expect(fetchMock).not.toHaveBeenCalled();
     });
 
     it('handles refusal and missing code without exchanging or storing tokens', async () => {
-        for (const query of [{ error: 'access_denied' }, {}]) {
+        for (const query of [{ error: 'access_denied' }, {}] as Record<string, string>[]) {
             const link = await startLink();
             let res = await callback(link, query).expect(302);
             expect(res.headers.location).toContain('error=');
             await callback(link).expect(400);
         }
-        expect(global.fetch).not.toHaveBeenCalled();
+        expect(fetchMock).not.toHaveBeenCalled();
         expect(prisma.oAuthToken.upsert).not.toHaveBeenCalled();
     });
 
     it('does not save a failed token exchange', async () => {
-        global.fetch.mockResolvedValue({
+        fetchMock.mockResolvedValue({
             ok: true,
             json: async () => ({ error: 'bad_verification_code' }),
         });
@@ -245,7 +249,7 @@ describe('GitHub account linking', () => {
     });
 
     it('handles a network failure and database failure without exposing secrets', async () => {
-        global.fetch.mockRejectedValueOnce(new Error('private upstream details'));
+        fetchMock.mockRejectedValueOnce(new Error('private upstream details'));
         let response = await callback(await startLink()).expect(302);
         const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
         expect(response.headers.location).toBe(`${frontendUrl}/services?error=github_flow_failed`);

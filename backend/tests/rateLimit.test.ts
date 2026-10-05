@@ -1,12 +1,13 @@
-import { describe, test, expect, vi, beforeEach } from 'vitest';
+import { describe, test, expect, vi, beforeEach, type Mock } from 'vitest';
 import { EventEmitter } from 'node:events';
-import express from 'express';
+import express, { type RequestHandler } from 'express';
+import type { Options } from 'express-rate-limit';
 import request from 'supertest';
 
 // Shared with the hoisted vi.mock factory below.
 const { mockStores, mockInitFailures } = vi.hoisted(() => ({
-    mockStores: [],
-    mockInitFailures: [],
+    mockStores: [] as Record<'init' | 'increment' | 'decrement' | 'resetKey', Mock>[],
+    mockInitFailures: [] as Error[],
 }));
 vi.mock('rate-limit-redis', () => ({
     RedisStore: vi.fn(function () {
@@ -24,18 +25,28 @@ vi.mock('rate-limit-redis', () => ({
     }),
 }));
 
-import { SharedRedisStore, createRateLimiter } from '../src/utils/rateLimit.ts';
+import { SharedRedisStore, createRateLimiter, type RedisLike } from '../src/utils/rateLimit.ts';
+
+class FakeRedis extends EventEmitter implements RedisLike {
+    isReady: boolean;
+    sendCommand = vi.fn();
+
+    constructor(ready: boolean) {
+        super();
+        this.isReady = ready;
+    }
+
+    becomeReady() {
+        this.isReady = true;
+        this.emit('ready');
+    }
+}
 
 function fakeClient({ ready = false } = {}) {
-    const client = new EventEmitter();
-    client.isReady = ready;
-    client.sendCommand = vi.fn();
-    client.becomeReady = () => {
-        client.isReady = true;
-        client.emit('ready');
-    };
-    return client;
+    return new FakeRedis(ready);
 }
+// The store only reads windowMs from the limiter options.
+const OPTIONS = { windowMs: 1000 } as Options;
 const flush = () => new Promise((resolve) => setImmediate(resolve));
 
 beforeEach(() => {
@@ -47,7 +58,7 @@ describe('SharedRedisStore', () => {
     test('rejects calls until Redis is ready, then delegates to the Redis store', async () => {
         const client = fakeClient();
         const store = new SharedRedisStore(client, 'rl:test:');
-        store.init({ windowMs: 1000 });
+        store.init(OPTIONS);
 
         await expect(store.increment('ip')).rejects.toThrow(/unavailable/);
         expect(mockStores).toHaveLength(0);
@@ -62,7 +73,7 @@ describe('SharedRedisStore', () => {
 
     test('starts immediately when the client is already connected', async () => {
         const store = new SharedRedisStore(fakeClient({ ready: true }), 'rl:test:');
-        store.init({ windowMs: 1000 });
+        store.init(OPTIONS);
         await flush();
         await expect(store.increment('ip')).resolves.toMatchObject({ totalHits: 1 });
     });
@@ -70,7 +81,7 @@ describe('SharedRedisStore', () => {
     test('retries on the next ready event when loading the scripts failed', async () => {
         const client = fakeClient();
         const store = new SharedRedisStore(client, 'rl:test:');
-        store.init({ windowMs: 1000 });
+        store.init(OPTIONS);
         vi.spyOn(console, 'error').mockImplementation(() => {});
 
         mockInitFailures.push(new Error('connection lost'));
@@ -87,7 +98,7 @@ describe('SharedRedisStore', () => {
     test('rejects again while the connection is down, without calling Redis', async () => {
         const client = fakeClient({ ready: true });
         const store = new SharedRedisStore(client, 'rl:test:');
-        store.init({ windowMs: 1000 });
+        store.init(OPTIONS);
         await flush();
 
         client.isReady = false;
@@ -101,7 +112,7 @@ describe('SharedRedisStore', () => {
 });
 
 describe('createRateLimiter', () => {
-    function appWith(limiter) {
+    function appWith(limiter: RequestHandler) {
         const app = express();
         app.use(limiter);
         app.get('/', (_req, res) => res.send('ok'));

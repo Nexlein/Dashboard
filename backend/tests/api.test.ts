@@ -1,55 +1,51 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { signToken } from './helpers.ts';
 import request from 'supertest';
-import jwt from 'jsonwebtoken';
 import app from '../src/app.ts';
 import weatherService from '../src/services/weather.ts';
 
 // Mock Prisma Client
-vi.mock('@prisma/client', () => {
-    const mPrisma = {
-        user: {
-            findUnique: vi.fn(),
-            create: vi.fn(),
-        },
-        widgetConfig: {
-            findMany: vi.fn(),
-            findUnique: vi.fn(),
-            create: vi.fn(),
-            update: vi.fn(),
-            updateMany: vi.fn(),
-            delete: vi.fn(),
-        },
-        serviceConnection: {
-            findMany: vi.fn(),
-            findUnique: vi.fn(),
-            upsert: vi.fn(),
-            deleteMany: vi.fn(),
-        },
-        oAuthToken: {
-            findMany: vi.fn(),
-            findUnique: vi.fn(),
-            upsert: vi.fn(),
-            deleteMany: vi.fn(),
-        },
-        $transaction: vi.fn(),
-        $queryRaw: vi.fn(),
-    };
-    return {
-        PrismaClient: vi.fn(function () {
-            return mPrisma;
-        }),
-    };
-});
+// The client the app gets from new PrismaClient(): plain stubs, hoisted for vi.mock.
+const prisma = vi.hoisted(() => ({
+    user: {
+        findUnique: vi.fn(),
+        create: vi.fn(),
+    },
+    widgetConfig: {
+        findMany: vi.fn(),
+        findUnique: vi.fn(),
+        create: vi.fn(),
+        update: vi.fn(),
+        updateMany: vi.fn(),
+        delete: vi.fn(),
+    },
+    serviceConnection: {
+        findMany: vi.fn(),
+        findUnique: vi.fn(),
+        upsert: vi.fn(),
+        deleteMany: vi.fn(),
+    },
+    oAuthToken: {
+        findMany: vi.fn(),
+        findUnique: vi.fn(),
+        upsert: vi.fn(),
+        deleteMany: vi.fn(),
+    },
+    $transaction: vi.fn(),
+    $queryRaw: vi.fn(),
+}));
+vi.mock('@prisma/client', () => ({
+    PrismaClient: vi.fn(function () {
+        return prisma;
+    }),
+}));
 
-import { PrismaClient } from '@prisma/client';
 import { encryptJson } from '../src/utils/encryption.ts';
 import chatbotService from '../src/services/chatbot.ts';
 // Runs before the imports below: the app reads these when it loads.
 vi.hoisted(() => {
     process.env.JWT_SECRET = 'api-test-secret-that-is-long-enough-for-authentication-tests';
 });
-
-const prisma = new PrismaClient();
 
 describe('API Endpoints', () => {
     beforeEach(() => {
@@ -238,11 +234,10 @@ describe('API Endpoints', () => {
         });
 
         it('should rate limit repeated authentication attempts', async () => {
-            let response;
-
-            for (let attempt = 0; attempt < 21; attempt += 1) {
-                response = await request(app).post('/auth/login').send({});
+            for (let attempt = 0; attempt < 20; attempt += 1) {
+                await request(app).post('/auth/login').send({});
             }
+            const response = await request(app).post('/auth/login').send({});
 
             expect(response.statusCode).toBe(429);
             expect(response.body.error).toBe(
@@ -253,7 +248,7 @@ describe('API Endpoints', () => {
 
     describe('GET /auth/me', () => {
         it('returns the authenticated user profile', async () => {
-            const token = jwt.sign({ userId: 7, isAdmin: false }, process.env.JWT_SECRET);
+            const token = signToken({ userId: 7, isAdmin: false });
             prisma.user.findUnique.mockResolvedValue({
                 id: 7,
                 email: 'user@example.com',
@@ -282,7 +277,7 @@ describe('API Endpoints', () => {
     });
 
     describe('Widget CRUD API', () => {
-        const token = jwt.sign({ userId: 1, isAdmin: false }, process.env.JWT_SECRET);
+        const token = signToken({ userId: 1, isAdmin: false });
         const mockWidget = {
             id: 1,
             userId: 1,
@@ -351,7 +346,7 @@ describe('API Endpoints', () => {
         });
 
         it('should batch update widget layouts', async () => {
-            prisma.$transaction.mockResolvedValue();
+            prisma.$transaction.mockResolvedValue([]);
 
             const res = await request(app)
                 .put('/widgets/layout')
@@ -441,7 +436,7 @@ describe('API Endpoints', () => {
             ['post', '/widgets/abc/chat'],
             ['delete', '/widgets/0'],
             ['put', '/widgets/1.5'],
-        ])('rejects an invalid widget id on %s %s', async (method, url) => {
+        ] as const)('rejects an invalid widget id on %s %s', async (method, url) => {
             const res = await request(app)
                 [method](url)
                 .set('Authorization', `Bearer ${token}`)
@@ -570,7 +565,7 @@ describe('API Endpoints', () => {
     });
 
     describe('Service connections API', () => {
-        const token = jwt.sign({ userId: 1, isAdmin: false }, process.env.JWT_SECRET);
+        const token = signToken({ userId: 1, isAdmin: false });
         const verifiedAt = new Date('2026-09-21T12:00:00.000Z');
         const connection = {
             id: 9,
@@ -588,7 +583,9 @@ describe('API Endpoints', () => {
             const res = await request(app).get('/services').set('Authorization', `Bearer ${token}`);
 
             expect(res.statusCode).toBe(200);
-            const weather = res.body.find((service) => service.name === 'weather');
+            const weather = res.body.find(
+                (service: { name: string }) => service.name === 'weather',
+            );
             expect(weather).toEqual(
                 expect.objectContaining({
                     displayName: 'OpenWeather',

@@ -1,8 +1,9 @@
-import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
+import { stubFetch } from './helpers.ts';
 import weather from '../src/services/weather.ts';
 
 describe('Weather service', () => {
-    const originalFetch = global.fetch;
+    let fetchMock: Mock;
     const connectionOptions = {
         credentials: { apiKey: 'test-key' },
         cacheScope: 'user-1',
@@ -10,19 +11,15 @@ describe('Weather service', () => {
 
     beforeEach(() => {
         weather.clearCache();
-        global.fetch = vi.fn();
+        fetchMock = stubFetch();
     });
 
     afterEach(() => {
         vi.restoreAllMocks();
     });
 
-    afterAll(() => {
-        global.fetch = originalFetch;
-    });
-
     it('normalizes current weather and caches it by city', async () => {
-        global.fetch
+        fetchMock
             .mockResolvedValueOnce({
                 ok: true,
                 json: async () => [{ name: 'Paris', country: 'FR', lat: 48.85, lon: 2.35 }],
@@ -60,11 +57,11 @@ describe('Weather service', () => {
             icon: '01d',
         });
         expect(second).toEqual(first);
-        expect(global.fetch).toHaveBeenCalledTimes(2);
+        expect(fetchMock).toHaveBeenCalledTimes(2);
     });
 
     it('does not share cached weather between user connections', async () => {
-        global.fetch
+        fetchMock
             .mockResolvedValueOnce({
                 ok: true,
                 json: async () => [{ name: 'Paris', country: 'FR', lat: 48.85, lon: 2.35 }],
@@ -106,14 +103,14 @@ describe('Weather service', () => {
             },
         );
 
-        expect(firstUser.observedAt).toBe(123);
-        expect(secondUser.observedAt).toBe(124);
-        expect(global.fetch).toHaveBeenCalledTimes(4);
+        expect(firstUser).toHaveProperty('observedAt', 123);
+        expect(secondUser).toHaveProperty('observedAt', 124);
+        expect(fetchMock).toHaveBeenCalledTimes(4);
     });
 
     it('expires cached data at the configured refresh interval', async () => {
         vi.spyOn(Date, 'now').mockReturnValue(0);
-        global.fetch
+        fetchMock
             .mockResolvedValueOnce({
                 ok: true,
                 json: async () => [{ name: 'Paris', country: 'FR', lat: 48.85, lon: 2.35 }],
@@ -146,26 +143,26 @@ describe('Weather service', () => {
             { city: 'Paris' },
             { ...connectionOptions, refreshRate: 60 },
         );
-        Date.now.mockReturnValue(59_000);
+        vi.spyOn(Date, 'now').mockReturnValue(59_000);
         const cached = await weather.execute(
             'current_weather',
             { city: 'Paris' },
             { ...connectionOptions, refreshRate: 60 },
         );
-        Date.now.mockReturnValue(60_000);
+        vi.spyOn(Date, 'now').mockReturnValue(60_000);
         const refreshed = await weather.execute(
             'current_weather',
             { city: 'Paris' },
             { ...connectionOptions, refreshRate: 60 },
         );
 
-        expect(cached.observedAt).toBe(first.observedAt);
-        expect(refreshed.observedAt).toBe(183);
-        expect(global.fetch).toHaveBeenCalledTimes(4);
+        expect(cached).toEqual(first);
+        expect(refreshed).toHaveProperty('observedAt', 183);
+        expect(fetchMock).toHaveBeenCalledTimes(4);
     });
 
     it('supports the legacy weather-current widget name', async () => {
-        global.fetch
+        fetchMock
             .mockResolvedValueOnce({
                 ok: true,
                 json: async () => [{ name: 'Paris', country: 'FR', lat: 48.85, lon: 2.35 }],
@@ -186,11 +183,11 @@ describe('Weather service', () => {
             connectionOptions,
         );
 
-        expect(result.type).toBe('current_weather');
+        expect(result).toHaveProperty('type', 'current_weather');
     });
 
     it('returns a clear error when the city cannot be resolved', async () => {
-        global.fetch.mockResolvedValue({ ok: true, json: async () => [] });
+        fetchMock.mockResolvedValue({ ok: true, json: async () => [] });
 
         await expect(
             weather.execute('forecast', { city: 'Unknown' }, connectionOptions),
@@ -198,7 +195,7 @@ describe('Weather service', () => {
     });
 
     it('reports an invalid or inactive API key clearly', async () => {
-        global.fetch.mockResolvedValue({ ok: false, status: 401 });
+        fetchMock.mockResolvedValue({ ok: false, status: 401 });
 
         await expect(
             weather.execute('forecast', { city: 'Paris' }, connectionOptions),
@@ -209,7 +206,7 @@ describe('Weather service', () => {
     });
 
     it('retries once after a transient provider network error', async () => {
-        global.fetch
+        fetchMock
             .mockRejectedValueOnce(new Error('temporary network failure'))
             .mockResolvedValueOnce({
                 ok: true,
@@ -231,12 +228,12 @@ describe('Weather service', () => {
             connectionOptions,
         );
 
-        expect(result.temperature).toBe(19);
-        expect(global.fetch).toHaveBeenCalledTimes(3);
+        expect(result).toHaveProperty('temperature', 19);
+        expect(fetchMock).toHaveBeenCalledTimes(3);
     });
 
     it('aggregates three-hour forecast entries into daily values', async () => {
-        global.fetch
+        fetchMock
             .mockResolvedValueOnce({
                 ok: true,
                 json: async () => [{ name: 'Paris', country: 'FR', lat: 48.85, lon: 2.35 }],
@@ -264,8 +261,7 @@ describe('Weather service', () => {
 
         const result = await weather.execute('forecast', { city: 'Paris' }, connectionOptions);
 
-        expect(result.type).toBe('forecast');
-        expect(result.days).toHaveLength(1);
-        expect(result.days[0]).toEqual(expect.objectContaining({ min: 9, max: 21 }));
+        expect(result).toHaveProperty('type', 'forecast');
+        expect(result).toMatchObject({ days: [expect.objectContaining({ min: 9, max: 21 })] });
     });
 });

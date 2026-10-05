@@ -1,35 +1,35 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
+import { stubFetch } from './helpers.ts';
 import { decryptString } from '../src/utils/encryption.ts';
 import githubService from '../src/services/github.ts';
+import type { ServiceContext } from '../src/services/types.ts';
 
-vi.mock('@prisma/client', () => {
-    const mPrisma = {
-        oAuthToken: {
-            update: vi.fn(),
-        },
-    };
-    return {
-        PrismaClient: vi.fn(function () {
-            return mPrisma;
-        }),
-    };
-});
+// The client the app gets from new PrismaClient(): plain stubs, hoisted for vi.mock.
+const prisma = vi.hoisted(() => ({
+    oAuthToken: {
+        update: vi.fn(),
+    },
+}));
+vi.mock('@prisma/client', () => ({
+    PrismaClient: vi.fn(function () {
+        return prisma;
+    }),
+}));
 
-import { PrismaClient } from '@prisma/client';
 // Runs before the imports below: the app reads these when it loads.
 vi.hoisted(() => {
     process.env.JWT_SECRET = 'github-service-test-secret';
 });
 
-const prisma = new PrismaClient();
-
-global.fetch = vi.fn();
-
 describe('GitHub Service', () => {
-    let mockContext;
+    let fetchMock: Mock;
+    let mockContext: ServiceContext & {
+        credentials: { accessToken: string; refreshToken: string };
+    };
 
     beforeEach(() => {
         vi.clearAllMocks();
+        fetchMock = stubFetch();
         githubService.clearCache();
         process.env.GITHUB_CLIENT_ID = 'test-client';
         process.env.GITHUB_CLIENT_SECRET = 'test-secret';
@@ -44,13 +44,13 @@ describe('GitHub Service', () => {
 
     describe('Execution', () => {
         it('throws if no credentials provided', async () => {
-            await expect(githubService.execute('repo_stats', {}, {})).rejects.toThrow(
+            await expect(githubService.execute('repo_stats', {}, { userId: 1 })).rejects.toThrow(
                 'GitHub account is not connected',
             );
         });
 
         it('executes repo_stats correctly', async () => {
-            global.fetch.mockResolvedValueOnce({
+            fetchMock.mockResolvedValueOnce({
                 ok: true,
                 json: async () => ({
                     stargazers_count: 10,
@@ -76,7 +76,7 @@ describe('GitHub Service', () => {
         });
 
         it('encodes user-supplied path segments instead of letting them change the endpoint', async () => {
-            global.fetch.mockResolvedValueOnce({
+            fetchMock.mockResolvedValueOnce({
                 ok: true,
                 json: async () => ({ login: 'x', public_repos: 0, followers: 0, following: 0 }),
             });
@@ -87,14 +87,14 @@ describe('GitHub Service', () => {
                 mockContext,
             );
 
-            expect(global.fetch).toHaveBeenCalledWith(
+            expect(fetchMock).toHaveBeenCalledWith(
                 'https://api.github.com/users/..%2Fuser%2Femails',
                 expect.anything(),
             );
         });
 
         it('executes latest_commits correctly', async () => {
-            global.fetch.mockResolvedValueOnce({
+            fetchMock.mockResolvedValueOnce({
                 ok: true,
                 json: async () => [
                     {
@@ -106,11 +106,11 @@ describe('GitHub Service', () => {
                 ],
             });
 
-            const result = await githubService.execute(
+            const result = (await githubService.execute(
                 'latest_commits',
                 { owner: 'test', repo: 'repo' },
                 mockContext,
-            );
+            )) as unknown[];
             expect(result[0]).toEqual({
                 sha: '12345',
                 message: 'init',
@@ -122,7 +122,7 @@ describe('GitHub Service', () => {
         });
 
         it('executes user_profile correctly', async () => {
-            global.fetch.mockResolvedValueOnce({
+            fetchMock.mockResolvedValueOnce({
                 ok: true,
                 json: async () => ({
                     login: 'testuser',
@@ -154,7 +154,7 @@ describe('GitHub Service', () => {
 
     describe('Caching', () => {
         it('returns cached data if within TTL', async () => {
-            global.fetch.mockResolvedValueOnce({
+            fetchMock.mockResolvedValueOnce({
                 ok: true,
                 json: async () => ({ stargazers_count: 10, full_name: 'test/repo' }),
             });
@@ -166,14 +166,14 @@ describe('GitHub Service', () => {
                 mockContext,
             );
 
-            expect(global.fetch).toHaveBeenCalledTimes(1);
-            expect(result2.stars).toBe(10);
+            expect(fetchMock).toHaveBeenCalledTimes(1);
+            expect(result2).toHaveProperty('stars', 10);
         });
     });
 
     describe('Token Refreshing', () => {
         it('refreshes token on 401 and retries', async () => {
-            global.fetch
+            fetchMock
                 .mockResolvedValueOnce({
                     ok: false,
                     status: 401,
@@ -200,8 +200,8 @@ describe('GitHub Service', () => {
                 mockContext,
             );
 
-            expect(result.stars).toBe(42);
-            expect(global.fetch).toHaveBeenCalledTimes(3);
+            expect(result).toHaveProperty('stars', 42);
+            expect(fetchMock).toHaveBeenCalledTimes(3);
             expect(prisma.oAuthToken.update).toHaveBeenCalledWith(
                 expect.objectContaining({
                     data: expect.objectContaining({
@@ -217,7 +217,7 @@ describe('GitHub Service', () => {
         });
 
         it('throws appropriate error if refresh fails', async () => {
-            global.fetch
+            fetchMock
                 .mockResolvedValueOnce({
                     ok: false,
                     status: 401,

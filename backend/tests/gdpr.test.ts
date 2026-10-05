@@ -1,16 +1,17 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
-import request from 'supertest';
-import jwt from 'jsonwebtoken';
+import { setCookies, signToken, stubFetch, verifyToken } from './helpers.ts';
+import request, { type Response } from 'supertest';
+// The client the app gets from new PrismaClient(): plain stubs, hoisted for vi.mock.
+const prisma = vi.hoisted(() => ({
+    $transaction: vi.fn(),
+    user: { findUnique: vi.fn(), update: vi.fn(), create: vi.fn(), delete: vi.fn() },
+    oAuthToken: { upsert: vi.fn(), findUnique: vi.fn() },
+}));
 vi.mock('@prisma/client', () => ({
     PrismaClient: vi.fn(function () {
-        return {
-            $transaction: vi.fn(),
-            user: { findUnique: vi.fn(), update: vi.fn(), create: vi.fn(), delete: vi.fn() },
-            oAuthToken: { upsert: vi.fn(), findUnique: vi.fn() },
-        };
+        return prisma;
     }),
 }));
-import { PrismaClient } from '@prisma/client';
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import authRouter from '../src/routes/auth.ts';
@@ -21,7 +22,6 @@ const app = express();
 app.use(express.json());
 app.use(cookieParser());
 app.use('/auth', authRouter);
-const prisma = PrismaClient.mock.results[0].value;
 // Runs before the imports below: the app reads these when it loads.
 vi.hoisted(() => {
     process.env.JWT_SECRET = 'gdpr-test-secret-with-at-least-32-chars!';
@@ -31,7 +31,7 @@ vi.hoisted(() => {
     process.env.GITHUB_CALLBACK_URL = 'http://localhost:8080/auth/github/callback';
 });
 
-const authorization = `Bearer ${jwt.sign({ userId: 42 }, process.env.JWT_SECRET)}`;
+const authorization = `Bearer ${signToken({ userId: 42 })}`;
 
 beforeEach(() => {
     vi.resetAllMocks();
@@ -40,22 +40,18 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 /** JWT stored in the session cookie set by the response. */
-function sessionToken(res) {
-    const cookie = (res.headers['set-cookie'] || []).find((c) =>
-        c.startsWith('dashboard_session='),
-    );
+function sessionToken(res: Response) {
+    const cookie = setCookies(res).find((c) => c.startsWith('dashboard_session='));
     return cookie?.split(';')[0].slice('dashboard_session='.length);
 }
 
 /** GitHub login ends on the dashboard with an httpOnly session cookie and no token in the URL. */
-function expectSignedIn(res) {
+function expectSignedIn(res: Response) {
     const url = new URL(res.headers.location);
     expect(url.pathname).toBe('/');
     expect(url.search + url.hash).toBe('');
     expect(sessionToken(res)).toEqual(expect.any(String));
-    expect(res.headers['set-cookie'].find((c) => c.startsWith('dashboard_session='))).toMatch(
-        /HttpOnly/,
-    );
+    expect(setCookies(res).find((c) => c.startsWith('dashboard_session='))).toMatch(/HttpOnly/);
 }
 
 describe('Profile and data rights', () => {
@@ -107,7 +103,7 @@ describe('Profile and data rights', () => {
         prisma.oAuthToken.findUnique.mockResolvedValue({
             accessToken: encryptString('github-token'),
         });
-        vi.spyOn(global, 'fetch').mockResolvedValue({
+        stubFetch().mockResolvedValue({
             ok: true,
             json: async () => ({ id: 142 }),
         });
@@ -131,7 +127,7 @@ describe('Profile and data rights', () => {
     test('keeps the old email when the legacy GitHub identity cannot be verified', async () => {
         prisma.user.findUnique.mockResolvedValue({ email: 'github@example.com', password: null });
         prisma.oAuthToken.findUnique.mockResolvedValue({ accessToken: encryptString('expired') });
-        vi.spyOn(global, 'fetch').mockResolvedValue({
+        stubFetch().mockResolvedValue({
             ok: false,
             json: async () => ({ message: 'Bad credentials' }),
         });
@@ -217,7 +213,7 @@ describe('Profile and data rights', () => {
             .set('Authorization', authorization)
             .expect(200);
         expect(res.headers['cache-control']).toBe('no-store');
-        expect(res.body.widgets.map((w) => w.params)).toEqual([
+        expect(res.body.widgets.map((w: { params: unknown }) => w.params)).toEqual([
             { city: 'Paris' },
             { city: 'Lyon' },
         ]);
@@ -292,7 +288,7 @@ describe('Age confirmation', () => {
     async function githubCallback(query = {}, callbackQuery = {}) {
         const start = await request(app).get('/auth/github/login').query(query).expect(302);
         const state = new URL(start.headers.location).searchParams.get('state');
-        vi.spyOn(global, 'fetch')
+        stubFetch()
             .mockResolvedValueOnce({
                 ok: true,
                 json: async () => ({ access_token: 'github-access' }),
@@ -360,7 +356,7 @@ describe('GitHub identity after profile changes', () => {
         prisma.oAuthToken.upsert.mockResolvedValue({ id: 1 });
         const start = await request(app).get('/auth/github/login').expect(302);
         const state = new URL(start.headers.location).searchParams.get('state');
-        vi.spyOn(global, 'fetch')
+        stubFetch()
             .mockResolvedValueOnce({ ok: true, json: async () => ({ access_token: 'token' }) })
             .mockResolvedValueOnce({
                 ok: true,
@@ -371,7 +367,7 @@ describe('GitHub identity after profile changes', () => {
             .query({ state, code: 'code' })
             .set('Cookie', start.headers['set-cookie'][0].split(';')[0])
             .expect(302);
-        expect(jwt.verify(sessionToken(res), process.env.JWT_SECRET).userId).toBe(42);
+        expect(verifyToken(sessionToken(res) ?? '').userId).toBe(42);
         expect(prisma.user.create).not.toHaveBeenCalled();
         expect(prisma.user.findUnique).not.toHaveBeenCalledWith({
             where: { email: 'original@example.com' },
@@ -380,13 +376,13 @@ describe('GitHub identity after profile changes', () => {
 });
 
 describe('GitHub identity validation', () => {
-    async function loginWithEmails(emails) {
+    async function loginWithEmails(emails: unknown) {
         const start = await request(app)
             .get('/auth/github/login')
             .query({ cguAccepted: 'true', is16OrOlder: 'true' })
             .expect(302);
         const state = new URL(start.headers.location).searchParams.get('state');
-        vi.spyOn(global, 'fetch')
+        stubFetch()
             .mockResolvedValueOnce({ ok: true, json: async () => ({ access_token: 'token' }) })
             .mockResolvedValueOnce({
                 ok: true,

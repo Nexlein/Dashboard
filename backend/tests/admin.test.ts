@@ -1,32 +1,28 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest';
+import { signToken } from './helpers.ts';
 import request from 'supertest';
-import jwt from 'jsonwebtoken';
 
-vi.mock('@prisma/client', () => {
-    const mockPrisma = {
-        user: {
-            findUnique: vi.fn(),
-            findMany: vi.fn(),
-            delete: vi.fn(),
-        },
-    };
+// The client the app gets from new PrismaClient(): plain stubs, hoisted for vi.mock.
+const prisma = vi.hoisted(() => ({
+    user: {
+        findUnique: vi.fn(),
+        findMany: vi.fn(),
+        delete: vi.fn(),
+    },
+}));
+vi.mock('@prisma/client', () => ({
+    PrismaClient: vi.fn(function () {
+        return prisma;
+    }),
+}));
 
-    return {
-        PrismaClient: vi.fn(function () {
-            return mockPrisma;
-        }),
-    };
-});
-
-import { PrismaClient } from '@prisma/client';
-const prisma = new PrismaClient();
 import app from '../src/app.ts';
 // Runs before the imports below: the app reads these when it loads.
 vi.hoisted(() => {
     process.env.JWT_SECRET = 'test-secret-with-at-least-32-characters!';
 });
 
-const adminToken = jwt.sign({ userId: 1, isAdmin: true }, process.env.JWT_SECRET);
+const adminToken = signToken({ userId: 1, isAdmin: true });
 
 describe('Admin routes', () => {
     beforeEach(() => {

@@ -13,7 +13,7 @@ const VALID = {
 };
 
 // utils/env exits the process on invalid input, so load it in a child process.
-function loadEnv(overrides) {
+function loadEnv(overrides: Record<string, string | undefined>) {
     const result = spawnSync(
         process.execPath,
         [

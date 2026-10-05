@@ -22,7 +22,7 @@ async function load() {
     return import('../src/utils/encryption.ts');
 }
 
-function tamper(hex) {
+function tamper(hex: string) {
     return hex.slice(0, -2) + (hex.endsWith('00') ? 'ff' : '00');
 }
 
@@ -46,7 +46,9 @@ describe('key derivation', () => {
 
     test('falls back to JWT_SECRET when ENCRYPTION_KEY is unset', async () => {
         const { getEncryptionKey } = await load();
-        expect(getEncryptionKey()).toEqual(crypto.scryptSync(process.env.JWT_SECRET, KEY_SALT, 32));
+        expect(getEncryptionKey()).toEqual(
+            crypto.scryptSync('encryption-test-jwt-secret', KEY_SALT, 32),
+        );
     });
 
     test('refuses to encrypt without any secret', async () => {
