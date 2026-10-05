@@ -5,7 +5,7 @@ import env from '../utils/env.ts';
 import { isAllowedOrigin } from '../utils/origins.ts';
 
 /** The signed-in user, as the routes behind requireAuth see it. */
-export type AuthPayload = { userId: number; role: string };
+export type AuthPayload = { userId: number };
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 // Swagger UI calls the API from the API's own origin.
@@ -25,7 +25,7 @@ async function requireAuth(req: Request, res: Response, next: NextFunction) {
         return res.status(403).json({ error: 'Request origin not allowed' });
     }
 
-    req.user = { userId: Number(session.user.id), role: session.user.role ?? 'user' };
+    req.user = { userId: Number(session.user.id) };
     next();
 }
 

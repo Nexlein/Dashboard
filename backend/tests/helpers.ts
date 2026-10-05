@@ -12,9 +12,9 @@ export function stubFetch() {
 }
 
 /** Makes the (mocked) Better Auth session belong to this user for the next requests. */
-export function signedInAs(userId: number, role = 'user') {
+export function signedInAs(userId: number) {
     vi.mocked(auth.api.getSession).mockResolvedValue({
-        user: { id: String(userId), role },
+        user: { id: String(userId) },
         session: { userId: String(userId) },
     } as never);
 }

@@ -8,7 +8,7 @@ export { API_URL };
  * Better Auth's client for /api/auth/* on the API. The session lives in an httpOnly cookie:
  * the client sends it (credentials: include) but page scripts can never read it.
  */
-export const authClient = createAuthClient({
+const authClient = createAuthClient({
     baseURL: API_URL,
     // Look fetch up on each call rather than once at import, like apiClient (tests stub it).
     fetchOptions: { customFetchImpl: (input, init) => fetch(input, init) },
