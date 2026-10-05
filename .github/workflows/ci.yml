@@ -118,7 +118,7 @@ jobs:
             - run: npm run test:e2e
               env:
                   DATABASE_URL: postgresql://postgres:postgres@localhost:5432/dashboard_e2e_test
-            - uses: actions/upload-artifact@v4
+            - uses: actions/upload-artifact@v7
               if: failure()
               with:
                   name: playwright-report
