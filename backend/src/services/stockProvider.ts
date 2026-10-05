@@ -1,18 +1,19 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { HttpError } from '../utils/httpError.ts';
 import { getCache, setCache, redisClient } from '../utils/redisCache.ts';
 
 const localLocks = new Set<string>();
 const DEFAULT_LIMIT = 8;
 type Budget = { window: number; remaining: number; limit: number; blockedUntil?: number };
 
-export class StockPendingError extends Error {
-    statusCode = 429;
+/** Twelve Data credits are spent for now: the widget retries after `retryAfter` seconds. */
+export class StockPendingError extends HttpError {
     retryAfter: number;
     constructor(
         retryAt: number,
         message = 'Stock data is waiting for available Twelve Data credits',
     ) {
-        super(message);
+        super(message, 429);
         this.retryAfter = Math.max(1, Math.ceil((retryAt - Date.now()) / 1000));
     }
 }
