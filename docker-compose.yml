@@ -46,7 +46,7 @@ services:
     # Development inbox: catches every email the API sends (verification and reset codes).
     mailpit:
         restart: unless-stopped
-        image: axllent/mailpit:v1.29
+        image: axllent/mailpit:v1.31
         ports:
             - '8025:8025' # web inbox
             - '1025:1025' # SMTP, for a backend started with npm run dev

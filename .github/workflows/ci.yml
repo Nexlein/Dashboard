@@ -111,7 +111,7 @@ jobs:
                     --health-retries 10
             # Catches the verification codes the e2e tests read (backend/.env.example: port 1025).
             mailpit:
-                image: axllent/mailpit:v1.29
+                image: axllent/mailpit:v1.31
                 ports:
                     - 1025:1025
                     - 8025:8025
