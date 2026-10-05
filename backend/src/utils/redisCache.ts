@@ -33,14 +33,6 @@ async function setCache(key: string, data: unknown, ttlMs: number) {
     }
 }
 
-async function deleteCache(key: string) {
-    if (redisClient && redisClient.isReady) {
-        await redisClient.del(key);
-    } else {
-        localCache.delete(key);
-    }
-}
-
 async function clearCache() {
     if (redisClient && redisClient.isReady) {
         await redisClient.flushAll();
@@ -48,4 +40,4 @@ async function clearCache() {
     localCache.clear();
 }
 
-export { getCache, setCache, deleteCache, clearCache, redisClient };
+export { getCache, setCache, clearCache, redisClient };

@@ -1,9 +1,9 @@
-import type { AuthPayload } from '../utils/authToken.ts';
+import type { AuthPayload } from '../middleware/auth.ts';
 
 declare global {
     namespace Express {
         interface Request {
-            /** Set by middleware/auth once the session or Bearer token is verified. */
+            /** Set by middleware/auth once the session is verified. */
             user?: AuthPayload;
         }
     }

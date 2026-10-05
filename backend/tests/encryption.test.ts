@@ -13,8 +13,6 @@ const STORED_JSON = {
     authTag: '83b2a34a0097867da84c11d30dbfbdab',
     data: '5c463193d28b28c2a34085dbf2f329fda30e44f7dd3efc25f4f30652b94bb36a8c346ab0',
 };
-const STORED_STRING =
-    'v1:19b9e71abb45a9f7a858b7d1:950e61bc0a00d43bb53974da5d11a36a:d2fa34fcf2fcd5a6f443c7b15705dafafd9e';
 
 // The module caches the derived key: reload it after changing the environment.
 async function load() {
@@ -27,7 +25,7 @@ function tamper(hex: string) {
 }
 
 beforeEach(() => {
-    process.env.JWT_SECRET = 'encryption-test-jwt-secret';
+    process.env.BETTER_AUTH_SECRET = 'encryption-test-auth-secret';
     delete process.env.ENCRYPTION_KEY;
 });
 afterAll(() => {
@@ -44,17 +42,17 @@ describe('key derivation', () => {
         },
     );
 
-    test('falls back to JWT_SECRET when ENCRYPTION_KEY is unset', async () => {
+    test('falls back to BETTER_AUTH_SECRET when ENCRYPTION_KEY is unset', async () => {
         const { getEncryptionKey } = await load();
         expect(getEncryptionKey()).toEqual(
-            crypto.scryptSync('encryption-test-jwt-secret', KEY_SALT, 32),
+            crypto.scryptSync('encryption-test-auth-secret', KEY_SALT, 32),
         );
     });
 
     test('refuses to encrypt without any secret', async () => {
-        delete process.env.JWT_SECRET;
-        const { encryptString } = await load();
-        expect(() => encryptString('token')).toThrow(/must be set/);
+        delete process.env.BETTER_AUTH_SECRET;
+        const { encryptJson } = await load();
+        expect(() => encryptJson({ apiKey: 'key' })).toThrow(/must be set/);
     });
 });
 
@@ -90,38 +88,5 @@ describe('JSON values', () => {
         expect(() => decryptJsonStrict(damaged)).toThrow();
         vi.spyOn(console, 'error').mockImplementation(() => {});
         expect(decryptJson(damaged)).toEqual({ error: 'Failed to decrypt parameters' });
-    });
-});
-
-describe('string values', () => {
-    test('round-trips a token in the v1 format', async () => {
-        const { encryptString, decryptString } = await load();
-        const sealed = encryptString('github-token');
-        expect(sealed).toMatch(/^v1:[a-f0-9]{24}:[a-f0-9]{32}:[a-f0-9]+$/);
-        expect(decryptString(sealed)).toBe('github-token');
-        expect(encryptString('github-token')).not.toBe(sealed);
-    });
-
-    test('passes null and undefined through', async () => {
-        const { encryptString, decryptString } = await load();
-        expect(encryptString(null)).toBeNull();
-        expect(decryptString(undefined)).toBeUndefined();
-    });
-
-    test('reads tokens written by the previous implementation', async () => {
-        process.env.ENCRYPTION_KEY = FIXTURE_SECRET;
-        expect((await load()).decryptString(STORED_STRING)).toBe('gho_legacyToken123');
-    });
-
-    test('rejects plaintext, damaged and wrong-key values instead of sending them to GitHub', async () => {
-        const { encryptString, decryptString } = await load();
-        expect(() => decryptString('plaintext-token')).toThrow(/not an encrypted string/);
-        expect(() => decryptString('v1:broken')).toThrow();
-        const sealed = encryptString('token');
-        expect(() => decryptString(tamper(sealed))).toThrow();
-
-        process.env.JWT_SECRET = 'another-secret';
-        const reloaded = await load();
-        expect(() => reloaded.decryptString(sealed)).toThrow();
     });
 });

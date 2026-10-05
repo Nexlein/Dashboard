@@ -12,22 +12,79 @@ datasource db {
   provider = "postgresql"
 }
 
+// User, Session, Account and Verification are Better Auth's tables (src/auth.ts). Field names
+// follow its schema; ids stay autoincrement integers (generateId: "serial").
 model User {
   id            Int       @id @default(autoincrement())
+  name          String // Display name; empty when the user did not give one
   email         String    @unique
-  githubId      String?   @unique // Stable login identity, independent of the editable email
-  displayName   String?
-  password      String? // Null for OAuth-only users
-  isAdmin       Boolean   @default(false)
-  cguAcceptedAt DateTime? // Timestamp when CGU was accepted
+  emailVerified Boolean   @default(false)
+  image         String?
+  role          String?   @default("user") // Admin plugin: "user" or "admin"
+  banned        Boolean?  @default(false)
+  banReason     String?
+  banExpires    DateTime?
+  cguAcceptedAt DateTime? // When the user accepted the CGU and confirmed being 16 or older
   language      String    @default("en") // i18n preference (en/fr)
   theme         String    @default("system") // light/dark/system
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  sessions           Session[]
+  accounts           Account[]
   widgets            WidgetConfig[]
-  tokens             OAuthToken[]
   serviceConnections ServiceConnection[]
+}
+
+model Session {
+  id             Int      @id @default(autoincrement())
+  token          String   @unique
+  expiresAt      DateTime
+  ipAddress      String?
+  userAgent      String?
+  impersonatedBy String? // Admin plugin: id of the admin impersonating this user
+  userId         Int
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// One row per sign-in method: "credential" (password hash) or an OAuth provider ("github",
+// whose tokens are encrypted by Better Auth: account.encryptOAuthTokens).
+model Account {
+  id                    Int       @id @default(autoincrement())
+  accountId             String // Provider-side id (the GitHub user id), or the user id for "credential"
+  providerId            String
+  userId                Int
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+}
+
+// Short-lived values: OAuth state, email/deletion verification tokens.
+model Verification {
+  id         Int      @id @default(autoincrement())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
 }
 
 model ServiceConnection {
@@ -43,19 +100,6 @@ model ServiceConnection {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, serviceName])
-}
-
-model OAuthToken {
-  id           Int       @id @default(autoincrement())
-  userId       Int
-  provider     String // e.g. "github", "google"
-  accessToken  String
-  refreshToken String?
-  expiresAt    DateTime?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, provider])
 }
 
 model WidgetConfig {

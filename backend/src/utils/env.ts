@@ -24,21 +24,23 @@ const envSchema = z.object({
         .url('DATABASE_URL must be a valid URL')
         // .env files are read as-is: `${POSTGRES_DB}` would become part of the database name.
         .refine((url) => !url.includes('${'), 'DATABASE_URL must not reference other variables'),
-    JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters long'),
-    JWT_EXPIRES_IN: z.string().default('24h'),
-    SALT_ROUNDS: z.coerce.number().int().min(1).default(10),
+    // Signs Better Auth's session cookies and encrypts the stored OAuth tokens.
+    BETTER_AUTH_SECRET: z
+        .string()
+        .min(32, 'BETTER_AUTH_SECRET must be at least 32 characters long'),
+    // Public URL of this API (where /api/auth/* is reached): OAuth callbacks are built from it,
+    // and session cookies are marked Secure when it uses https.
+    BETTER_AUTH_URL: z.url('BETTER_AUTH_URL must be a valid URL').default('http://localhost:8080'),
     GLOBAL_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(1000),
     AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(20),
-    // Falls back to JWT_SECRET when unset (see utils/encryption.ts).
+    // Falls back to BETTER_AUTH_SECRET when unset (see utils/encryption.ts).
     ENCRYPTION_KEY: optional(
         z.string().min(32, 'ENCRYPTION_KEY must be at least 32 characters long'),
     ),
     CORS_ORIGINS: optional(z.string()),
     REDIS_URL: optional(z.url('REDIS_URL must be a valid URL')),
-    FRONTEND_URL: optional(z.url('FRONTEND_URL must be a valid URL')),
     GITHUB_CLIENT_ID: optional(z.string()),
     GITHUB_CLIENT_SECRET: optional(z.string()),
-    GITHUB_CALLBACK_URL: optional(z.url('GITHUB_CALLBACK_URL must be a valid URL')),
 });
 
 const _env = envSchema.safeParse(process.env);

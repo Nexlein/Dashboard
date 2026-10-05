@@ -7,7 +7,7 @@ const ENV_MODULE = path.join(import.meta.dirname, '..', 'src', 'utils', 'env.ts'
 const VALID = {
     PATH: process.env.PATH,
     DATABASE_URL: 'postgresql://user:password@localhost:5432/dashboard',
-    JWT_SECRET: 'a'.repeat(32),
+    BETTER_AUTH_SECRET: 'a'.repeat(32),
     // Keeps utils/env from reading the developer's backend/.env.
     NODE_ENV: 'test',
 };
@@ -35,30 +35,34 @@ describe('environment validation', () => {
         const { status, env } = loadEnv({});
 
         expect(status).toBe(0);
-        expect(env).toMatchObject({ PORT: '8080', SALT_ROUNDS: 10, AUTH_RATE_LIMIT_MAX: 20 });
+        expect(env).toMatchObject({
+            PORT: '8080',
+            AUTH_RATE_LIMIT_MAX: 20,
+            BETTER_AUTH_URL: 'http://localhost:8080',
+        });
     });
 
     it('treats empty optional values from .env.example as unset', () => {
         const { status, env } = loadEnv({
             ENCRYPTION_KEY: '',
-            FRONTEND_URL: '',
             REDIS_URL: '',
+            CORS_ORIGINS: '',
             GITHUB_CLIENT_ID: '',
-            GITHUB_CALLBACK_URL: '',
+            GITHUB_CLIENT_SECRET: '',
         });
 
         expect(status).toBe(0);
         expect(env.ENCRYPTION_KEY).toBeUndefined();
-        expect(env.FRONTEND_URL).toBeUndefined();
+        expect(env.REDIS_URL).toBeUndefined();
     });
 
     it.each([
-        ['JWT_SECRET', 'too-short'],
+        ['BETTER_AUTH_SECRET', 'too-short'],
         ['ENCRYPTION_KEY', 'too-short'],
         ['DATABASE_URL', 'not a url'],
         // Not expanded by dotenv: the database name would be `${POSTGRES_DB}`.
         ['DATABASE_URL', 'postgresql://user:password@localhost:5432/${POSTGRES_DB}'],
-        ['FRONTEND_URL', 'not a url'],
+        ['BETTER_AUTH_URL', 'not a url'],
     ])('exits when %s is invalid', (key, value) => {
         const { status, stderr } = loadEnv({ [key]: value });
 

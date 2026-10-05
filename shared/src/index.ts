@@ -4,7 +4,8 @@ import { z } from 'zod';
 export interface User {
     id: number;
     email: string;
-    displayName: string | null;
+    /** Display name; empty when the user did not give one. */
+    name: string;
 }
 
 // Trimmed before it is validated: z.email() alone would reject surrounding spaces.
@@ -12,8 +13,11 @@ const email = z.string().trim().pipe(z.email('Invalid email address').max(254));
 
 export const registerSchema = z.object({
     email,
-    password: z.string().min(8, 'Password must be between 8 and 72 characters').max(72),
-    displayName: z
+    password: z
+        .string()
+        .min(8, 'Password must be between 8 and 128 characters')
+        .max(128, 'Password must be between 8 and 128 characters'),
+    name: z
         .string()
         .max(50, 'Display name must be 50 characters or fewer')
         .optional()
@@ -33,7 +37,7 @@ export const loginSchema = z.object({
 
 export const updateMeSchema = z.object({
     email: email.optional(),
-    displayName: z
+    name: z
         .string()
         .max(50, 'Display name must be 50 characters or fewer')
         .optional()

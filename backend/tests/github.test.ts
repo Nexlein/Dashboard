@@ -1,38 +1,22 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { stubFetch } from './helpers.ts';
-import { decryptString } from '../src/utils/encryption.ts';
 import githubService from '../src/services/github.ts';
 import type { ServiceContext } from '../src/services/types.ts';
-
-// The shared client from utils/prisma.ts: plain stubs, hoisted for vi.mock.
-const prisma = vi.hoisted(() => ({
-    oAuthToken: {
-        update: vi.fn(),
-    },
-}));
-vi.mock('../src/utils/prisma.ts', () => ({ default: prisma }));
-
-// Runs before the imports below: the app reads these when it loads.
-vi.hoisted(() => {
-    process.env.JWT_SECRET = 'github-service-test-secret';
-});
 
 describe('GitHub Service', () => {
     let fetchMock: Mock;
     let mockContext: ServiceContext & {
-        credentials: { accessToken: string; refreshToken: string };
+        credentials: { accessToken: string };
     };
 
     beforeEach(() => {
         vi.clearAllMocks();
         fetchMock = stubFetch();
         githubService.clearCache();
-        process.env.GITHUB_CLIENT_ID = 'test-client';
-        process.env.GITHUB_CLIENT_SECRET = 'test-secret';
 
         mockContext = {
             userId: 1,
-            credentials: { accessToken: 'mock-access', refreshToken: 'mock-refresh' },
+            credentials: { accessToken: 'mock-access' },
             refreshRate: 60,
             cacheScope: 'test',
         };
@@ -167,66 +151,18 @@ describe('GitHub Service', () => {
         });
     });
 
-    describe('Token Refreshing', () => {
-        it('refreshes token on 401 and retries', async () => {
-            fetchMock
-                .mockResolvedValueOnce({
-                    ok: false,
-                    status: 401,
-                    statusText: 'Unauthorized',
-                })
-                .mockResolvedValueOnce({
-                    ok: true,
-                    json: async () => ({
-                        access_token: 'new-access-token',
-                        refresh_token: 'new-refresh-token',
-                        expires_in: 3600,
-                    }),
-                })
-                .mockResolvedValueOnce({
-                    ok: true,
-                    json: async () => ({ stargazers_count: 42, full_name: 'test/repo' }),
-                });
-
-            prisma.oAuthToken.update.mockResolvedValueOnce({});
-
-            const result = await githubService.execute(
-                'repo_stats',
-                { owner: 'test', repo: 'repo' },
-                mockContext,
-            );
-
-            expect(result).toHaveProperty('stars', 42);
-            expect(fetchMock).toHaveBeenCalledTimes(3);
-            expect(prisma.oAuthToken.update).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    data: expect.objectContaining({
-                        accessToken: expect.any(String),
-                        refreshToken: expect.any(String),
-                    }),
-                }),
-            );
-            expect(mockContext.credentials.accessToken).toBe('new-access-token');
-            const saved = prisma.oAuthToken.update.mock.calls[0][0].data;
-            expect(decryptString(saved.accessToken)).toBe('new-access-token');
-            expect(decryptString(saved.refreshToken)).toBe('new-refresh-token');
-        });
-
-        it('throws appropriate error if refresh fails', async () => {
-            fetchMock
-                .mockResolvedValueOnce({
-                    ok: false,
-                    status: 401,
-                    statusText: 'Unauthorized',
-                })
-                .mockResolvedValueOnce({
-                    ok: false,
-                    json: async () => ({ error: 'bad refresh' }),
-                });
+    describe('Errors', () => {
+        // Better Auth refreshes tokens before the service runs (utils/oauthAccounts.ts); a
+        // revoked token surfaces as GitHub's own status.
+        it('reports a rejected token with its status', async () => {
+            fetchMock.mockResolvedValueOnce({ ok: false, status: 401, statusText: 'Unauthorized' });
 
             await expect(
                 githubService.execute('repo_stats', { owner: 'test', repo: 'repo' }, mockContext),
-            ).rejects.toThrow('GitHub API error: Unauthorized');
+            ).rejects.toMatchObject({ message: 'GitHub API error: Unauthorized', statusCode: 401 });
+            expect(fetchMock).toHaveBeenCalledWith('https://api.github.com/repos/test/repo', {
+                headers: expect.objectContaining({ Authorization: 'Bearer mock-access' }),
+            });
         });
     });
 });
