@@ -1,6 +1,6 @@
 import { AuthBackground } from '@/features/auth/components/AuthBackground';
 import { LayoutDashboard } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
@@ -26,7 +26,7 @@ export default function AuthPage() {
     const registrationRequired =
         new URLSearchParams(location.search).get('error') === 'github_registration_requirements';
 
-    async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
         event.preventDefault();
         setError('');
         setIsSubmitting(true);
