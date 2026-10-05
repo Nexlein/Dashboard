@@ -2,12 +2,13 @@ import { decryptJsonStrict } from '../utils/encryption.ts';
 import asyncHandler from '../utils/asyncHandler.ts';
 import prisma from '../utils/prisma.ts';
 import { endSession } from '../utils/session.ts';
+import { authUser } from '../middleware/auth.ts';
 
 // GDPR: export and delete everything stored about the current user.
 
 export const downloadData = asyncHandler(async (req, res) => {
     const user = await prisma.user.findUnique({
-        where: { id: req.user.userId },
+        where: { id: authUser(req).userId },
         select: {
             id: true,
             email: true,
@@ -50,7 +51,7 @@ export const downloadData = asyncHandler(async (req, res) => {
 
 export const deleteAccount = asyncHandler(async (req, res) => {
     try {
-        await prisma.user.delete({ where: { id: req.user.userId } });
+        await prisma.user.delete({ where: { id: authUser(req).userId } });
         endSession(req, res);
         res.json({ message: 'Account deleted successfully' });
     } catch (err) {

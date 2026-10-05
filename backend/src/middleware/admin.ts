@@ -1,9 +1,12 @@
+import type { NextFunction, Request, Response } from 'express';
 import prisma from '../utils/prisma.ts';
+import { authUser } from './auth.ts';
 
-async function requireAdmin(req, res, next) {
+/** Runs after requireAuth: lets only administrators through. */
+async function requireAdmin(req: Request, res: Response, next: NextFunction) {
     try {
         const user = await prisma.user.findUnique({
-            where: { id: req.user.userId },
+            where: { id: authUser(req).userId },
             select: { isAdmin: true },
         });
 

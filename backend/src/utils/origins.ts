@@ -7,7 +7,7 @@ const allowedOrigins = (
     .map((origin) => origin.trim())
     .filter(Boolean);
 
-function isAllowedOrigin(origin) {
+function isAllowedOrigin(origin: string | undefined): boolean {
     return typeof origin === 'string' && allowedOrigins.includes(origin);
 }
 

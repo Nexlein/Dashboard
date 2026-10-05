@@ -4,6 +4,7 @@ import registry from '../services/registry.ts';
 import asyncHandler from '../utils/asyncHandler.ts';
 
 import prisma from '../utils/prisma.ts';
+import { authUser } from '../middleware/auth.ts';
 const MIN_REFRESH_RATE_SECONDS = 60;
 
 const layoutSchema = z.object({
@@ -59,7 +60,7 @@ function invalid(res, result) {
 }
 
 export const getWidgets = asyncHandler(async (req, res) => {
-    const widgets = await prisma.widgetConfig.findMany({ where: { userId: req.user.userId } });
+    const widgets = await prisma.widgetConfig.findMany({ where: { userId: authUser(req).userId } });
     const decryptedWidgets = widgets.map((w) => ({
         ...w,
         params: decryptJson(w.params),
@@ -87,7 +88,7 @@ export const addWidget = asyncHandler(async (req, res) => {
     let connection = null;
     if (serviceName === 'weather' || service.configurable) {
         connection = await prisma.serviceConnection.findUnique({
-            where: { userId_serviceName: { userId: req.user.userId, serviceName } },
+            where: { userId_serviceName: { userId: authUser(req).userId, serviceName } },
         });
         if (!connection)
             return res
@@ -98,10 +99,10 @@ export const addWidget = asyncHandler(async (req, res) => {
     if (typeof service.execute === 'function') {
         try {
             await service.execute(widgetName, params, {
-                userId: req.user.userId,
+                userId: authUser(req).userId,
                 refreshRate: Math.max(refreshRate, MIN_REFRESH_RATE_SECONDS),
                 credentials: connection ? decryptJson(connection.encryptedCredentials) : null,
-                ...(connection && { cacheScope: `${req.user.userId}:${connection.id}` }),
+                ...(connection && { cacheScope: `${authUser(req).userId}:${connection.id}` }),
             });
         } catch (execError) {
             return res.status(400).json({ error: execError.message || 'Widget validation failed' });
@@ -110,7 +111,7 @@ export const addWidget = asyncHandler(async (req, res) => {
 
     const newWidget = await prisma.widgetConfig.create({
         data: {
-            userId: req.user.userId,
+            userId: authUser(req).userId,
             serviceName,
             widgetName,
             params: encryptJson(params),
@@ -133,7 +134,7 @@ export const updateLayout = asyncHandler(async (req, res) => {
     await prisma.$transaction(
         layouts.map((l) =>
             prisma.widgetConfig.updateMany({
-                where: { id: l.id, userId: req.user.userId },
+                where: { id: l.id, userId: authUser(req).userId },
                 data: { layout: l.layout },
             }),
         ),
@@ -146,7 +147,7 @@ export const getWidgetData = asyncHandler(async (req, res) => {
     if (!widgetId) return res.status(400).json({ error: 'Invalid widget id' });
     const widget = await prisma.widgetConfig.findUnique({ where: { id: widgetId } });
     if (!widget) return res.status(404).json({ error: 'Widget not found' });
-    if (widget.userId !== req.user.userId)
+    if (widget.userId !== authUser(req).userId)
         return res.status(403).json({ error: 'Unauthorized to view this widget' });
 
     const service = registry.getService(widget.serviceName);
@@ -156,7 +157,10 @@ export const getWidgetData = asyncHandler(async (req, res) => {
     if (widget.serviceName === 'weather' || service.configurable) {
         connection = await prisma.serviceConnection.findUnique({
             where: {
-                userId_serviceName: { userId: req.user.userId, serviceName: widget.serviceName },
+                userId_serviceName: {
+                    userId: authUser(req).userId,
+                    serviceName: widget.serviceName,
+                },
             },
         });
         if (!connection)
@@ -169,10 +173,10 @@ export const getWidgetData = asyncHandler(async (req, res) => {
     let data;
     try {
         data = await service.execute(widget.widgetName, params, {
-            userId: req.user.userId,
+            userId: authUser(req).userId,
             refreshRate: Math.max(widget.refreshRate, MIN_REFRESH_RATE_SECONDS),
             credentials: connection ? decryptJson(connection.encryptedCredentials) : null,
-            ...(connection && { cacheScope: `${req.user.userId}:${connection.id}` }),
+            ...(connection && { cacheScope: `${authUser(req).userId}:${connection.id}` }),
         });
     } catch (execError) {
         return res.status(502).json({ error: execError.message || 'Failed to fetch widget data' });
@@ -190,7 +194,7 @@ export const updateWidget = asyncHandler(async (req, res) => {
 
     const existing = await prisma.widgetConfig.findUnique({ where: { id: widgetId } });
     if (!existing) return res.status(404).json({ error: 'Widget not found' });
-    if (existing.userId !== req.user.userId)
+    if (existing.userId !== authUser(req).userId)
         return res.status(403).json({ error: 'Unauthorized to update this widget' });
 
     const updated = await prisma.widgetConfig.update({
@@ -210,7 +214,7 @@ export const deleteWidget = asyncHandler(async (req, res) => {
     if (!widgetId) return res.status(400).json({ error: 'Invalid widget id' });
     const existing = await prisma.widgetConfig.findUnique({ where: { id: widgetId } });
     if (!existing) return res.status(404).json({ error: 'Widget not found' });
-    if (existing.userId !== req.user.userId)
+    if (existing.userId !== authUser(req).userId)
         return res.status(403).json({ error: 'Unauthorized to delete this widget' });
 
     await prisma.widgetConfig.delete({ where: { id: widgetId } });
@@ -225,7 +229,8 @@ export const chatWidget = asyncHandler(async (req, res) => {
 
     const widget = await prisma.widgetConfig.findUnique({ where: { id: widgetId } });
     if (!widget) return res.status(404).json({ error: 'Widget not found' });
-    if (widget.userId !== req.user.userId) return res.status(403).json({ error: 'Unauthorized' });
+    if (widget.userId !== authUser(req).userId)
+        return res.status(403).json({ error: 'Unauthorized' });
 
     const service = registry.getService(widget.serviceName);
     if (typeof service?.chat !== 'function')
@@ -234,7 +239,7 @@ export const chatWidget = asyncHandler(async (req, res) => {
     try {
         const data = await service.chat(
             decryptJson(widget.params),
-            { userId: req.user.userId },
+            { userId: authUser(req).userId },
             validated.data.messages,
         );
         res.json(data);

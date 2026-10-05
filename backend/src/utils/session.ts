@@ -1,10 +1,12 @@
+import type { CookieOptions, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
+import type { User } from '@prisma/client';
 import { signAuthToken } from './authToken.ts';
 
 // The JWT lives in an httpOnly cookie: page scripts (and so an XSS payload) cannot read it.
 const SESSION_COOKIE = 'dashboard_session';
 
-function cookieOptions(req) {
+function cookieOptions(req: Request): CookieOptions {
     return {
         httpOnly: true,
         sameSite: 'lax',
@@ -16,13 +18,13 @@ function cookieOptions(req) {
 }
 
 /** Signs a JWT for `user` and stores it in the session cookie until it expires. */
-function startSession(req, res, user) {
+function startSession(req: Request, res: Response, user: Pick<User, 'id' | 'isAdmin'>) {
     const token = signAuthToken(user);
-    const { exp } = jwt.decode(token);
+    const { exp } = jwt.decode(token) as { exp: number };
     res.cookie(SESSION_COOKIE, token, { ...cookieOptions(req), expires: new Date(exp * 1000) });
 }
 
-function endSession(req, res) {
+function endSession(req: Request, res: Response) {
     res.clearCookie(SESSION_COOKIE, cookieOptions(req));
 }
 

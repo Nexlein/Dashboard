@@ -3,11 +3,12 @@ import { decryptString, encryptJson } from '../utils/encryption.ts';
 import asyncHandler from '../utils/asyncHandler.ts';
 
 import prisma from '../utils/prisma.ts';
+import { authUser } from '../middleware/auth.ts';
 
 export const getServices = asyncHandler(async (req, res) => {
     const [connections, oauthTokens] = await Promise.all([
-        prisma.serviceConnection.findMany({ where: { userId: req.user.userId } }),
-        prisma.oAuthToken.findMany({ where: { userId: req.user.userId } }),
+        prisma.serviceConnection.findMany({ where: { userId: authUser(req).userId } }),
+        prisma.oAuthToken.findMany({ where: { userId: authUser(req).userId } }),
     ]);
 
     const connectedServiceNames = new Set([
@@ -85,9 +86,9 @@ export const connectService = asyncHandler(async (req, res) => {
 
     const verifiedAt = new Date();
     const connection = await prisma.serviceConnection.upsert({
-        where: { userId_serviceName: { userId: req.user.userId, serviceName: service.name } },
+        where: { userId_serviceName: { userId: authUser(req).userId, serviceName: service.name } },
         create: {
-            userId: req.user.userId,
+            userId: authUser(req).userId,
             serviceName: service.name,
             encryptedCredentials: encryptJson({ apiKey }),
             keyHint: apiKey.slice(-4),
@@ -113,11 +114,11 @@ export const disconnectService = asyncHandler(async (req, res) => {
 
     if (service.connection.type === 'oauth') {
         await prisma.oAuthToken.deleteMany({
-            where: { userId: req.user.userId, provider: service.name },
+            where: { userId: authUser(req).userId, provider: service.name },
         });
     } else {
         await prisma.serviceConnection.deleteMany({
-            where: { userId: req.user.userId, serviceName: service.name },
+            where: { userId: authUser(req).userId, serviceName: service.name },
         });
     }
 

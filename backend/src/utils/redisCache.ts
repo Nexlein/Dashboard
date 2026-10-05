@@ -1,7 +1,9 @@
 import { createClient } from 'redis';
 
-const localCache = new Map();
-let redisClient = null;
+type CacheEntry = { data: unknown; expiresAt: number };
+
+const localCache = new Map<string, CacheEntry>();
+let redisClient: ReturnType<typeof createClient> | null = null;
 
 if (process.env.REDIS_URL) {
     // Fail commands at once while disconnected instead of queueing them, so callers
@@ -11,19 +13,19 @@ if (process.env.REDIS_URL) {
     redisClient.connect().catch(console.error);
 }
 
-async function getCache(key) {
+async function getCache<T = unknown>(key: string): Promise<T | null> {
     if (redisClient && redisClient.isReady) {
         const val = await redisClient.get(key);
-        return val ? JSON.parse(val) : null;
+        return val ? (JSON.parse(val) as T) : null;
     }
     const cached = localCache.get(key);
     if (cached && cached.expiresAt > Date.now()) {
-        return cached.data;
+        return cached.data as T;
     }
     return null;
 }
 
-async function setCache(key, data, ttlMs) {
+async function setCache(key: string, data: unknown, ttlMs: number) {
     if (redisClient && redisClient.isReady) {
         await redisClient.set(key, JSON.stringify(data), { PX: ttlMs });
     } else {
@@ -31,7 +33,7 @@ async function setCache(key, data, ttlMs) {
     }
 }
 
-async function deleteCache(key) {
+async function deleteCache(key: string) {
     if (redisClient && redisClient.isReady) {
         await redisClient.del(key);
     } else {

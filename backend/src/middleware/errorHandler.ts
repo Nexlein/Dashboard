@@ -1,5 +1,9 @@
+import type { NextFunction, Request, Response } from 'express';
+
+type HandledError = Error & { statusCode?: number; code?: string };
+
 // Express recognises error handlers by their 4-argument signature, so keep `_next`.
-function errorHandler(err, req, res, _next) {
+function errorHandler(err: HandledError, _req: Request, res: Response, _next: NextFunction) {
     console.error('Unhandled error:', err);
 
     if (err.statusCode) {

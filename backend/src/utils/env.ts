@@ -14,7 +14,8 @@ if (process.env.NODE_ENV !== 'test') {
 // of supported variables and their constraints.
 
 // `.env` files often keep a key with an empty value: treat it as unset.
-const optional = (schema) => z.preprocess((v) => (v === '' ? undefined : v), schema.optional());
+const optional = <T extends z.ZodType>(schema: T) =>
+    z.preprocess((v) => (v === '' ? undefined : v), schema.optional());
 
 const envSchema = z.object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),

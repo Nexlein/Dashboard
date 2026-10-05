@@ -6,6 +6,7 @@ import asyncHandler from '../utils/asyncHandler.ts';
 import { normalizeEmail } from '../utils/authToken.ts';
 import { startSession } from '../utils/session.ts';
 import prisma from '../utils/prisma.ts';
+import { authUser } from '../middleware/auth.ts';
 
 // GitHub OAuth: link an account to GitHub, or sign in / sign up with GitHub.
 
@@ -29,7 +30,7 @@ export const githubLink = asyncHandler(async (req, res) => {
     ) {
         return res.status(503).json({ error: 'GitHub linking is not configured' });
     }
-    const userId = req.user.userId;
+    const userId = authUser(req).userId;
     const state = crypto.randomBytes(32).toString('hex');
     const browserSecret = crypto.randomBytes(32).toString('hex');
     await setCache(

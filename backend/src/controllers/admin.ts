@@ -1,5 +1,6 @@
 import prisma from '../utils/prisma.ts';
 import asyncHandler from '../utils/asyncHandler.ts';
+import { authUser } from '../middleware/auth.ts';
 
 export const getUsers = asyncHandler(async (req, res) => {
     try {
@@ -28,7 +29,7 @@ export const deleteUser = asyncHandler(async (req, res) => {
     if (!Number.isInteger(userId) || userId <= 0) {
         return res.status(400).json({ error: 'Invalid user ID' });
     }
-    if (userId === req.user.userId) {
+    if (userId === authUser(req).userId) {
         return res.status(403).json({ error: 'You cannot delete your own account' });
     }
     try {

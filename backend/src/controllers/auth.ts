@@ -7,6 +7,7 @@ import { normalizeEmail } from '../utils/authToken.ts';
 import { startSession, endSession } from '../utils/session.ts';
 import env from '../utils/env.ts';
 import prisma from '../utils/prisma.ts';
+import { authUser } from '../middleware/auth.ts';
 
 // Password registration/login and the current user's profile.
 // GitHub OAuth lives in githubAuth.js, GDPR export/deletion in account.js.
@@ -57,7 +58,7 @@ export const logout = (req, res) => {
 
 export const getMe = asyncHandler(async (req, res) => {
     const user = await prisma.user.findUnique({
-        where: { id: req.user.userId },
+        where: { id: authUser(req).userId },
         select: { id: true, email: true, displayName: true },
     });
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -71,7 +72,7 @@ export const updateMe = asyncHandler(async (req, res) => {
     const { displayName, email } = validated.data;
     const normalizedEmail = email === undefined ? undefined : normalizeEmail(email);
     const currentUser = await prisma.user.findUnique({
-        where: { id: req.user.userId },
+        where: { id: authUser(req).userId },
         select: { email: true, password: true, githubId: true },
     });
     if (!currentUser) return res.status(404).json({ error: 'User not found' });
@@ -79,7 +80,7 @@ export const updateMe = asyncHandler(async (req, res) => {
 
     if (normalizedEmail !== undefined && normalizedEmail !== currentUser.email && !githubId) {
         const githubToken = await prisma.oAuthToken.findUnique({
-            where: { userId_provider: { userId: req.user.userId, provider: 'github' } },
+            where: { userId_provider: { userId: authUser(req).userId, provider: 'github' } },
         });
         if (githubToken) {
             try {
@@ -100,7 +101,7 @@ export const updateMe = asyncHandler(async (req, res) => {
     let user;
     try {
         user = await prisma.user.update({
-            where: { id: req.user.userId },
+            where: { id: authUser(req).userId },
             data: {
                 ...(displayName === undefined ? {} : { displayName: displayName.trim() || null }),
                 ...(normalizedEmail === undefined ? {} : { email: normalizedEmail }),
