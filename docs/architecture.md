@@ -42,7 +42,7 @@ flowchart TB
 - **Session**: Better Auth keeps the session in an httpOnly cookie that page scripts cannot read, backed by a revocable row in PostgreSQL. `useCurrentUser` (`GET /api/auth/get-session`) tells whether the visitor is signed in, and protected routes wait for it. Writes authenticated by the cookie must come from an allowed origin (Better Auth on `/api/auth/*`, `middleware/auth.ts` on the other routes).
 - **Source layout** (`frontend/src/`):
     - `pages/`: one component per route.
-    - `features/<feature>/`: code owned by one feature, split into `components/`, `hooks/` and `lib/`. `features/widgets/catalog/` holds the per-service widget UIs referenced by `lib/registry.tsx`; each declares the response type of its backend service, and `lib/types.ts` types the registry.
+    - `features/<feature>/`: code owned by one feature, split into `components/`, `hooks/` and `lib/`. `features/widgets/catalog/` holds the per-service widget UIs referenced by `lib/registry.tsx`; each declares the response type of its backend service, and `lib/types.ts` types the registry. The widget configurator is built from `/about.json` (`lib/catalog.ts`): the server decides which services, widgets and params exist, the registry how each one is displayed and asked for. A widget the frontend has no component for is not offered, a param it has no field for gets a plain text or number field.
     - `components/`: the app shell shared by every page (`Navbar`, `ErrorBoundary`, `ThemeProvider`, `CookieBanner`) and the `ui/` primitives from shadcn.
     - `lib/`: cross-feature helpers (`apiClient`, `auth`, `utils`).
 

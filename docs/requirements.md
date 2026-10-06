@@ -18,7 +18,7 @@
     - [x] Twelve Data subscription requires a verified, user-owned API key.
     - [x] Add OAuth linking for every remaining account-based service (GitHub done).
 - [ ] **Dashboard & Widgets**:
-    - [ ] Connect `about.json` dynamically to the frontend Configurator. (The configurator uses a frontend copy of the registry, `features/widgets/lib/registry.tsx`.)
+    - [x] Connect `about.json` dynamically to the frontend Configurator. (The configurator offers the services, widgets and params `/about.json` declares; `features/widgets/lib/registry.tsx` only says how to display them.)
     - [x] Sync Dashboard Grid layout with Postgres Database via PUT/POST routes. (`PUT /widgets/layout`, debounced from the grid)
     - [x] Add widget (select type, configure, set refresh rate).
     - [x] Reconfigure, move, delete widgets.

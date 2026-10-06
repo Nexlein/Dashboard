@@ -11,6 +11,8 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { findWidgetDefinition, getServiceDefinition } from '@/features/widgets/lib/registry';
+import { useWidgetCatalog } from '@/features/widgets/hooks/useWidgetCatalog';
+import { findCatalogWidget } from '@/features/widgets/lib/catalog';
 import { WidgetForm } from './WidgetForm';
 
 // Mounted only while a widget is being edited (keyed by widget id), so the form
@@ -32,8 +34,11 @@ export function WidgetEditDialog({
     const service = widget.serviceName;
     const widgetType = widget.widgetName;
 
-    const serviceDef = getServiceDefinition(service);
-    const widgetDef = findWidgetDefinition(service, widgetType);
+    // The params the server declares (/about.json); the frontend definition until it loads.
+    const catalog = useWidgetCatalog();
+    const fromCatalog = findCatalogWidget(catalog.data, service, widgetType);
+    const serviceDef = fromCatalog?.service ?? getServiceDefinition(service);
+    const widgetDef = fromCatalog?.widget ?? findWidgetDefinition(service, widgetType);
 
     const handleSave = async () => {
         if (!isRefreshRateValid(refreshTimer, serviceDef)) return;

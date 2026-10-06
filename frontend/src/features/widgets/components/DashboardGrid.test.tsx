@@ -14,6 +14,11 @@ vi.mock('@/features/widgets/hooks/useWidgets', () => ({
     useUpdateWidget: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
+// Until /about.json loads, the edit dialog uses the frontend widget definitions.
+vi.mock('@/features/widgets/hooks/useWidgetCatalog', () => ({
+    useWidgetCatalog: () => ({ data: undefined }),
+}));
+
 vi.mock('@/features/widgets/hooks/useWidgetLayoutManager', () => ({
     useWidgetLayoutManager: () => ({ onLayoutChange: mockUpdateLayoutChange }),
 }));
