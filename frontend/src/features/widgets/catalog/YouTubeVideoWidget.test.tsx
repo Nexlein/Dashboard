@@ -15,7 +15,8 @@ const widget = toDashboardWidget({
 });
 
 it('offers a player and watch feed without connection parameters', () => {
-    expect(REGISTRY.youtube.hasRefresh).toBe(false);
+    expect(REGISTRY.youtube.hasRefresh).toBe(true);
+    expect(REGISTRY.youtube.widgets[0].hasRefresh).toBe(false);
     expect(REGISTRY.youtube.widgets.map((item) => item.id)).toEqual([
         'video_player',
         'channel_watch',

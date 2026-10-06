@@ -5,6 +5,7 @@ import { useAddWidget } from '@/features/widgets/hooks/useWidgets';
 import {
     getDefaultWidgetLayout,
     isRefreshRateValid,
+    MIN_REFRESH_RATE_SECONDS,
     type WidgetParams,
 } from '@/features/widgets/lib/widgets';
 import { fetchServices, type ServiceConnection } from '@/features/services/lib/services';
@@ -105,7 +106,7 @@ export function WidgetConfigurator() {
             !service ||
             !widgetType ||
             !areParamsComplete(widgetDef, params) ||
-            !isRefreshRateValid(refreshTimer, serviceDef)
+            !isRefreshRateValid(refreshTimer, serviceDef, widgetDef)
         ) {
             return;
         }
@@ -117,7 +118,10 @@ export function WidgetConfigurator() {
                 serviceName: service,
                 widgetName: widgetType,
                 params: params,
-                refreshRate: Number(refreshTimer),
+                refreshRate:
+                    (widgetDef?.hasRefresh ?? serviceDef?.hasRefresh) === false
+                        ? MIN_REFRESH_RATE_SECONDS
+                        : Number(refreshTimer),
                 layout: getDefaultWidgetLayout(service, widgetType),
             },
             {
@@ -263,7 +267,7 @@ export function WidgetConfigurator() {
                             !service ||
                             !widgetType ||
                             !areParamsComplete(widgetDef, params) ||
-                            !isRefreshRateValid(refreshTimer, serviceDef) ||
+                            !isRefreshRateValid(refreshTimer, serviceDef, widgetDef) ||
                             addWidgetMutation.isPending
                         }
                         onClick={handleSave}

@@ -1,4 +1,4 @@
-import { youtubeChannels, youtubeVideoId } from 'shared/youtube';
+import { youtubeChannels, youtubeVideoId } from 'shared';
 import { youtubeWatch } from './youtubeFeed.ts';
 import { HttpError } from '../utils/httpError.ts';
 import type { ServiceDefinition, WidgetParams } from './types.ts';

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ArrowUpRight, Play, Square } from 'lucide-react';
-import { youtubeVideoId } from 'shared/youtube';
+import { youtubeVideoId } from 'shared';
 import type { WidgetViewProps } from '@/features/widgets/lib/types';
 
 export function YouTubeVideoWidget({ widget }: WidgetViewProps<unknown>) {

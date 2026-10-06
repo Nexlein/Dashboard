@@ -1,4 +1,3 @@
-import { HttpError } from '../utils/httpError.ts';
 import type { Response } from 'express';
 import { z } from 'zod';
 import { encryptJson, decryptJson } from '../utils/encryption.ts';
@@ -174,7 +173,7 @@ export const addWidget = asyncHandler(async (req, res) => {
                 });
         } catch (execError) {
             return res
-                .status(execError instanceof HttpError ? execError.statusCode : 400)
+                .status(400)
                 .json({ error: errorMessage(execError, 'Widget validation failed') });
         }
     }

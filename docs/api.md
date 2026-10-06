@@ -425,7 +425,8 @@ warnings }`, merging the public Atom feeds in publication order. Each video has
 Links and thumbnail URLs are constructed from validated IDs. No Google account or
 YouTube Data API key is used.
 
-The watch refreshes every ten minutes. `GET /widgets/:id/data?refresh=true` requests
+The watch refreshes according to its configured `refreshRate` (at least 60 seconds).
+Public feeds have a ten-minute cache. `GET /widgets/:id/data?refresh=true` requests
 a manual refresh, with a one-minute cooldown per channel. Public channel data is
 cached across users; failed refreshes can use the previous feed for up to 24 hours,
 with a warning. Unavailable channels do not hide healthy channels. Handles are

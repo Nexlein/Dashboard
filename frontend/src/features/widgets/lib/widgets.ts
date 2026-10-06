@@ -1,11 +1,15 @@
 import { fetchClient } from '@/lib/apiClient';
-import type { ServiceDefinition } from './types';
+import type { ServiceDefinition, WidgetDefinition } from './types';
 
 export const MIN_REFRESH_RATE_SECONDS = 60;
 
-/** Services without a refresh timer (the chatbot) accept any value. */
-export function isRefreshRateValid(refreshTimer: string, serviceDef?: ServiceDefinition) {
-    if (serviceDef?.hasRefresh === false) return true;
+/* Widgets without a refresh timer accept any value. */
+export function isRefreshRateValid(
+    refreshTimer: string,
+    serviceDef?: ServiceDefinition,
+    widgetDef?: WidgetDefinition,
+) {
+    if ((widgetDef?.hasRefresh ?? serviceDef?.hasRefresh) === false) return true;
     const refreshRate = Number(refreshTimer);
     return Number.isInteger(refreshRate) && refreshRate >= MIN_REFRESH_RATE_SECONDS;
 }

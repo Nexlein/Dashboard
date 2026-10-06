@@ -1,5 +1,5 @@
 import { XMLParser, XMLValidator } from 'fast-xml-parser';
-import { youtubeChannels } from 'shared/youtube';
+import { youtubeChannels } from 'shared';
 import { getCache, setCache } from '../utils/redisCache.ts';
 import { HttpError } from '../utils/httpError.ts';
 import type { ServiceContext, WidgetParams } from './types.ts';

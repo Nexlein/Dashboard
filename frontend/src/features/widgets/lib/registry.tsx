@@ -120,12 +120,14 @@ export const REGISTRY: Record<string, ServiceDefinition> = {
     },
     youtube: {
         name: 'YouTube',
-        hasRefresh: false,
+        hasRefresh: true,
         widgets: [
             {
                 id: 'video_player',
                 name: 'Video Player',
                 component: YouTubeVideoWidget,
+                hasRefresh: false,
+                fullBleed: true,
                 params: [
                     {
                         id: 'video_url',

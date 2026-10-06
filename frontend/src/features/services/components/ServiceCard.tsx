@@ -59,11 +59,9 @@ export function ServiceCard({ service, onConnect, onDisconnect, setError }: Serv
                         <CardTitle>{service.displayName}</CardTitle>
                         <p className="mt-1 text-sm text-muted-foreground">
                             {service.description ||
-                                (service.name === 'youtube'
-                                    ? 'Embedded video player — no API key required'
-                                    : service.name === 'github'
-                                      ? 'Statistiques et activité des dépôts'
-                                      : 'Current weather and forecasts')}
+                                (service.name === 'github'
+                                    ? 'Statistiques et activité des dépôts'
+                                    : 'Current weather and forecasts')}
                         </p>
                     </div>
                 </div>

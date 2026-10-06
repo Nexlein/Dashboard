@@ -20,7 +20,7 @@ export function WidgetForm({
     setRefreshTimer: (value: string) => void;
 }) {
     const CustomConfigUi = widgetDef.customConfigUi;
-    const hasRefresh = serviceDef.hasRefresh !== false;
+    const hasRefresh = widgetDef.hasRefresh ?? serviceDef.hasRefresh;
 
     return (
         <div className="grid gap-4 py-2">

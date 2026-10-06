@@ -60,13 +60,17 @@ describe('WidgetConfigurator', () => {
         expect(within(dialog).getByRole('alert')).toHaveTextContent('Enter a YouTube channel link');
         fireEvent.change(input, { target: { value: '@YouTube' } });
         fireEvent.keyDown(input, { key: 'Enter' });
-        expect(within(dialog).queryByLabelText('Refresh Rate (seconds)')).toBeNull();
+        const timer = within(dialog).getByLabelText('Refresh Rate (seconds)');
+        fireEvent.change(timer, { target: { value: '30' } });
+        expect(within(dialog).getByRole('button', { name: 'Add to Dashboard' })).toBeDisabled();
+        fireEvent.change(timer, { target: { value: '120' } });
         fireEvent.click(within(dialog).getByRole('button', { name: 'Add to Dashboard' }));
         await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
         const post = fetch.mock.calls.find(([, init]) => init?.method === 'POST');
         expect(JSON.parse(String(post?.[1]?.body))).toMatchObject({
             serviceName: 'youtube',
             widgetName: 'channel_watch',
+            refreshRate: 120,
             params: { channels: '@googledevelopers\n@youtube' },
             layout: { x: 0, y: 0, w: 5, h: 5 },
         });
@@ -82,6 +86,11 @@ describe('WidgetConfigurator', () => {
                                 name: 'video_player',
                                 description: 'Play a YouTube video',
                                 params: [{ name: 'video_url', type: 'string' }],
+                            },
+                            {
+                                name: 'channel_watch',
+                                description: 'Public channel watch',
+                                params: [{ name: 'channels', type: 'string' }],
                             },
                         ],
                     },
@@ -105,6 +114,11 @@ describe('WidgetConfigurator', () => {
         const dialog = await openDialog();
         await choose(dialog, 'Service', 'YouTube');
 
+        await choose(dialog, 'Widget Type', 'Channel Watch');
+        fireEvent.change(within(dialog).getByLabelText('Refresh Rate (seconds)'), {
+            target: { value: '30' },
+        });
+        await choose(dialog, 'Widget Type', 'Video Player');
         const input = await within(dialog).findByLabelText('YouTube video link');
         expect(within(dialog).queryByLabelText('Refresh Rate (seconds)')).toBeNull();
         expect(within(dialog).queryByText(/not connected/)).toBeNull();
@@ -116,6 +130,7 @@ describe('WidgetConfigurator', () => {
         expect(JSON.parse(String(post?.[1]?.body))).toMatchObject({
             serviceName: 'youtube',
             widgetName: 'video_player',
+            refreshRate: 60,
             params: { video_url: 'https://youtu.be/M7lc1UVf-VE' },
             layout: { x: 0, y: 0, w: 4, h: 4 },
         });

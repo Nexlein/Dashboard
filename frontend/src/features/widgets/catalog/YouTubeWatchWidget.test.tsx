@@ -1,5 +1,5 @@
-import { beforeEach, expect, it } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@/test-utils';
+import { beforeEach, expect, it, vi } from 'vitest';
+import { act, fireEvent, queryClient, render, screen, waitFor } from '@/test-utils';
 import { makeWidget, mockApi } from '@/test/fixtures';
 import WidgetRenderer from '@/features/widgets/components/WidgetRenderer';
 import type { YouTubeWatchData } from './YouTubeWatchWidget';
@@ -38,6 +38,52 @@ const data: YouTubeWatchData = {
     warnings: [],
 };
 beforeEach(() => localStorage.clear());
+
+it('refreshes on the configured timer and follows a changed refresh rate', async () => {
+    vi.useFakeTimers();
+    const fetch = mockApi({ 'GET /widgets/9/data': { body: data } });
+    const view = render(<WidgetRenderer widget={{ ...widget, refreshRate: 120 }} />);
+    try {
+        await act(async () => {
+            await vi.advanceTimersByTimeAsync(50);
+        });
+        expect(screen.getByText('Alpha news')).toBeInTheDocument();
+        expect(screen.getByText(/Updates every 2 min/)).toBeInTheDocument();
+        expect(fetch).toHaveBeenCalledOnce();
+        await act(async () => {
+            await vi.advanceTimersByTimeAsync(119_900);
+        });
+        expect(fetch).toHaveBeenCalledOnce();
+        await act(async () => {
+            await vi.advanceTimersByTimeAsync(100);
+        });
+        expect(fetch).toHaveBeenCalledTimes(2);
+        view.rerender(<WidgetRenderer widget={{ ...widget, refreshRate: 60 }} />);
+        await act(async () => {
+            await vi.advanceTimersByTimeAsync(60_000);
+        });
+        expect(fetch).toHaveBeenCalledTimes(3);
+        expect(screen.getByText(/Updates every 1 min/)).toBeInTheDocument();
+    } finally {
+        view.unmount();
+        vi.useRealTimers();
+    }
+});
+
+it('uses the common loading and error states, and retains data after a timer failure', async () => {
+    const fetch = mockApi({ 'GET /widgets/9/data': { body: data } });
+    render(<WidgetRenderer widget={widget} />);
+    expect(screen.queryByRole('button', { name: 'Refresh publications' })).toBeNull();
+    await screen.findByText('Alpha news');
+    fetch.mockResolvedValueOnce(
+        new Response(JSON.stringify({ error: 'Feed unavailable' }), { status: 503 }),
+    );
+    await act(async () => {
+        await queryClient.invalidateQueries({ queryKey: ['widget', widget.id] });
+    });
+    expect(await screen.findByRole('alert')).toHaveTextContent('Feed unavailable');
+    expect(screen.getByText('Alpha news')).toBeInTheDocument();
+});
 
 it('fetches the watch feed while keeping the video player free of data requests', async () => {
     const fetch = mockApi({ 'GET /widgets/9/data': { body: data } });

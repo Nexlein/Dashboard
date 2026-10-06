@@ -15,7 +15,7 @@ export default function WidgetRenderer({ widget }: { widget: DashboardWidget }) 
     const widgetDef = findWidgetDefinition(serviceName, widgetName);
 
     // Widgets without a refresh (the chatbot) render without loading any data.
-    const isDataFetchingWidget = serviceDef?.hasRefresh ?? false;
+    const isDataFetchingWidget = widgetDef?.hasRefresh ?? serviceDef?.hasRefresh ?? false;
 
     const periodParam = serviceDef?.periodParam ?? 'days';
     const quotaLimited = serviceDef?.quotaLimited ?? false;
@@ -148,6 +148,11 @@ export default function WidgetRenderer({ widget }: { widget: DashboardWidget }) 
 
     return (
         <div className="flex h-full min-h-0 w-full flex-col gap-2">
+            {queryError && displayData && !quotaLimited && (
+                <p role="alert" className="shrink-0 text-xs text-destructive">
+                    Refresh unavailable: {error}. Showing previously loaded data.
+                </p>
+            )}
             {pendingPeriod && (
                 <p
                     className="shrink-0 rounded-md bg-muted px-2 py-1 text-[11px] text-muted-foreground"

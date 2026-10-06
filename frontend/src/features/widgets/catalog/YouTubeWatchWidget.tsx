@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowUpRight, CheckCheck, Loader2, Radio, RefreshCw } from 'lucide-react';
+import { useIsFetching, useQueryClient } from '@tanstack/react-query';
+import { ArrowUpRight, CheckCheck, Radio, RefreshCw } from 'lucide-react';
 import { fetchClient } from '@/lib/apiClient';
 import type { WidgetViewProps } from '@/features/widgets/lib/types';
 import { YOUTUBE_WATCH_HISTORY_PREFIX } from '@/lib/auth';
@@ -19,7 +19,7 @@ export type YouTubeWatchData = {
     warnings: { channel: string; message: string }[];
 };
 
-export function YouTubeWatchWidget({ widget }: WidgetViewProps<unknown>) {
+export function YouTubeWatchWidget({ data, widget }: WidgetViewProps<YouTubeWatchData>) {
     const queryClient = useQueryClient();
     const [filter, setFilter] = useState('all');
     const storageKey = `${YOUTUBE_WATCH_HISTORY_PREFIX}${widget.id}`;
@@ -33,14 +33,8 @@ export function YouTubeWatchWidget({ widget }: WidgetViewProps<unknown>) {
             return [];
         }
     });
-    const query = useQuery({
-        queryKey: ['youtube-watch', widget.id, widget.params.channels],
-        queryFn: () => fetchClient<YouTubeWatchData>(`/widgets/${widget.id}/data`),
-        staleTime: 600_000,
-        refetchInterval: 600_000,
-        refetchOnWindowFocus: false,
-        retry: false,
-    });
+    const queryKey = ['widget', widget.id, widget.params];
+    const isFetching = useIsFetching({ queryKey, exact: true }) > 0;
     const markSeen = (ids: string[]) => {
         setSeen((current) => {
             const next = [...new Set([...current, ...ids])].slice(-300);
@@ -59,24 +53,22 @@ export function YouTubeWatchWidget({ widget }: WidgetViewProps<unknown>) {
         setRefreshing(true);
         setRefreshError('');
         try {
+            await queryClient.cancelQueries({ queryKey, exact: true });
             const fresh = await fetchClient<YouTubeWatchData>(
                 `/widgets/${widget.id}/data?refresh=true`,
             );
-            queryClient.setQueryData(['youtube-watch', widget.id, widget.params.channels], fresh);
+            queryClient.setQueryData(queryKey, fresh);
         } catch (error) {
             setRefreshError(error instanceof Error ? error.message : 'Unable to refresh the feed');
         } finally {
             setRefreshing(false);
         }
     };
-    const activeFilter = query.data?.channels.some((channel) => channel.id === filter)
-        ? filter
-        : 'all';
-    const visible =
-        query.data?.videos.filter(
-            (video) => activeFilter === 'all' || video.channelId === activeFilter,
-        ) ?? [];
-    const busy = query.isFetching || refreshing;
+    const activeFilter = data.channels.some((channel) => channel.id === filter) ? filter : 'all';
+    const visible = data.videos.filter(
+        (video) => activeFilter === 'all' || video.channelId === activeFilter,
+    );
+    const busy = isFetching || refreshing;
 
     return (
         <div
@@ -110,38 +102,34 @@ export function YouTubeWatchWidget({ widget }: WidgetViewProps<unknown>) {
                     </button>
                 </div>
             </div>
-            {query.data && (
-                <div
-                    className="flex shrink-0 gap-1.5 overflow-x-auto pb-1"
-                    aria-label="Filter publications by channel"
-                >
-                    {[{ id: 'all', title: 'All channels' }, ...query.data.channels].map(
-                        (channel) => (
-                            <button
-                                key={channel.id}
-                                type="button"
-                                aria-pressed={activeFilter === channel.id}
-                                onClick={() => setFilter(channel.id)}
-                                className={`shrink-0 cursor-pointer rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${activeFilter === channel.id ? 'bg-red-500/10 text-red-600 dark:text-red-400' : 'bg-muted text-muted-foreground hover:text-foreground'}`}
-                            >
-                                {channel.title}
-                            </button>
-                        ),
-                    )}
-                </div>
-            )}
-            {(query.error || refreshError) && (
+            <div
+                className="flex shrink-0 gap-1.5 overflow-x-auto pb-1"
+                aria-label="Filter publications by channel"
+            >
+                {[{ id: 'all', title: 'All channels' }, ...data.channels].map((channel) => (
+                    <button
+                        key={channel.id}
+                        type="button"
+                        aria-pressed={activeFilter === channel.id}
+                        onClick={() => setFilter(channel.id)}
+                        className={`shrink-0 cursor-pointer rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${activeFilter === channel.id ? 'bg-red-500/10 text-red-600 dark:text-red-400' : 'bg-muted text-muted-foreground hover:text-foreground'}`}
+                    >
+                        {channel.title}
+                    </button>
+                ))}
+            </div>
+            {refreshError && (
                 <p role="alert" className="shrink-0 text-xs text-destructive">
-                    {refreshError || query.error?.message}
-                    {query.data && ' Showing saved publications.'}
+                    {refreshError}
+                    {' Showing saved publications.'}
                 </p>
             )}
-            {!!query.data?.warnings.length && (
+            {!!data.warnings.length && (
                 <div
                     role="status"
                     className="shrink-0 rounded-md bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-300"
                 >
-                    {query.data.warnings.map((warning) => (
+                    {data.warnings.map((warning) => (
                         <p key={warning.channel}>
                             {warning.channel}: {warning.message}
                         </p>
@@ -149,17 +137,9 @@ export function YouTubeWatchWidget({ widget }: WidgetViewProps<unknown>) {
                 </div>
             )}
             <div className="min-h-0 flex-1 overflow-y-auto pr-1">
-                {query.isPending && (
-                    <div
-                        className="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground"
-                        role="status"
-                    >
-                        <Loader2 className="size-4 animate-spin" /> Loading publications…
-                    </div>
-                )}
-                {query.data && !visible.length && (
+                {!visible.length && (
                     <div className="flex h-full items-center justify-center p-4 text-center text-sm text-muted-foreground">
-                        {query.data.channels.length
+                        {data.channels.length
                             ? 'No recent publications from these channels.'
                             : 'Channels are unavailable. Try refreshing or edit your channel list.'}
                     </div>
@@ -213,7 +193,11 @@ export function YouTubeWatchWidget({ widget }: WidgetViewProps<unknown>) {
                 </div>
             </div>
             <p className="shrink-0 border-t pt-2 text-[10px] text-muted-foreground">
-                Updates every 10 min · {query.data?.channels.length ?? 0} channel(s)
+                Updates every{' '}
+                {widget.refreshRate % 60 === 0
+                    ? `${widget.refreshRate / 60} min`
+                    : `${widget.refreshRate} s`}{' '}
+                · {data.channels.length} channel(s)
             </p>
         </div>
     );

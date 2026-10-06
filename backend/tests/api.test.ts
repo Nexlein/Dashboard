@@ -181,6 +181,33 @@ describe('API Endpoints', () => {
             expect(res.statusCode).toBe(401);
         });
 
+        it('does not treat a provider rejection during creation as an invalid Dashboard session', async () => {
+            prisma.serviceConnection.findUnique.mockResolvedValue({
+                id: 9,
+                encryptedCredentials: encryptJson({ apiKey: 'revoked' }),
+            });
+            const execute = vi
+                .spyOn(weatherService, 'execute')
+                .mockRejectedValue(new HttpError('Provider credential rejected', 401));
+            try {
+                const res = await request(app)
+                    .post('/widgets')
+                    .set('Origin', FRONTEND)
+                    .send({
+                        serviceName: 'weather',
+                        widgetName: 'current_weather',
+                        params: { city: 'Paris' },
+                        refreshRate: 60,
+                        layout: { x: 0, y: 0, w: 2, h: 2 },
+                    });
+                expect(res.statusCode).toBe(400);
+                expect(res.body.error).toBe('Provider credential rejected');
+                expect(prisma.widgetConfig.create).not.toHaveBeenCalled();
+            } finally {
+                execute.mockRestore();
+            }
+        });
+
         it('should create a widget with encrypted params and return the public contract', async () => {
             prisma.serviceConnection.findUnique.mockResolvedValue({
                 id: 9,
