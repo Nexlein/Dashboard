@@ -43,6 +43,12 @@ export default function PrivacyPage() {
                                     services as configured by the user.
                                 </li>
                                 <li>We do not sell or share your data with third parties.</li>
+                                <li>
+                                    Administrators see each account's name, email, role, email
+                                    verification, ban state and registration date, to manage
+                                    accounts (role, ban, sign-out, deletion). They never see
+                                    passwords, API keys, OAuth tokens or widget settings.
+                                </li>
                             </ul>
                         </section>
 

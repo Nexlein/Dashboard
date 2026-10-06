@@ -6,7 +6,11 @@ export interface User {
     email: string;
     /** Display name; empty when the user did not give one. */
     name: string;
+    /** "admin" opens the administration page. */
+    role: UserRole;
 }
+
+export type UserRole = 'user' | 'admin';
 
 // Trimmed before it is validated: z.email() alone would reject surrounding spaces.
 const email = z.string().trim().pipe(z.email('Invalid email address').max(254));

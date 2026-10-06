@@ -16,6 +16,7 @@ import {
     Download,
     Trash2,
     Shield,
+    ShieldCheck,
 } from 'lucide-react';
 import { WidgetConfigurator } from '@/features/widgets/components/WidgetConfigurator';
 import { ProfileSettingsModal } from '@/components/ProfileSettingsModal';
@@ -132,6 +133,21 @@ export default function Navbar({
                     <Plug className="size-4" />
                     <span className="hidden sm:inline">Services</span>
                 </NavLink>
+                {user?.role === 'admin' && (
+                    <NavLink
+                        to="/admin"
+                        className={({ isActive }) =>
+                            `flex h-10 items-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors ${
+                                isActive
+                                    ? 'bg-primary text-primary-foreground'
+                                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                            }`
+                        }
+                    >
+                        <ShieldCheck className="size-4" />
+                        <span className="hidden sm:inline">Administration</span>
+                    </NavLink>
+                )}
             </div>
             <div className="flex min-w-0 items-center gap-3">
                 {showWidgetConfigurator && <WidgetConfigurator />}
