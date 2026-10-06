@@ -2,7 +2,11 @@ import { useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError } from '@/lib/apiClient';
 import { Loader2 } from 'lucide-react';
-import { fetchWidgetData, type DashboardWidget } from '@/features/widgets/lib/widgets';
+import {
+    fetchWidgetData,
+    widgetQueryKey,
+    type DashboardWidget,
+} from '@/features/widgets/lib/widgets';
 import { useUpdateWidget } from '@/features/widgets/hooks/useWidgets';
 import { findWidgetDefinition, getServiceDefinition } from '@/features/widgets/lib/registry';
 
@@ -29,7 +33,7 @@ export default function WidgetRenderer({ widget }: { widget: DashboardWidget }) 
         isFetching,
         isPlaceholderData,
     } = useQuery({
-        queryKey: ['widget', id, widget.params],
+        queryKey: widgetQueryKey(id, widget.params),
         queryFn: () => fetchWidgetData(id),
         refetchInterval: (query) => {
             const error = query.state.error;
@@ -57,7 +61,7 @@ export default function WidgetRenderer({ widget }: { widget: DashboardWidget }) 
     const savedData = quotaLimited
         ? queryClient
               .getQueryCache()
-              .findAll({ queryKey: ['widget', id] })
+              .findAll({ queryKey: widgetQueryKey(id) })
               .filter(
                   (query) =>
                       withoutPeriod(query.queryKey[2] as DashboardWidget['params']) ===

@@ -3,6 +3,7 @@ import { useIsFetching, useQueryClient } from '@tanstack/react-query';
 import { ArrowUpRight, CheckCheck, Radio, RefreshCw } from 'lucide-react';
 import { fetchClient } from '@/lib/apiClient';
 import type { WidgetViewProps } from '@/features/widgets/lib/types';
+import { widgetQueryKey } from '@/features/widgets/lib/widgets';
 import { YOUTUBE_WATCH_HISTORY_PREFIX } from '@/lib/auth';
 
 export type YouTubeWatchData = {
@@ -33,7 +34,7 @@ export function YouTubeWatchWidget({ data, widget }: WidgetViewProps<YouTubeWatc
             return [];
         }
     });
-    const queryKey = ['widget', widget.id, widget.params];
+    const queryKey = widgetQueryKey(widget.id, widget.params);
     const isFetching = useIsFetching({ queryKey, exact: true }) > 0;
     const markSeen = (ids: string[]) => {
         setSeen((current) => {

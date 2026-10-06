@@ -3,7 +3,7 @@ import type { ServiceDefinition, WidgetDefinition } from './types';
 
 export const MIN_REFRESH_RATE_SECONDS = 60;
 
-/* Widgets without a refresh timer accept any value. */
+/** Widgets without a refresh timer accept any value. */
 export function isRefreshRateValid(
     refreshTimer: string,
     serviceDef?: ServiceDefinition,
@@ -158,6 +158,14 @@ export function toDashboardWidget(widget: ApiWidget): DashboardWidget {
 export async function fetchUserWidgets(): Promise<DashboardWidget[]> {
     const widgets: ApiWidget[] = await fetchClient('/widgets');
     return widgets.map(toDashboardWidget);
+}
+
+/**
+ * React Query key of a widget's data: one entry per params, so a widget keeps the data of
+ * its other settings (e.g. another chart period). `widgetQueryKey(widget.id)` matches them all.
+ */
+export function widgetQueryKey(widgetId: number, params?: DashboardWidget['params']) {
+    return params === undefined ? ['widget', widgetId] : ['widget', widgetId, params];
 }
 
 export async function fetchWidgetData(widgetId: number) {
