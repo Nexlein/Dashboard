@@ -85,12 +85,13 @@ export default function AdminPage({ currentUser }: { currentUser: User }) {
 
     // Search once typing pauses, from the first page.
     useEffect(() => {
+        if (searchInput === search) return;
         const timer = setTimeout(() => {
             setSearch(searchInput);
             setPage(0);
         }, 300);
         return () => clearTimeout(timer);
-    }, [searchInput]);
+    }, [searchInput, search]);
 
     const users = useAdminUsers({ search, filter, page, pageSize: PAGE_SIZE });
     const counts = useUserCounts();
@@ -118,6 +119,9 @@ export default function AdminPage({ currentUser }: { currentUser: User }) {
 
     const total = users.data?.total ?? 0;
     const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    // A deletion or a filter change can leave the current page past the end: go back to the
+    // last page once the real total is known (not the previous page's placeholder data).
+    if (users.data && !users.isPlaceholderData && page >= pageCount) setPage(pageCount - 1);
 
     return (
         <main className="mx-auto w-full max-w-6xl p-4 sm:p-8">

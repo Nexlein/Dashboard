@@ -55,6 +55,7 @@ function mockAdminApi(routes: Record<string, Route> = {}) {
 }
 
 const row = (email: string) => screen.getByText(email).closest('tr')!;
+const pageLabel = () => screen.getByText(/^Page \d+ \/ \d+$/).textContent;
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -156,5 +157,65 @@ describe('AdminPage', () => {
         expect(await screen.findByRole('alert')).toHaveTextContent(
             'You are not allowed to ban users',
         );
+    });
+
+    it('shows an expired ban as lifted, with Ban offered again', async () => {
+        mockApi({
+            'GET /api/auth/admin/list-users': {
+                body: {
+                    users: [apiUser({ banned: true, banReason: 'spam', banExpires: '2020-01-01' })],
+                    total: 1,
+                },
+            },
+        });
+        render(<AdminPage currentUser={me} />);
+        await screen.findByText('bob@example.com');
+
+        expect(within(row('bob@example.com')).queryByText(/^Banni/)).toBeNull();
+        fireEvent.click(screen.getByRole('button', { name: 'Actions pour Bob' }));
+        expect(await screen.findByRole('menuitem', { name: 'Bannir…' })).toBeInTheDocument();
+    });
+
+    it('goes back to the last page when its only account is deleted', async () => {
+        // 21 accounts: the second page holds one, which the test deletes.
+        let total = 21;
+        const fetchMock = mockApi({
+            'POST /api/auth/admin/remove-user': () => {
+                total = 20;
+                return { success: true };
+            },
+        });
+        const fallback = fetchMock.getMockImplementation()!;
+        fetchMock.mockImplementation(async (input, init) => {
+            const url = new URL(String(input));
+            if (url.pathname !== '/api/auth/admin/list-users') return fallback(input, init);
+            const offset = Number(url.searchParams.get('offset') ?? 0);
+            const users = Array.from(
+                { length: Math.max(0, Math.min(20, total - offset)) },
+                (_, i) =>
+                    apiUser({
+                        id: String(100 + offset + i),
+                        email: `user${offset + i}@example.com`,
+                        name: `User ${offset + i}`,
+                    }),
+            );
+            return new Response(JSON.stringify({ users, total }));
+        });
+        vi.stubGlobal(
+            'confirm',
+            vi.fn(() => true),
+        );
+        render(<AdminPage currentUser={me} />);
+        await screen.findByText('user0@example.com');
+
+        fireEvent.click(screen.getByRole('button', { name: 'Page suivante' }));
+        await screen.findByText('user20@example.com');
+        expect(pageLabel()).toBe('Page 2 / 2');
+        fireEvent.click(screen.getByRole('button', { name: 'Actions pour User 20' }));
+        fireEvent.click(await screen.findByRole('menuitem', { name: 'Supprimer le compte' }));
+
+        await waitFor(() => expect(pageLabel()).toBe('Page 1 / 1'));
+        expect(await screen.findByText('user0@example.com')).toBeInTheDocument();
+        expect(screen.queryByText('Aucun compte trouvé.')).toBeNull();
     });
 });
