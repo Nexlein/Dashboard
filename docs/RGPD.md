@@ -18,6 +18,7 @@ The session is kept in an httpOnly cookie that page scripts cannot read; its rec
 - OAuth tokens are used solely to fetch data for the connected services as configured by the user.
 - We do not sell your data.
 - YouTube widgets load thumbnails from `i.ytimg.com` and, when you click Play, the video player from `youtube-nocookie.com`. These browser requests send your IP address and browser information to Google / YouTube, under their privacy policy.
+- Administrators see each account's name, email, role, email verification, ban state and registration date, to manage accounts (role, ban, sign-out, deletion). They never see passwords, API keys, OAuth tokens or widget settings.
 
 ## Data Protection Officer (DPO)
 For any questions regarding your data privacy, to report a breach, or to exercise your rights manually, please contact our Data Protection Officer at: **privacy@example.com**

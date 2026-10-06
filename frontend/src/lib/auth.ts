@@ -1,5 +1,5 @@
 import { createAuthClient } from 'better-auth/client';
-import { emailOTPClient } from 'better-auth/client/plugins';
+import { adminClient, emailOTPClient } from 'better-auth/client/plugins';
 import { fetchClient, API_URL } from './apiClient';
 import type { RegisterFormData, LoginFormData, ProfileFormData, User } from 'shared';
 
@@ -9,9 +9,9 @@ export { API_URL };
  * Better Auth's client for /api/auth/* on the API. The session lives in an httpOnly cookie:
  * the client sends it (credentials: include) but page scripts can never read it.
  */
-const authClient = createAuthClient({
+export const authClient = createAuthClient({
     baseURL: API_URL,
-    plugins: [emailOTPClient()],
+    plugins: [emailOTPClient(), adminClient()],
     // Look fetch up on each call rather than once at import, like apiClient (tests stub it).
     fetchOptions: { customFetchImpl: (input, init) => fetch(input, init) },
 });
@@ -19,7 +19,7 @@ const authClient = createAuthClient({
 type AuthResult<T> = { data: T | null; error: { message?: string; code?: string } | null };
 
 /** The data of a Better Auth call, or an Error carrying its message and code. */
-function unwrap<T>({ data, error }: AuthResult<T>): T {
+export function unwrap<T>({ data, error }: AuthResult<T>): T {
     if (error || data === null) {
         throw Object.assign(new Error(error?.message || 'Une erreur est survenue.'), {
             code: error?.code,
@@ -66,8 +66,8 @@ export async function resetPassword(email: string, otp: string, password: string
 export async function getCurrentUser(): Promise<User> {
     const session = unwrap(await authClient.getSession());
     if (!session) throw new Error('Not signed in');
-    const { id, email, name } = session.user;
-    return { id: Number(id), email, name };
+    const { id, email, name, role } = session.user;
+    return { id: Number(id), email, name, role: role === 'admin' ? 'admin' : 'user' };
 }
 
 /** Prefix of the chat histories kept in localStorage by the chatbot widget. */

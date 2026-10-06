@@ -14,6 +14,7 @@ const ForgotPasswordPage = lazy(() => import('@/pages/ForgotPasswordPage'));
 const TermsPage = lazy(() => import('@/pages/TermsPage'));
 const ServicesPage = lazy(() => import('@/pages/ServicesPage'));
 const PrivacyPage = lazy(() => import('@/pages/PrivacyPage'));
+const AdminPage = lazy(() => import('@/pages/AdminPage'));
 
 function AuthenticatedShell({
     children,
@@ -64,6 +65,18 @@ function Services() {
     );
 }
 
+/** Administrators only; anyone else is sent to the dashboard (the API refuses them anyway). */
+function Admin() {
+    const { data: user } = useCurrentUser();
+    if (!user) return <PageFallback />;
+    if (user.role !== 'admin') return <Navigate to="/" replace />;
+    return (
+        <AuthenticatedShell>
+            <AdminPage currentUser={user} />
+        </AuthenticatedShell>
+    );
+}
+
 function ProtectedRoute({ children }: { children: ReactNode }) {
     const { isPending, isError } = useCurrentUser();
     if (isPending) return <PageFallback />;
@@ -97,6 +110,14 @@ export function AppRoutes() {
                         element={
                             <ProtectedRoute>
                                 <Services />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/admin"
+                        element={
+                            <ProtectedRoute>
+                                <Admin />
                             </ProtectedRoute>
                         }
                     />

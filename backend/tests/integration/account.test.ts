@@ -212,6 +212,82 @@ describe('administration (admin plugin)', () => {
         expect((await signIn(browser(), target.email)).status).toBe(403);
     });
 
+    it('sets the role of another user to user or admin only', async () => {
+        const { agent } = await adminAgent();
+        const target = await signedIn();
+        const setRole = (role: unknown) =>
+            agent
+                .post('/api/auth/admin/set-role')
+                .set('Origin', FRONTEND)
+                .send({ userId: String(target.user.id), role });
+
+        expect((await setRole('superuser')).status).toBe(400);
+        expect((await setRole(['admin', 'user'])).status).toBe(400);
+        expect((await setRole('admin')).status).toBe(200);
+        expect(await prisma.user.findUnique({ where: { id: target.user.id } })).toMatchObject({
+            role: 'admin',
+        });
+    });
+
+    it('does not let an administrator change their own role', async () => {
+        const { agent, user } = await adminAgent();
+
+        const res = await agent
+            .post('/api/auth/admin/set-role')
+            .set('Origin', FRONTEND)
+            .send({ userId: String(user.id), role: 'user' });
+
+        expect(res.status).toBe(400);
+        expect(await prisma.user.findUnique({ where: { id: user.id } })).toMatchObject({
+            role: 'admin',
+        });
+    });
+
+    it('lists banned users and administrators with the filters of the administration page', async () => {
+        const { agent } = await adminAgent();
+        const banned = await signedIn();
+        await agent
+            .post('/api/auth/admin/ban-user')
+            .set('Origin', FRONTEND)
+            .send({ userId: String(banned.user.id) });
+
+        const bannedList = await agent
+            .get('/api/auth/admin/list-users')
+            .query({ filterField: 'banned', filterValue: true, limit: 100 });
+        const admins = await agent
+            .get('/api/auth/admin/list-users')
+            .query({ filterField: 'role', filterValue: 'admin', limit: 100 });
+
+        const emails = (res: { body: { users: { email: string }[] } }) =>
+            res.body.users.map((u) => u.email);
+        expect(emails(bannedList)).toContain(banned.email);
+        expect(bannedList.body.users.every((u: { banned: boolean }) => u.banned)).toBe(true);
+        expect(admins.body.users.every((u: { role: string }) => u.role === 'admin')).toBe(true);
+        expect(admins.body.total).toBeGreaterThan(0);
+    });
+
+    it('lists an expired ban as lifted, in the filters and counts too', async () => {
+        const { agent } = await adminAgent();
+        const expired = await signedIn();
+        await prisma.user.update({
+            where: { id: expired.user.id },
+            data: { banned: true, banReason: 'spam', banExpires: new Date('2020-01-01') },
+        });
+
+        const banned = await agent
+            .get('/api/auth/admin/list-users')
+            .query({ filterField: 'banned', filterValue: true, limit: 100 });
+
+        expect(banned.body.users.map((u: { email: string }) => u.email)).not.toContain(
+            expired.email,
+        );
+        expect(await prisma.user.findUnique({ where: { id: expired.user.id } })).toMatchObject({
+            banned: false,
+            banReason: null,
+            banExpires: null,
+        });
+    });
+
     it('does not let an administrator remove their own account this way', async () => {
         const { agent, user } = await adminAgent();
 

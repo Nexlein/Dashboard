@@ -49,6 +49,33 @@ describe('App routing', () => {
         expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeInTheDocument();
     });
 
+    it('opens the administration page to administrators only', async () => {
+        mockApi({
+            'GET /api/auth/get-session': {
+                body: { user: { id: '1', email: 'ada@example.com', name: 'Ada' }, session: {} },
+            },
+            'GET /widgets': { body: [] },
+        });
+        renderAppAt('/admin');
+        await waitFor(() => expect(currentPath()).toBe('/'));
+        expect(screen.queryByRole('link', { name: 'Administration' })).toBeNull();
+    });
+
+    it('shows the administration page to an administrator', async () => {
+        mockApi({
+            'GET /api/auth/get-session': {
+                body: {
+                    user: { id: '1', email: 'ada@example.com', name: 'Ada', role: 'admin' },
+                    session: {},
+                },
+            },
+            'GET /api/auth/admin/list-users': { body: { users: [], total: 0 } },
+        });
+        renderAppAt('/admin');
+        expect(await screen.findByRole('heading', { name: 'Administration' })).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: 'Administration' })).toBeInTheDocument();
+    });
+
     it('sends a visitor with an expired session to the login page', async () => {
         mockApi({
             'GET /api/auth/get-session': { body: null },

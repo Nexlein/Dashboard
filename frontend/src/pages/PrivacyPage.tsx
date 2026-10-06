@@ -49,6 +49,12 @@ export default function PrivacyPage() {
                                     requests send your IP address and browser information to Google
                                     / YouTube, under their privacy policy.
                                 </li>
+                                <li>
+                                    Administrators see each account's name, email, role, email
+                                    verification, ban state and registration date, to manage
+                                    accounts (role, ban, sign-out, deletion). They never see
+                                    passwords, API keys, OAuth tokens or widget settings.
+                                </li>
                             </ul>
                         </section>
 
