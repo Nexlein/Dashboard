@@ -83,6 +83,7 @@ describe('session', () => {
             id: 1,
             email: 'ada@example.com',
             name: 'Ada',
+            role: 'user',
         });
         expect(fetchMock.mock.calls[0][1]?.credentials).toBe('include');
     });

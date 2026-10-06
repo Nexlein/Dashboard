@@ -22,7 +22,7 @@ export function makeWidget(overrides: Partial<ApiWidget> = {}): DashboardWidget 
 }
 
 export function makeUser(overrides: Partial<User> = {}): User {
-    return { id: 42, email: 'user@example.com', name: '', ...overrides };
+    return { id: 42, email: 'user@example.com', name: '', role: 'user', ...overrides };
 }
 
 export function makeService(overrides: Partial<ServiceConnection> = {}): ServiceConnection {
@@ -74,7 +74,7 @@ export function makeAbout(services: AboutService[] = ABOUT_SERVICES): AboutJson 
 }
 
 type RouteHandler = (init: RequestInit) => unknown;
-type Route = { status?: number; body?: unknown } | RouteHandler;
+export type Route = { status?: number; body?: unknown } | RouteHandler;
 
 /**
  * Stubs fetch for the API: keys are "METHOD /path" (query string ignored), values are a
