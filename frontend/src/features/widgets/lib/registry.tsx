@@ -87,6 +87,7 @@ export const REGISTRY: Record<string, ServiceDefinition> = {
                     {
                         id: 'branch',
                         label: 'Branch (optional)',
+                        optional: true,
                         type: 'text',
                         placeholder: 'e.g. main',
                     },
@@ -107,6 +108,7 @@ export const REGISTRY: Record<string, ServiceDefinition> = {
                     {
                         id: 'username',
                         label: 'GitHub Username (leave empty for your profile)',
+                        optional: true,
                         type: 'text',
                         placeholder: 'e.g. nexlein',
                     },

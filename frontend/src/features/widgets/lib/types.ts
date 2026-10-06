@@ -9,6 +9,7 @@ export type WidgetParamDefinition = {
     label: string;
     type:
         | 'text'
+        | 'number'
         | 'select'
         | 'coin-multiselect'
         | 'stock-multiselect'
@@ -18,6 +19,8 @@ export type WidgetParamDefinition = {
         | 'hidden';
     placeholder?: string;
     defaultValue?: string;
+    /** The widget works without it (e.g. a GitHub branch); every other param is required. */
+    optional?: boolean;
     options?: ParamOption[];
     /** `account` params: the service whose connected accounts are offered. */
     service?: string;

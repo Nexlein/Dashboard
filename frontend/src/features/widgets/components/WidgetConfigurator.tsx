@@ -9,11 +9,9 @@ import {
 } from '@/features/widgets/lib/widgets';
 import { fetchServices, type ServiceConnection } from '@/features/services/lib/services';
 import { ServiceLogo } from '@/features/services/components/ServiceLogo';
-import {
-    REGISTRY,
-    findWidgetDefinition,
-    getServiceDefinition,
-} from '@/features/widgets/lib/registry';
+import { useWidgetCatalog } from '@/features/widgets/hooks/useWidgetCatalog';
+import { findCatalogWidget } from '@/features/widgets/lib/catalog';
+import type { WidgetDefinition } from '@/features/widgets/lib/types';
 import { WidgetForm } from './WidgetForm';
 
 import { Button } from '@/components/ui/button';
@@ -35,12 +33,10 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 
-function areParamsComplete(service: string, widgetType: string, params: WidgetParams) {
-    if (!service || !widgetType) return false;
-    const widgetInfo = findWidgetDefinition(service, widgetType);
-    if (!widgetInfo) return true;
-    return widgetInfo.params.every((param) => {
-        if (param.label.includes('optional') || param.label.includes('leave empty')) return true;
+function areParamsComplete(widgetDef: WidgetDefinition | undefined, params: WidgetParams) {
+    if (!widgetDef) return false;
+    return widgetDef.params.every((param) => {
+        if (param.optional) return true;
         const val = params[param.id];
         if (Array.isArray(val)) return val.length > 0;
         if (typeof val === 'string') return val.trim().length > 0;
@@ -60,6 +56,7 @@ export function WidgetConfigurator() {
     const [serviceConnections, setServiceConnections] = useState<ServiceConnection[]>([]);
     const [connectionsLoading, setConnectionsLoading] = useState(false);
     const [error, setError] = useState('');
+    const catalog = useWidgetCatalog(open);
 
     const handleOpenChange = (nextOpen: boolean) => {
         setOpen(nextOpen);
@@ -79,7 +76,7 @@ export function WidgetConfigurator() {
 
     const handleWidgetTypeChange = (type: string, serviceName = service) => {
         setWidgetType(type);
-        const definition = findWidgetDefinition(serviceName, type);
+        const definition = findCatalogWidget(catalog.data, serviceName, type)?.widget;
         setParams(
             Object.fromEntries(
                 (definition?.params ?? [])
@@ -91,7 +88,7 @@ export function WidgetConfigurator() {
 
     const handleServiceChange = (val: string) => {
         setService(val);
-        const widgets = getServiceDefinition(val)?.widgets ?? [];
+        const widgets = catalog.data?.find((item) => item.id === val)?.widgets ?? [];
         if (widgets.length === 1) {
             handleWidgetTypeChange(widgets[0].id, val);
         } else {
@@ -100,14 +97,14 @@ export function WidgetConfigurator() {
         setError('');
     };
 
-    const serviceDef = getServiceDefinition(service);
-    const widgetDef = findWidgetDefinition(service, widgetType);
+    const serviceDef = catalog.data?.find((item) => item.id === service);
+    const widgetDef = findCatalogWidget(catalog.data, service, widgetType)?.widget;
 
     const handleSave = () => {
         if (
             !service ||
             !widgetType ||
-            !areParamsComplete(service, widgetType, params) ||
+            !areParamsComplete(widgetDef, params) ||
             !isRefreshRateValid(refreshTimer, serviceDef)
         ) {
             return;
@@ -153,26 +150,41 @@ export function WidgetConfigurator() {
                 <div className="grid gap-4 py-4">
                     <div className="grid gap-2">
                         <Label htmlFor="service">Service</Label>
-                        <Select value={service} onValueChange={handleServiceChange}>
+                        <Select
+                            value={service}
+                            onValueChange={handleServiceChange}
+                            disabled={!catalog.data}
+                        >
                             <SelectTrigger id="service" className="text-left">
-                                <SelectValue placeholder="Select a service..." />
+                                <SelectValue
+                                    placeholder={
+                                        catalog.isPending
+                                            ? 'Loading services…'
+                                            : 'Select a service...'
+                                    }
+                                />
                             </SelectTrigger>
                             <SelectContent>
-                                {Object.entries(REGISTRY).map(([key, svc]) => (
+                                {catalog.data?.map((svc) => (
                                     <SelectItem
-                                        key={key}
-                                        value={key}
+                                        key={svc.id}
+                                        value={svc.id}
                                         textValue={svc.name}
                                         className="pl-3 pr-8 [&>span:first-child]:left-auto [&>span:first-child]:right-2"
                                     >
                                         <span className="flex items-center gap-2">
-                                            <ServiceLogo name={key} size="sm" decorative />
+                                            <ServiceLogo name={svc.id} size="sm" decorative />
                                             <span>{svc.name}</span>
                                         </span>
                                     </SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
+                        {catalog.isError && (
+                            <p className="text-sm text-destructive" role="alert">
+                                Unable to load the available services: {catalog.error.message}
+                            </p>
+                        )}
                     </div>
 
                     <div className="grid gap-2">
@@ -250,7 +262,7 @@ export function WidgetConfigurator() {
                         disabled={
                             !service ||
                             !widgetType ||
-                            !areParamsComplete(service, widgetType, params) ||
+                            !areParamsComplete(widgetDef, params) ||
                             !isRefreshRateValid(refreshTimer, serviceDef) ||
                             addWidgetMutation.isPending
                         }

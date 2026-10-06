@@ -24,7 +24,9 @@ Serves the Swagger UI documentation for all endpoints.
 
 ### `GET /about.json`
 
-Returns the application's supported services and widgets in the format required by Epitech grading.
+Returns the application's supported services and widgets in the format required by Epitech grading,
+and only the fields of that format. Public (no session). The frontend widget configurator is built
+from it: it offers these services, widgets and params.
 
 **Response (200 OK):**
 

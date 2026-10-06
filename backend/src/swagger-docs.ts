@@ -339,7 +339,7 @@
  * /about.json:
  *   get:
  *     summary: Get server about.json
- *     description: Returns client host and server services/widgets.
+ *     description: Returns the client host, the server time and every service with its widgets and their params (name and type), in the schema of the Epitech subject. The frontend widget configurator is built from it.
  *     tags: [System]
  *     responses:
  *       200:

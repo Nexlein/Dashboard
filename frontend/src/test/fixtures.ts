@@ -1,6 +1,7 @@
 import { vi } from 'vitest';
 import type { User } from 'shared';
 import type { ServiceConnection } from '@/features/services/lib/services';
+import type { AboutJson, AboutService } from '@/features/widgets/lib/about';
 import {
     toDashboardWidget,
     type ApiWidget,
@@ -38,6 +39,38 @@ export function makeService(overrides: Partial<ServiceConnection> = {}): Service
         verifiedAt: null,
         ...overrides,
     };
+}
+
+const ABOUT_SERVICES: AboutService[] = [
+    {
+        name: 'crypto',
+        widgets: [
+            {
+                name: 'crypto_price',
+                description: 'Displays the current price and 24-hour change of a cryptocurrency',
+                params: [
+                    { name: 'coin', type: 'string' },
+                    { name: 'currency', type: 'string' },
+                ],
+            },
+        ],
+    },
+    {
+        name: 'stocks',
+        widgets: ['stock_market', 'stock_profile'].map((name) => ({
+            name,
+            description: name,
+            params: [
+                { name: 'symbols', type: 'string' as const },
+                { name: 'period', type: 'string' as const },
+            ],
+        })),
+    },
+];
+
+/** A GET /about.json answer; `services` replaces the default crypto and stocks services. */
+export function makeAbout(services: AboutService[] = ABOUT_SERVICES): AboutJson {
+    return { client: { host: '127.0.0.1' }, server: { current_time: 1_700_000_000, services } };
 }
 
 type RouteHandler = (init: RequestInit) => unknown;
