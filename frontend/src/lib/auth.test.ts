@@ -101,12 +101,14 @@ describe('session', () => {
 
     it('removes chat histories from this browser on logout, even if the API fails', async () => {
         localStorage.setItem('dashboard-chat-3', '[{"role":"user","content":"secret"}]');
+        localStorage.setItem('dashboard-youtube-seen-9', '["M7lc1UVf-VE"]');
         localStorage.setItem('cookie-consent', 'declined');
         mockApi({ 'POST /api/auth/sign-out': { status: 500, body: { message: 'down' } } });
 
         await expect(logout()).rejects.toThrow('down');
 
         expect(localStorage.getItem('dashboard-chat-3')).toBeNull();
+        expect(localStorage.getItem('dashboard-youtube-seen-9')).toBeNull();
         expect(localStorage.getItem('cookie-consent')).toBe('declined');
     });
 

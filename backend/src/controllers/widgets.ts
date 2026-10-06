@@ -227,7 +227,7 @@ export const getWidgetData = asyncHandler(async (req, res) => {
     if ('error' in result) return res.status(result.status).json({ error: result.error });
     const { access } = result;
 
-    // Services that declare widgets without fetching any data (e.g. YouTube placeholders).
+    // Services that declare widgets without fetching any data.
     if (!service.execute)
         return res.status(501).json({ error: 'Widget data is not available for this service' });
 
@@ -235,6 +235,7 @@ export const getWidgetData = asyncHandler(async (req, res) => {
     try {
         data = await service.execute(widget.widgetName, params, {
             userId: authUser(req).userId,
+            ...(req.query.refresh === 'true' && { forceRefresh: true }),
             refreshRate: Math.max(widget.refreshRate, MIN_REFRESH_RATE_SECONDS),
             ...access,
         });
@@ -265,6 +266,15 @@ export const updateWidget = asyncHandler(async (req, res) => {
     if (!existing) return res.status(404).json({ error: 'Widget not found' });
     if (existing.userId !== authUser(req).userId)
         return res.status(403).json({ error: 'Unauthorized to update this widget' });
+
+    if (params) {
+        const service = registry.getService(existing.serviceName);
+        try {
+            service?.validateParams?.(existing.widgetName, params);
+        } catch (error) {
+            return res.status(400).json({ error: errorMessage(error, 'Widget validation failed') });
+        }
+    }
 
     const updated = await prisma.widgetConfig.update({
         where: { id: widgetId },

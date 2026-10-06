@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { useUpdateWidget } from '@/features/widgets/hooks/useWidgets';
-import { isRefreshRateValid, type DashboardWidget } from '@/features/widgets/lib/widgets';
+import {
+    isRefreshRateValid,
+    MIN_REFRESH_RATE_SECONDS,
+    type DashboardWidget,
+} from '@/features/widgets/lib/widgets';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -41,7 +45,7 @@ export function WidgetEditDialog({
     const widgetDef = fromCatalog?.widget ?? findWidgetDefinition(service, widgetType);
 
     const handleSave = async () => {
-        if (!isRefreshRateValid(refreshTimer, serviceDef)) return;
+        if (!isRefreshRateValid(refreshTimer, serviceDef, widgetDef)) return;
         setError('');
 
         try {
@@ -49,7 +53,10 @@ export function WidgetEditDialog({
                 id: widget.id,
                 updates: {
                     params,
-                    refreshRate: parseInt(refreshTimer, 10),
+                    refreshRate:
+                        (widgetDef?.hasRefresh ?? serviceDef?.hasRefresh) === false
+                            ? MIN_REFRESH_RATE_SECONDS
+                            : Number(refreshTimer),
                 },
             });
             onOpenChange(false);
@@ -97,7 +104,9 @@ export function WidgetEditDialog({
                     </Button>
                     <Button
                         onClick={handleSave}
-                        disabled={isSaving || !isRefreshRateValid(refreshTimer, serviceDef)}
+                        disabled={
+                            isSaving || !isRefreshRateValid(refreshTimer, serviceDef, widgetDef)
+                        }
                     >
                         {isSaving ? 'Saving...' : 'Save Changes'}
                     </Button>

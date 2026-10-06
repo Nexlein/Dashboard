@@ -1,11 +1,15 @@
 import { fetchClient } from '@/lib/apiClient';
-import type { ServiceDefinition } from './types';
+import type { ServiceDefinition, WidgetDefinition } from './types';
 
 export const MIN_REFRESH_RATE_SECONDS = 60;
 
-/** Services without a refresh timer (the chatbot) accept any value. */
-export function isRefreshRateValid(refreshTimer: string, serviceDef?: ServiceDefinition) {
-    if (serviceDef?.hasRefresh === false) return true;
+/** Widgets without a refresh timer accept any value. */
+export function isRefreshRateValid(
+    refreshTimer: string,
+    serviceDef?: ServiceDefinition,
+    widgetDef?: WidgetDefinition,
+) {
+    if ((widgetDef?.hasRefresh ?? serviceDef?.hasRefresh) === false) return true;
     const refreshRate = Number(refreshTimer);
     return Number.isInteger(refreshRate) && refreshRate >= MIN_REFRESH_RATE_SECONDS;
 }
@@ -78,6 +82,18 @@ const WIDGET_PRESENTATION: Record<string, WidgetPresentation> = {
         minW: 3,
         minH: 3,
     },
+    'youtube:video_player': {
+        title: 'YouTube Video',
+        defaultLayout: { x: 0, y: 0, w: 4, h: 4 },
+        minW: 3,
+        minH: 4,
+    },
+    'youtube:channel_watch': {
+        title: 'YouTube Watch',
+        defaultLayout: { x: 0, y: 0, w: 5, h: 5 },
+        minW: 3,
+        minH: 4,
+    },
     'crypto:crypto_price': {
         title: 'Crypto Price',
         defaultLayout: { x: 0, y: 0, w: 3, h: 2 },
@@ -142,6 +158,14 @@ export function toDashboardWidget(widget: ApiWidget): DashboardWidget {
 export async function fetchUserWidgets(): Promise<DashboardWidget[]> {
     const widgets: ApiWidget[] = await fetchClient('/widgets');
     return widgets.map(toDashboardWidget);
+}
+
+/**
+ * React Query key of a widget's data: one entry per params, so a widget keeps the data of
+ * its other settings (e.g. another chart period). `widgetQueryKey(widget.id)` matches them all.
+ */
+export function widgetQueryKey(widgetId: number, params?: DashboardWidget['params']) {
+    return params === undefined ? ['widget', widgetId] : ['widget', widgetId, params];
 }
 
 export async function fetchWidgetData(widgetId: number) {

@@ -17,6 +17,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Edit2, EllipsisVertical, Trash2, Loader2 } from 'lucide-react';
 import { ServiceLogo } from '@/features/services/components/ServiceLogo';
 import { WidgetEditDialog } from './WidgetEditDialog';
+import { findWidgetDefinition } from '@/features/widgets/lib/registry';
 import type { DashboardWidget } from '@/features/widgets/lib/widgets';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
@@ -97,7 +98,14 @@ export default function DashboardGrid() {
                                     </DropdownMenuContent>
                                 </DropdownMenu>
                             </CardHeader>
-                            <CardContent className="flex min-h-0 flex-1 items-center justify-center overflow-auto p-4">
+                            <CardContent
+                                className={`flex min-h-0 flex-1 items-center justify-center ${
+                                    findWidgetDefinition(widget.serviceName, widget.widgetName)
+                                        ?.fullBleed
+                                        ? 'overflow-hidden p-0'
+                                        : 'overflow-auto p-4'
+                                }`}
+                            >
                                 <ErrorBoundary
                                     key={`${widget.id}:${JSON.stringify(widget.params)}`}
                                 >

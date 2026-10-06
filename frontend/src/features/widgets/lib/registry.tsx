@@ -4,6 +4,8 @@ import {
     GithubProfileWidget,
     GithubCommitsWidget,
 } from '@/features/widgets/catalog/GithubWidgets';
+import { YouTubeVideoWidget } from '@/features/widgets/catalog/YouTubeVideoWidget';
+import { YouTubeWatchWidget } from '@/features/widgets/catalog/YouTubeWatchWidget';
 import { CryptoPrice } from '@/features/widgets/catalog/CryptoPrice';
 import { CryptoChartWidget } from '@/features/widgets/catalog/CryptoChartWidget';
 import { StockProfileWidget } from '@/features/widgets/catalog/StockProfileWidget';
@@ -113,6 +115,33 @@ export const REGISTRY: Record<string, ServiceDefinition> = {
                         placeholder: 'e.g. nexlein',
                     },
                 ],
+            },
+        ],
+    },
+    youtube: {
+        name: 'YouTube',
+        hasRefresh: true,
+        widgets: [
+            {
+                id: 'video_player',
+                name: 'Video Player',
+                component: YouTubeVideoWidget,
+                hasRefresh: false,
+                fullBleed: true,
+                params: [
+                    {
+                        id: 'video_url',
+                        label: 'YouTube video link',
+                        type: 'text',
+                        placeholder: 'https://www.youtube.com/watch?v=...',
+                    },
+                ],
+            },
+            {
+                id: 'channel_watch',
+                name: 'Channel Watch',
+                component: YouTubeWatchWidget,
+                params: [{ id: 'channels', label: 'YouTube channels', type: 'youtube-channels' }],
             },
         ],
     },

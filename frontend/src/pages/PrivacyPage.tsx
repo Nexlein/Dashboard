@@ -42,7 +42,13 @@ export default function PrivacyPage() {
                                     OAuth tokens are used solely to fetch data for the connected
                                     services as configured by the user.
                                 </li>
-                                <li>We do not sell or share your data with third parties.</li>
+                                <li>We do not sell your data.</li>
+                                <li>
+                                    YouTube widgets load thumbnails from i.ytimg.com and, when you
+                                    click Play, the video player from youtube-nocookie.com. These
+                                    requests send your IP address and browser information to Google
+                                    / YouTube, under their privacy policy.
+                                </li>
                                 <li>
                                     Administrators see each account's name, email, role, email
                                     verification, ban state and registration date, to manage

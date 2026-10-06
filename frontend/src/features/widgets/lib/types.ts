@@ -9,6 +9,7 @@ export type WidgetParamDefinition = {
     label: string;
     type:
         | 'text'
+        | 'youtube-channels'
         | 'number'
         | 'select'
         | 'coin-multiselect'
@@ -50,6 +51,10 @@ export type WidgetDefinition = {
     // single place that hands the untyped API response to it.
     component: ComponentType<WidgetViewProps<never>>;
     customConfigUi?: ComponentType<CustomConfigProps>;
+    /** Overrides the service default when a widget needs no data requests. */
+    hasRefresh?: boolean;
+    /** Render edge to edge inside the dashboard card. */
+    fullBleed?: boolean;
     params: WidgetParamDefinition[];
 };
 

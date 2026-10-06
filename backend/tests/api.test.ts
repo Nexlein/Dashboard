@@ -4,8 +4,8 @@ import request from 'supertest';
 import app from '../src/app.ts';
 import stocks from '../src/services/stocks.ts';
 import { StockPendingError } from '../src/services/stockProvider.ts';
-import weatherService from '../src/services/weather.ts';
 import registry from '../src/services/registry.ts';
+import weatherService from '../src/services/weather.ts';
 import { HttpError } from '../src/utils/httpError.ts';
 import { getCache, setCache } from '../src/utils/redisCache.ts';
 
@@ -179,6 +179,33 @@ describe('API Endpoints', () => {
             const res = await request(app).get('/widgets');
 
             expect(res.statusCode).toBe(401);
+        });
+
+        it('does not treat a provider rejection during creation as an invalid Dashboard session', async () => {
+            prisma.serviceConnection.findUnique.mockResolvedValue({
+                id: 9,
+                encryptedCredentials: encryptJson({ apiKey: 'revoked' }),
+            });
+            const execute = vi
+                .spyOn(weatherService, 'execute')
+                .mockRejectedValue(new HttpError('Provider credential rejected', 401));
+            try {
+                const res = await request(app)
+                    .post('/widgets')
+                    .set('Origin', FRONTEND)
+                    .send({
+                        serviceName: 'weather',
+                        widgetName: 'current_weather',
+                        params: { city: 'Paris' },
+                        refreshRate: 60,
+                        layout: { x: 0, y: 0, w: 2, h: 2 },
+                    });
+                expect(res.statusCode).toBe(400);
+                expect(res.body.error).toBe('Provider credential rejected');
+                expect(prisma.widgetConfig.create).not.toHaveBeenCalled();
+            } finally {
+                execute.mockRestore();
+            }
         });
 
         it('should create a widget with encrypted params and return the public contract', async () => {
@@ -380,10 +407,13 @@ describe('API Endpoints', () => {
         });
 
         it('answers 501 for a widget whose service fetches no data', async () => {
+            const service = vi
+                .spyOn(registry, 'getService')
+                .mockReturnValue({ name: 'placeholder', widgets: [] });
             prisma.widgetConfig.findUnique.mockResolvedValue({
                 ...mockWidget,
-                serviceName: 'youtube',
-                widgetName: 'channel_stats',
+                serviceName: 'placeholder',
+                widgetName: 'placeholder',
                 params: {},
             });
 
@@ -391,6 +421,7 @@ describe('API Endpoints', () => {
 
             expect(res.statusCode).toBe(501);
             expect(res.body.error).toBe('Widget data is not available for this service');
+            service.mockRestore();
         });
 
         it('requires the user to connect OpenWeather before creating a weather widget', async () => {
@@ -585,7 +616,7 @@ describe('API Endpoints', () => {
                     expect.objectContaining({ connected: false, configurable: true }),
                 );
             }
-            for (const name of ['youtube', 'chatbot']) {
+            for (const name of ['chatbot', 'youtube']) {
                 expect(res.body.find((service: { name: string }) => service.name === name)).toEqual(
                     expect.objectContaining({ connected: true, configurable: false }),
                 );

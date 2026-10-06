@@ -6,6 +6,8 @@ import { defineConfig } from 'vitest/config';
 // https://vite.dev/config/
 export default defineConfig({
     plugins: [react(), tailwindcss()],
+    // The linked workspace is CommonJS; convert it before serving named imports in dev.
+    optimizeDeps: { include: ['shared'] },
     resolve: {
         alias: {
             '@': path.resolve(import.meta.dirname, './src'),
@@ -13,6 +15,10 @@ export default defineConfig({
     },
     test: {
         environment: 'happy-dom',
+        // Assert embed markup in unit tests without loading third-party players.
+        environmentOptions: {
+            happyDOM: { settings: { disableIframePageLoading: true } },
+        },
         globals: true,
         setupFiles: './src/test/setup.ts',
         coverage: {

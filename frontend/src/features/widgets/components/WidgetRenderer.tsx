@@ -2,7 +2,11 @@ import { useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError } from '@/lib/apiClient';
 import { Loader2 } from 'lucide-react';
-import { fetchWidgetData, type DashboardWidget } from '@/features/widgets/lib/widgets';
+import {
+    fetchWidgetData,
+    widgetQueryKey,
+    type DashboardWidget,
+} from '@/features/widgets/lib/widgets';
 import { useUpdateWidget } from '@/features/widgets/hooks/useWidgets';
 import { findWidgetDefinition, getServiceDefinition } from '@/features/widgets/lib/registry';
 
@@ -15,7 +19,7 @@ export default function WidgetRenderer({ widget }: { widget: DashboardWidget }) 
     const widgetDef = findWidgetDefinition(serviceName, widgetName);
 
     // Widgets without a refresh (the chatbot) render without loading any data.
-    const isDataFetchingWidget = serviceDef?.hasRefresh ?? false;
+    const isDataFetchingWidget = widgetDef?.hasRefresh ?? serviceDef?.hasRefresh ?? false;
 
     const periodParam = serviceDef?.periodParam ?? 'days';
     const quotaLimited = serviceDef?.quotaLimited ?? false;
@@ -29,7 +33,7 @@ export default function WidgetRenderer({ widget }: { widget: DashboardWidget }) 
         isFetching,
         isPlaceholderData,
     } = useQuery({
-        queryKey: ['widget', id, widget.params],
+        queryKey: widgetQueryKey(id, widget.params),
         queryFn: () => fetchWidgetData(id),
         refetchInterval: (query) => {
             const error = query.state.error;
@@ -57,7 +61,7 @@ export default function WidgetRenderer({ widget }: { widget: DashboardWidget }) 
     const savedData = quotaLimited
         ? queryClient
               .getQueryCache()
-              .findAll({ queryKey: ['widget', id] })
+              .findAll({ queryKey: widgetQueryKey(id) })
               .filter(
                   (query) =>
                       withoutPeriod(query.queryKey[2] as DashboardWidget['params']) ===
@@ -148,6 +152,11 @@ export default function WidgetRenderer({ widget }: { widget: DashboardWidget }) 
 
     return (
         <div className="flex h-full min-h-0 w-full flex-col gap-2">
+            {queryError && displayData && !quotaLimited && (
+                <p role="alert" className="shrink-0 text-xs text-destructive">
+                    Refresh unavailable: {error}. Showing previously loaded data.
+                </p>
+            )}
             {pendingPeriod && (
                 <p
                     className="shrink-0 rounded-md bg-muted px-2 py-1 text-[11px] text-muted-foreground"

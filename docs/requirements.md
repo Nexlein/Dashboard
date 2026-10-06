@@ -26,6 +26,7 @@
     - [x] Single-company Stock Profile with an on-demand logo, latest price, daily change, and historical price chart.
     - [x] Quota-aware progressive stock loading, automatic retries, and retention of previously loaded charts.
     - [x] On-demand company logos in the multi-symbol stock comparison, shared with Stock Profile.
+    - [x] YouTube video player and public channel watch without credentials. The watch uses its configured refresh timer; the player loads on demand without a timer.
     - [x] **Crucial**: Widget _must_ have configurable parameters.
     - [x] **Crucial**: Two instances of same widget with different configs display distinct info.
 - [ ] **Accessibility (a11y)**: (axe reports no violation on login, register and dashboard in the e2e suite; not audited manually)

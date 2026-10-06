@@ -78,6 +78,17 @@ Requirements: Node.js 24 (see `.nvmrc`, `nvm use`) and Docker with Docker Compos
    several GitHub accounts per user), and register both callback URLs in your GitHub OAuth
    App (GitHub matches them exactly): `http://localhost:8080/api/auth/callback/github` and
    `http://localhost:8080/api/auth/callback/github-service`.
+   YouTube needs no setup: add the Video Player widget and paste a video link
+   (`youtube.com/watch`, `youtu.be`, Shorts, live or embed links).
+   No API key, Google account linking or public website is needed. The player loads
+   directly in the browser and has no refresh timer. Playback depends on the video's
+   availability and whether its owner permits embedding.
+   The Channel Watch widget follows up to five public channels from their links or
+   `@handles`, merging their recent publications without an API key. Its refresh
+   timer is configurable; public feeds are cached for ten minutes. Filter by
+   channel, refresh manually, or mark publications as seen.
+   Prefer a `/channel/UC…` URL or channel ID for reliable lookup: resolving an
+   `@handle` depends on YouTube's public HTML and may break if that page changes.
    `CORS_ORIGINS` lists the frontend origins allowed to call the API; the example
    includes Vite on ports 5173/5174 and the Docker frontend on port 8081.
    `SMTP_*` configure the emails (verification and reset codes). With Gmail: turn on

@@ -14,6 +14,8 @@ export type ServiceCredentials = Record<string, unknown>;
 export type ServiceContext = {
     userId: number;
     refreshRate?: number;
+    /** User-requested refresh; providers still apply their own cooldown. */
+    forceRefresh?: boolean;
     credentials?: ServiceCredentials | null;
     /** Scopes cache entries to one user connection. */
     cacheScope?: string;

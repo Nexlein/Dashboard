@@ -1,5 +1,5 @@
 import { useState, type ComponentType, type SVGProps } from 'react';
-import { Bitcoin, Bot } from 'lucide-react';
+import { Bitcoin, Play } from 'lucide-react';
 import { Github } from '@/components/ui/Github';
 
 // Every logo is served by the app itself: loading them from the brands' sites would send
@@ -10,9 +10,10 @@ const SERVICE_BRANDS: Record<
 > = {
     weather: { name: 'OpenWeather', logo: '/logos/openweather.svg' },
     github: { name: 'GitHub', icon: Github },
+    youtube: { name: 'YouTube', icon: Play },
     crypto: { name: 'CoinGecko', icon: Bitcoin },
     stocks: { name: 'Twelve Data', logo: '/logos/twelve-data.png' },
-    chatbot: { name: 'Ollama', icon: Bot },
+    chatbot: { name: 'Ollama', logo: '/logos/ollama.png' },
 };
 
 export function ServiceLogo({

@@ -405,3 +405,32 @@ users (`?error=account_already_linked_to_different_user`).
 
 Tokens are stored encrypted (`account.encryptOAuthTokens`), read through Better Auth on the
 server (which refreshes them when they expire) and never returned to the page.
+
+
+### YouTube video player and channel watch
+
+YouTube requires no service connection, API key or Google OAuth.
+`GET /services` reports it as connected and not configurable.
+The `video_player` widget accepts a `video_url` parameter containing
+an 11-character video ID or a YouTube video URL (`watch`, `youtu.be`, `shorts`, `live`,
+`embed`). Invalid links return `400` when creating or editing the widget.
+The browser renders the official player on `www.youtube-nocookie.com`; arbitrary
+iframe URLs are never accepted. Playback requires the video to be available and
+embeddable. The widget has no refresh timer and does not call `/widgets/:id/data`.
+
+`channel_watch` accepts `channels`: a newline- or comma-separated string of one to
+five channel IDs (`UC…`), `@handles` or YouTube channel URLs. The configurator adds
+them as removable chips. `GET /widgets/:id/data` returns `{ channels, videos,
+warnings }`, merging the public Atom feeds in publication order. Each video has
+`id`, `title`, `channelId`, `channelTitle`, `publishedAt`, `url` and `thumbnail`.
+Links and thumbnail URLs are constructed from validated IDs. No Google account or
+YouTube Data API key is used.
+
+The watch refreshes according to its configured `refreshRate` (at least 60 seconds).
+Public feeds have a ten-minute cache. `GET /widgets/:id/data?refresh=true` requests
+a manual refresh, with a one-minute cooldown per channel. Public channel data is
+cached across users; failed refreshes can use the previous feed for up to 24 hours,
+with a warning. Unavailable channels do not hide healthy channels. Handles are
+resolved from public channel metadata; if resolution fails, use a `/channel/UC…`
+URL. The feed contains recent publications, not the channel's complete archive.
+Seen publications are stored per widget in this browser and cleared on logout.
