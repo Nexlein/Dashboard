@@ -266,6 +266,28 @@ describe('administration (admin plugin)', () => {
         expect(admins.body.total).toBeGreaterThan(0);
     });
 
+    it('lists an expired ban as lifted, in the filters and counts too', async () => {
+        const { agent } = await adminAgent();
+        const expired = await signedIn();
+        await prisma.user.update({
+            where: { id: expired.user.id },
+            data: { banned: true, banReason: 'spam', banExpires: new Date('2020-01-01') },
+        });
+
+        const banned = await agent
+            .get('/api/auth/admin/list-users')
+            .query({ filterField: 'banned', filterValue: true, limit: 100 });
+
+        expect(banned.body.users.map((u: { email: string }) => u.email)).not.toContain(
+            expired.email,
+        );
+        expect(await prisma.user.findUnique({ where: { id: expired.user.id } })).toMatchObject({
+            banned: false,
+            banReason: null,
+            banExpires: null,
+        });
+    });
+
     it('does not let an administrator remove their own account this way', async () => {
         const { agent, user } = await adminAgent();
 

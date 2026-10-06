@@ -187,6 +187,17 @@ export const auth = betterAuth({
                 }
                 return { context: { body: { ...body, name: parsed.data.name } } };
             }
+            if (ctx.path === '/admin/list-users') {
+                // Better Auth only lifts an expired ban when that user next signs in: lift
+                // them before listing, so the banned filter and count only see active bans.
+                const session = await getSessionFromCtx(ctx);
+                if (session?.user.role === 'admin') {
+                    await prisma.user.updateMany({
+                        where: { banned: true, banExpires: { lte: new Date() } },
+                        data: { banned: false, banReason: null, banExpires: null },
+                    });
+                }
+            }
             if (ctx.path === '/admin/set-role') {
                 // Without a roles option the admin plugin stores any string as the role.
                 if (body.role !== 'user' && body.role !== 'admin') {

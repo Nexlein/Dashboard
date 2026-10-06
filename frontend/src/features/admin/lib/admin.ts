@@ -36,15 +36,18 @@ type ApiUser = {
 };
 
 function toAdminUser(user: ApiUser): AdminUser {
+    const banExpires = user.banExpires ? new Date(user.banExpires) : null;
+    // A ban whose end has passed no longer applies (the API lifts it when listing).
+    const banned = user.banned === true && (!banExpires || banExpires > new Date());
     return {
         id: Number(user.id),
         email: user.email,
         name: user.name ?? '',
         role: user.role === 'admin' ? 'admin' : 'user',
         emailVerified: user.emailVerified === true,
-        banned: user.banned === true,
-        banReason: user.banReason ?? null,
-        banExpires: user.banExpires ? new Date(user.banExpires) : null,
+        banned,
+        banReason: banned ? (user.banReason ?? null) : null,
+        banExpires: banned ? banExpires : null,
         createdAt: new Date(user.createdAt),
     };
 }
