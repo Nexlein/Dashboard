@@ -97,7 +97,14 @@ export default function DashboardGrid() {
                                     </DropdownMenuContent>
                                 </DropdownMenu>
                             </CardHeader>
-                            <CardContent className="flex min-h-0 flex-1 items-center justify-center overflow-auto p-4">
+                            <CardContent
+                                className={`flex min-h-0 flex-1 items-center justify-center ${
+                                    widget.serviceName === 'youtube' &&
+                                    widget.widgetName === 'video_player'
+                                        ? 'overflow-hidden p-0'
+                                        : 'overflow-auto p-4'
+                                }`}
+                            >
                                 <ErrorBoundary
                                     key={`${widget.id}:${JSON.stringify(widget.params)}`}
                                 >

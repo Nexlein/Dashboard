@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { render, screen } from '@/test-utils';
+import { fireEvent, render, screen } from '@/test-utils';
 import { mockApi } from '@/test/fixtures';
 import { REGISTRY } from '@/features/widgets/lib/registry';
 import { getDefaultWidgetLayout, toDashboardWidget } from '@/features/widgets/lib/widgets';
@@ -21,13 +21,15 @@ it('offers a single player with no refresh timer or account parameter', () => {
     expect(widget.title).toBe('YouTube Video');
 });
 
-it('renders a canonical YouTube player immediately without fetching widget data', () => {
+it('loads the player only on play and stops it when returning to the preview', () => {
     const fetch = mockApi({});
-    const { rerender } = render(<WidgetRenderer widget={widget} />);
+    render(<WidgetRenderer widget={widget} />);
+    expect(screen.queryByTitle('YouTube video player')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Play YouTube video' }));
     const iframe = screen.getByTitle('YouTube video player');
     expect(iframe).toHaveAttribute(
         'src',
-        'https://www.youtube-nocookie.com/embed/M7lc1UVf-VE?playsinline=1',
+        'https://www.youtube-nocookie.com/embed/M7lc1UVf-VE?playsinline=1&autoplay=1',
     );
     expect(iframe).toHaveAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
     expect(iframe).toHaveAttribute('allowfullscreen');
@@ -35,16 +37,37 @@ it('renders a canonical YouTube player immediately without fetching widget data'
         'href',
         'https://www.youtube.com/watch?v=M7lc1UVf-VE',
     );
+    fireEvent.click(screen.getByRole('button', { name: 'Stop video' }));
+    expect(screen.queryByTitle('YouTube video player')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Play YouTube video' })).toBeInTheDocument();
+    expect(fetch).not.toHaveBeenCalled();
+});
+
+it('returns to the preview when editing the video instead of autoplaying the replacement', () => {
+    mockApi({});
+    const { rerender } = render(<WidgetRenderer widget={widget} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Play YouTube video' }));
     rerender(
         <WidgetRenderer
             widget={{ ...widget, params: { video_url: 'https://youtube.com/watch?v=dQw4w9WgXcQ' } }}
         />,
     );
+    expect(screen.queryByTitle('YouTube video player')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Play YouTube video' }));
     expect(screen.getByTitle('YouTube video player')).toHaveAttribute(
         'src',
-        'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?playsinline=1',
+        'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?playsinline=1&autoplay=1',
     );
-    expect(fetch).not.toHaveBeenCalled();
+});
+
+it('keeps play available if the thumbnail cannot load', () => {
+    mockApi({});
+    render(<WidgetRenderer widget={widget} />);
+    const play = screen.getByRole('button', { name: 'Play YouTube video' });
+    fireEvent.error(play.querySelector('img')!);
+    expect(play.querySelector('img')).toBeNull();
+    fireEvent.click(play);
+    expect(screen.getByTitle('YouTube video player')).toBeInTheDocument();
 });
 
 it('does not embed arbitrary saved URLs', () => {
