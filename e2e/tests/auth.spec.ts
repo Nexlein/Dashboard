@@ -16,27 +16,27 @@ test('registers, signs in and signs out through the UI', async ({ page }) => {
     const password = 'password1234';
 
     await page.goto('/register');
-    await page.getByLabel('Adresse e-mail').fill(email);
-    await page.getByLabel('Mot de passe').fill(password);
-    await page.getByLabel(/conditions générales/).check();
-    await page.getByLabel(/16 ans ou plus/).check();
-    await page.getByRole('button', { name: 'Créer mon compte' }).click();
+    await page.getByLabel('Email address').fill(email);
+    await page.getByLabel('Password').fill(password);
+    await page.getByLabel(/Terms of Service/).check();
+    await page.getByLabel(/16 or older/).check();
+    await page.getByRole('button', { name: 'Create my account' }).click();
 
     // The account signs in once the emailed code is entered.
-    await expect(page.getByText('Vérifiez votre adresse e-mail')).toBeVisible();
+    await expect(page.getByText('Verify your email address')).toBeVisible();
     const code = await emailedCode(page.request, email, 'vérification');
-    await page.getByLabel('Code de vérification').fill(code);
-    await page.getByRole('button', { name: 'Vérifier' }).click();
+    await page.getByLabel('Verification code').fill(code);
+    await page.getByRole('button', { name: 'Verify' }).click();
     await expect(page).toHaveURL(/\/$/);
     await expect(page.getByRole('button', { name: 'Add Widget' })).toBeVisible();
 
-    await page.getByRole('button', { name: /Ouvrir le menu du compte/ }).click();
-    await page.getByRole('menuitem', { name: 'Se déconnecter' }).click();
+    await page.getByRole('button', { name: /Open the account menu/ }).click();
+    await page.getByRole('menuitem', { name: 'Sign out' }).click();
     await expect(page).toHaveURL(/\/login$/);
 
-    await page.getByLabel('Adresse e-mail').fill(email);
-    await page.getByLabel('Mot de passe').fill(password);
-    await page.getByRole('button', { name: 'Se connecter' }).click();
+    await page.getByLabel('Email address').fill(email);
+    await page.getByLabel('Password').fill(password);
+    await page.getByRole('button', { name: 'Sign in' }).click();
     await expect(page).toHaveURL(/\/$/);
     await expect(page.getByRole('button', { name: 'Add Widget' })).toBeVisible();
 });
@@ -46,9 +46,9 @@ test('shows an error for wrong credentials', async ({ page, request }) => {
     await registerUser(request, email, 'password1234');
 
     await page.goto('/login');
-    await page.getByLabel('Adresse e-mail').fill(email);
-    await page.getByLabel('Mot de passe').fill('wrong-password');
-    await page.getByRole('button', { name: 'Se connecter' }).click();
+    await page.getByLabel('Email address').fill(email);
+    await page.getByLabel('Password').fill('wrong-password');
+    await page.getByRole('button', { name: 'Sign in' }).click();
 
     await expect(page.getByRole('alert')).toBeVisible();
     await expect(page).toHaveURL(/\/login$/);
@@ -60,9 +60,9 @@ test('keeps the session token out of reach of page scripts', async ({ page }) =>
     await registerUser(page.request, email, password);
 
     await page.goto('/login');
-    await page.getByLabel('Adresse e-mail').fill(email);
-    await page.getByLabel('Mot de passe').fill(password);
-    await page.getByRole('button', { name: 'Se connecter' }).click();
+    await page.getByLabel('Email address').fill(email);
+    await page.getByLabel('Password').fill(password);
+    await page.getByRole('button', { name: 'Sign in' }).click();
     await expect(page.getByRole('button', { name: 'Add Widget' })).toBeVisible();
 
     const session = (await page.context().cookies()).find((c) => c.name === SESSION_COOKIE);
@@ -87,21 +87,21 @@ test('resets a forgotten password with the emailed code', async ({ page, request
     await registerUser(request, email, 'password1234');
 
     await page.goto('/login');
-    await page.getByRole('link', { name: 'Mot de passe oublié ?' }).click();
-    // The sign-in page also has an "Adresse e-mail" field: wait for the new page.
-    await expect(page.getByRole('heading', { name: 'Mot de passe oublié' })).toBeVisible();
-    await page.getByLabel('Adresse e-mail').fill(email);
-    await page.getByRole('button', { name: 'Recevoir un code' }).click();
+    await page.getByRole('link', { name: 'Forgot password?' }).click();
+    // The sign-in page also has an "Email address" field: wait for the new page.
+    await expect(page.getByRole('heading', { name: 'Forgot password' })).toBeVisible();
+    await page.getByLabel('Email address').fill(email);
+    await page.getByRole('button', { name: 'Send a code' }).click();
 
     const code = await emailedCode(request, email, 'mot de passe');
-    await page.getByLabel('Code reçu par e-mail').fill(code);
-    await page.getByLabel('Nouveau mot de passe').fill('a-new-password-123');
-    await page.getByRole('button', { name: 'Changer le mot de passe' }).click();
+    await page.getByLabel('Code from your email').fill(code);
+    await page.getByLabel('New password').fill('a-new-password-123');
+    await page.getByRole('button', { name: 'Change password' }).click();
 
     await expect(page).toHaveURL(/\/login$/);
-    await expect(page.getByRole('status')).toContainText('Mot de passe modifié');
-    await page.getByLabel('Adresse e-mail').fill(email);
-    await page.getByLabel('Mot de passe', { exact: true }).fill('a-new-password-123');
-    await page.getByRole('button', { name: 'Se connecter' }).click();
+    await expect(page.getByRole('status')).toContainText('Password changed');
+    await page.getByLabel('Email address').fill(email);
+    await page.getByLabel('Password', { exact: true }).fill('a-new-password-123');
+    await page.getByRole('button', { name: 'Sign in' }).click();
     await expect(page.getByRole('button', { name: 'Add Widget' })).toBeVisible();
 });

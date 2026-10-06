@@ -1,3 +1,4 @@
+import { apiError } from '../utils/apiError.ts';
 import { decryptJsonStrict } from '../utils/encryption.ts';
 import asyncHandler from '../utils/asyncHandler.ts';
 import prisma from '../utils/prisma.ts';
@@ -46,7 +47,7 @@ export const downloadData = asyncHandler(async (req, res) => {
             },
         },
     });
-    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (!user) return res.status(404).json({ ...apiError('User not found') });
     res.set('Cache-Control', 'no-store');
     try {
         res.json({
@@ -57,6 +58,6 @@ export const downloadData = asyncHandler(async (req, res) => {
             })),
         });
     } catch {
-        return res.status(500).json({ error: 'Internal server error' });
+        return res.status(500).json({ ...apiError('Internal server error') });
     }
 });

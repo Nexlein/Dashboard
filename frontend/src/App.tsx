@@ -1,11 +1,21 @@
+import i18n from '@/i18n';
+import { useTranslation } from 'react-i18next';
 import { Suspense, lazy } from 'react';
 import type { ReactNode } from 'react';
-import { BrowserRouter as Router, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
+import {
+    BrowserRouter as Router,
+    Navigate,
+    Route,
+    Routes,
+    useNavigate,
+    useLocation,
+} from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import Navbar from '@/components/Navbar';
 import { logout } from '@/lib/auth';
 import { useCurrentUser } from '@/features/auth/hooks/useCurrentUser';
 import { CookieBanner } from '@/components/CookieBanner';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { Loader2 } from 'lucide-react';
 
 const DashboardGrid = lazy(() => import('@/features/widgets/components/DashboardGrid'));
@@ -47,10 +57,11 @@ function AuthenticatedShell({
 }
 
 function Dashboard() {
+    useTranslation();
     return (
         <AuthenticatedShell showWidgetConfigurator>
             <main>
-                <h1 className="sr-only">Dashboard</h1>
+                <h1 className="sr-only">{i18n.t('common:dashboard')}</h1>
                 <DashboardGrid />
             </main>
         </AuthenticatedShell>
@@ -93,8 +104,19 @@ function PageFallback() {
 
 /** All routes; wrapped in a router by App (BrowserRouter) or by tests (MemoryRouter). */
 export function AppRoutes() {
+    useTranslation();
+    const { pathname } = useLocation();
+    const publicPage = !['/', '/services', '/admin'].includes(pathname);
     return (
         <>
+            {publicPage && (
+                <nav
+                    aria-label={i18n.t('language.label')}
+                    className="flex justify-end border-b border-border bg-card px-4 py-2"
+                >
+                    <LanguageSwitcher />
+                </nav>
+            )}
             <Suspense fallback={<PageFallback />}>
                 <Routes>
                     <Route

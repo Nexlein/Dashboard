@@ -1,3 +1,7 @@
+import { getErrorMessage } from '@/i18n/errors';
+import { formatNumber, formatPeriod } from '@/i18n/format';
+import i18n from '@/i18n';
+import { useTranslation } from 'react-i18next';
 import { useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError } from '@/lib/apiClient';
@@ -11,6 +15,7 @@ import { useUpdateWidget } from '@/features/widgets/hooks/useWidgets';
 import { findWidgetDefinition, getServiceDefinition } from '@/features/widgets/lib/registry';
 
 export default function WidgetRenderer({ widget }: { widget: DashboardWidget }) {
+    useTranslation();
     const { id, serviceName, widgetName, refreshRate } = widget;
     const updateWidgetMutation = useUpdateWidget();
     const queryClient = useQueryClient();
@@ -55,7 +60,7 @@ export default function WidgetRenderer({ widget }: { widget: DashboardWidget }) 
         retry: false,
     });
 
-    const error = queryError?.message || null;
+    const error = queryError ? getErrorMessage(queryError) : null;
     const retryAfter =
         quotaLimited && queryError instanceof ApiError ? queryError.retryAfter : undefined;
     const savedData = quotaLimited
@@ -89,7 +94,7 @@ export default function WidgetRenderer({ widget }: { widget: DashboardWidget }) 
     if (!serviceDef || !widgetDef) {
         return (
             <div className="flex h-full items-center justify-center text-center text-sm text-muted-foreground">
-                This widget is not implemented yet.
+                {i18n.t('widgets:unimplemented')}
             </div>
         );
     }
@@ -113,21 +118,30 @@ export default function WidgetRenderer({ widget }: { widget: DashboardWidget }) 
                 role="status"
             >
                 <Loader2 className="size-5 animate-spin text-muted-foreground" />
-                <p className="text-sm font-medium">Loading data progressively</p>
+                <p className="text-sm font-medium">{i18n.t('widgets:loadingProgressively')}</p>
                 <p className="text-xs text-muted-foreground">{error}</p>
                 <p className="text-xs text-muted-foreground">
-                    Automatic retry in {retryAfter} seconds.
+                    {i18n.t('widgets:automaticRetry', { seconds: formatNumber(retryAfter) })}
                 </p>
             </div>
         );
     }
 
     if (error && !displayData) {
-        const needsServiceConnection = error.includes('Configure it in Services');
+        const needsServiceConnection =
+            queryError instanceof ApiError &&
+            [
+                'SERVICE_NOT_CONNECTED',
+                'OPENWEATHER_NOT_CONNECTED',
+                'COINGECKO_NOT_CONNECTED',
+                'TWELVE_DATA_NOT_CONNECTED',
+                'ACCOUNT_SELECTION_REQUIRED',
+                'ACCOUNT_CONNECTION_EXPIRED',
+            ].includes(queryError.code ?? '');
         return (
             <div className="flex flex-col items-center justify-center h-full p-4 text-center">
                 <p className="text-destructive text-sm font-medium">
-                    Error loading {widgetDef.name}
+                    {i18n.t('widgets:loadingError', { name: widgetDef.name })}
                 </p>
                 <p className="text-muted-foreground text-xs mt-1">{error}</p>
                 {needsServiceConnection && (
@@ -135,7 +149,7 @@ export default function WidgetRenderer({ widget }: { widget: DashboardWidget }) 
                         href="/services"
                         className="mt-3 text-sm font-medium text-primary underline-offset-4 hover:underline"
                     >
-                        Open Services
+                        {i18n.t('widgets:openServices')}
                     </a>
                 )}
             </div>
@@ -154,7 +168,7 @@ export default function WidgetRenderer({ widget }: { widget: DashboardWidget }) 
         <div className="flex h-full min-h-0 w-full flex-col gap-2">
             {queryError && displayData && !quotaLimited && (
                 <p role="alert" className="shrink-0 text-xs text-destructive">
-                    Refresh unavailable: {error}. Showing previously loaded data.
+                    {i18n.t('widgets:staleData', { error })}
                 </p>
             )}
             {pendingPeriod && (
@@ -163,12 +177,15 @@ export default function WidgetRenderer({ widget }: { widget: DashboardWidget }) 
                     role="status"
                 >
                     {retryAfter
-                        ? `Waiting for API credits. Automatic retry in ${retryAfter} seconds.`
+                        ? i18n.t('widgets:waitingCredits', { seconds: formatNumber(retryAfter) })
                         : queryError
-                          ? `Refresh unavailable: ${error}`
-                          : 'Loading the requested period…'}{' '}
-                    Showing previously loaded data (
-                    {String((displayData as { period?: string }).period ?? '')}).
+                          ? i18n.t('widgets:refreshUnavailable', { error })
+                          : i18n.t('widgets:loadingPeriod')}{' '}
+                    {i18n.t('widgets:savedPeriod', {
+                        period: formatPeriod(
+                            String((displayData as { period?: string }).period ?? ''),
+                        ),
+                    })}
                 </p>
             )}
             <div className="min-h-0 flex-1">

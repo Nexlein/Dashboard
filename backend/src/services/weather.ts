@@ -12,7 +12,7 @@ const MIN_REFRESH_RATE_SECONDS = 60;
 
 // The parts of the OpenWeather responses this service reads.
 type GeoLocation = { name: string; country: string; state?: string; lat: number; lon: number };
-type Conditions = { weather?: { description: string; icon: string }[] };
+type Conditions = { weather?: { id?: number; description: string; icon: string }[] };
 type CurrentPayload = Conditions & {
     dt: number;
     main: { temp: number; feels_like: number; humidity: number };
@@ -144,6 +144,7 @@ function aggregateForecast(payload: ForecastPayload, location: GeoLocation) {
             max: Math.round(day.max),
             precipitationProbability: Math.round(day.precipitationProbability * 100),
             condition: day.representative.weather?.[0]?.description || '',
+            conditionCode: day.representative.weather?.[0]?.id ?? null,
             icon: day.representative.weather?.[0]?.icon || '',
         })),
     };
@@ -199,6 +200,7 @@ async function execute(
             humidity: payload.main.humidity,
             windSpeed: payload.wind?.speed ?? null,
             condition: payload.weather?.[0]?.description || '',
+            conditionCode: payload.weather?.[0]?.id ?? null,
             icon: payload.weather?.[0]?.icon || '',
         };
     } else {

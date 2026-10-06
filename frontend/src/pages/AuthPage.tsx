@@ -1,3 +1,6 @@
+import { getErrorMessage, notice } from '@/i18n/errors';
+import i18n from '@/i18n';
+import { Trans, useTranslation } from 'react-i18next';
 import { AuthBackground } from '@/features/auth/components/AuthBackground';
 import { EmailCodeForm } from '@/features/auth/components/EmailCodeForm';
 import { LayoutDashboard } from 'lucide-react';
@@ -16,22 +19,28 @@ import { CURRENT_USER_KEY } from '@/features/auth/hooks/useCurrentUser';
 
 /** Messages for the `error` codes GitHub sign-in sends back (see backend/src/auth.ts). */
 const GITHUB_ERRORS: Record<string, string> = {
-    REGISTRATION_REQUIREMENTS:
-        'Pour créer un compte avec GitHub, acceptez les conditions et confirmez avoir 16 ans ou plus, puis cliquez sur « Continuer avec GitHub ».',
-    signup_disabled:
-        'Aucun compte n’est lié à ce compte GitHub. Créez-en un depuis l’onglet Inscription.',
-    account_not_linked:
-        'Un compte existe déjà avec cet email. Connectez-vous avec votre mot de passe, puis liez GitHub depuis la page Services.',
-    EMAIL_NOT_VERIFIED: 'Votre compte GitHub doit avoir une adresse email vérifiée.',
+    get REGISTRATION_REQUIREMENTS() {
+        return i18n.t('auth:githubRequirements');
+    },
+    get signup_disabled() {
+        return i18n.t('auth:githubNoAccount');
+    },
+    get account_not_linked() {
+        return i18n.t('auth:githubExistingAccount');
+    },
+    get EMAIL_NOT_VERIFIED() {
+        return i18n.t('auth:githubVerifiedEmail');
+    },
 };
 
 export default function AuthPage() {
+    useTranslation();
     const location = useLocation();
     const navigate = useNavigate();
     const queryClient = useQueryClient();
     const { pathname } = location;
     const isRegister = pathname === '/register';
-    const [error, setError] = useState('');
+    const [error, setError] = useState<unknown>('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [cguAccepted, setCguAccepted] = useState(false);
     const [is16OrOlder, setIs16OrOlder] = useState(false);
@@ -75,11 +84,7 @@ export default function AuthPage() {
                 setVerifyingEmail(email);
                 return;
             }
-            setError(
-                requestError instanceof Error
-                    ? requestError.message
-                    : 'Une erreur est survenue. Réessayez plus tard.',
-            );
+            setError(requestError);
         } finally {
             setIsSubmitting(false);
         }
@@ -96,17 +101,17 @@ export default function AuthPage() {
                     </div>
                     <CardTitle>
                         {verifyingEmail
-                            ? 'Vérifiez votre adresse e-mail'
+                            ? i18n.t('auth:verifyAddress')
                             : isRegister
-                              ? 'Créer votre compte'
-                              : 'Bon retour parmi nous'}
+                              ? i18n.t('auth:createTitle')
+                              : i18n.t('auth:welcomeTitle')}
                     </CardTitle>
                     <CardDescription>
                         {verifyingEmail
-                            ? 'Une dernière étape avant d’accéder à votre dashboard.'
+                            ? i18n.t('auth:verifySubtitle')
                             : isRegister
-                              ? 'Créez un compte pour personnaliser votre dashboard.'
-                              : 'Connectez-vous pour retrouver votre dashboard.'}
+                              ? i18n.t('auth:createSubtitle')
+                              : i18n.t('auth:loginSubtitle')}
                     </CardDescription>
                 </CardHeader>
 
@@ -125,7 +130,7 @@ export default function AuthPage() {
                                             : 'text-muted-foreground hover:text-foreground',
                                     )}
                                 >
-                                    Connexion
+                                    {i18n.t('auth:loginTab')}
                                 </Link>
                                 <Link
                                     to="/register"
@@ -136,7 +141,7 @@ export default function AuthPage() {
                                             : 'text-muted-foreground hover:text-foreground',
                                     )}
                                 >
-                                    Inscription
+                                    {i18n.t('auth:registerTab')}
                                 </Link>
                             </div>
 
@@ -145,13 +150,14 @@ export default function AuthPage() {
                                     className="mb-4 rounded-md bg-muted px-3 py-2 text-sm"
                                     role="status"
                                 >
-                                    Mot de passe modifié. Connectez-vous avec le nouveau.
+                                    {i18n.t('auth:passwordChanged')}
                                 </p>
                             )}
                             {githubError && (
                                 <p className="mb-4 text-sm text-destructive" role="alert">
-                                    {GITHUB_ERRORS[githubError] ??
-                                        'La connexion avec GitHub a échoué. Réessayez.'}
+                                    {Object.hasOwn(GITHUB_ERRORS, githubError)
+                                        ? GITHUB_ERRORS[githubError]
+                                        : i18n.t('auth:githubError')}
                                 </p>
                             )}
 
@@ -161,25 +167,19 @@ export default function AuthPage() {
                                 className="mb-4 h-10 w-full"
                                 onClick={() => {
                                     if (isRegister && (!cguAccepted || !is16OrOlder)) {
-                                        setError(
-                                            'Acceptez les conditions et confirmez avoir 16 ans ou plus avant de continuer avec GitHub.',
-                                        );
+                                        setError(notice('auth:githubConsent'));
                                         return;
                                     }
                                     setError('');
                                     startGitHubLogin(
                                         isRegister ? { cguAccepted, is16OrOlder } : undefined,
                                     ).catch((githubStartError: unknown) =>
-                                        setError(
-                                            githubStartError instanceof Error
-                                                ? githubStartError.message
-                                                : 'La connexion avec GitHub a échoué. Réessayez.',
-                                        ),
+                                        setError(githubStartError),
                                     );
                                 }}
                             >
                                 <Github className="mr-2 size-4" />
-                                Continuer avec GitHub
+                                {i18n.t('auth:continueGithub')}
                             </Button>
 
                             <div className="relative mb-6">
@@ -188,7 +188,7 @@ export default function AuthPage() {
                                 </div>
                                 <div className="relative flex justify-center text-xs uppercase">
                                     <span className="bg-white/88 px-2 text-muted-foreground">
-                                        Ou
+                                        {i18n.t('auth:or')}
                                     </span>
                                 </div>
                             </div>
@@ -197,9 +197,11 @@ export default function AuthPage() {
                                 {isRegister && (
                                     <div className="space-y-2">
                                         <div className="flex items-center justify-between gap-3">
-                                            <Label htmlFor="displayName">Nom d’affichage</Label>
+                                            <Label htmlFor="displayName">
+                                                {i18n.t('auth:displayName')}
+                                            </Label>
                                             <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                                                Facultatif
+                                                {i18n.t('auth:optional')}
                                             </span>
                                         </div>
                                         <Input
@@ -208,26 +210,26 @@ export default function AuthPage() {
                                             type="text"
                                             autoComplete="name"
                                             maxLength={50}
-                                            placeholder="Votre pseudo"
+                                            placeholder={i18n.t('auth:namePlaceholder')}
                                             aria-describedby="displayName-help"
                                         />
                                         <p
                                             id="displayName-help"
                                             className="text-xs text-muted-foreground"
                                         >
-                                            Utilisé uniquement pour personnaliser votre espace.
+                                            {i18n.t('auth:nameHint')}
                                         </p>
                                     </div>
                                 )}
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="email">Adresse e-mail</Label>
+                                    <Label htmlFor="email">{i18n.t('auth:email')}</Label>
                                     <Input
                                         id="email"
                                         name="email"
                                         type="email"
                                         autoComplete="email"
-                                        placeholder="vous@exemple.fr"
+                                        placeholder={i18n.t('auth:emailPlaceholder')}
                                         defaultValue={location.state?.email ?? ''}
                                         required
                                     />
@@ -235,13 +237,13 @@ export default function AuthPage() {
 
                                 <div className="space-y-2">
                                     <div className="flex items-center justify-between gap-3">
-                                        <Label htmlFor="password">Mot de passe</Label>
+                                        <Label htmlFor="password">{i18n.t('auth:password')}</Label>
                                         {!isRegister && (
                                             <Link
                                                 to="/forgot-password"
                                                 className="text-xs font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
                                             >
-                                                Mot de passe oublié ?
+                                                {i18n.t('auth:forgotLink')}
                                             </Link>
                                         )}
                                     </div>
@@ -262,7 +264,7 @@ export default function AuthPage() {
                                             id="password-help"
                                             className="text-xs text-muted-foreground"
                                         >
-                                            Entre 8 et 128 caractères.
+                                            {i18n.t('auth:passwordHint')}
                                         </p>
                                     )}
                                 </div>
@@ -281,16 +283,20 @@ export default function AuthPage() {
                                                 className="mt-0.5 size-4 rounded border-input accent-foreground"
                                             />
                                             <span>
-                                                J’accepte les{' '}
-                                                <Link
-                                                    className="font-medium text-foreground underline underline-offset-4"
-                                                    to="/cgu"
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                >
-                                                    conditions générales d’utilisation
-                                                </Link>
-                                                .
+                                                <Trans
+                                                    ns="auth"
+                                                    i18nKey="acceptTerms"
+                                                    components={{
+                                                        terms: (
+                                                            <Link
+                                                                className="font-medium text-foreground underline underline-offset-4"
+                                                                to="/cgu"
+                                                                target="_blank"
+                                                                rel="noreferrer"
+                                                            />
+                                                        ),
+                                                    }}
+                                                />
                                             </span>
                                         </label>
                                         <label className="flex cursor-pointer items-start gap-3 text-sm text-muted-foreground">
@@ -304,14 +310,14 @@ export default function AuthPage() {
                                                 required
                                                 className="mt-0.5 size-4 rounded border-input accent-foreground"
                                             />
-                                            <span>Je confirme avoir 16 ans ou plus.</span>
+                                            <span>{i18n.t('auth:ageConfirmation')}</span>
                                         </label>
                                     </div>
                                 )}
 
-                                {error && (
+                                {Boolean(error) && (
                                     <p className="text-sm text-destructive" role="alert">
-                                        {error}
+                                        {getErrorMessage(error)}
                                     </p>
                                 )}
 
@@ -321,10 +327,10 @@ export default function AuthPage() {
                                     disabled={isSubmitting}
                                 >
                                     {isSubmitting
-                                        ? 'Chargement…'
+                                        ? i18n.t('auth:loading')
                                         : isRegister
-                                          ? 'Créer mon compte'
-                                          : 'Se connecter'}
+                                          ? i18n.t('auth:createAccount')
+                                          : i18n.t('auth:login')}
                                 </Button>
                             </form>
                         </>

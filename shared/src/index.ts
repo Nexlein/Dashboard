@@ -52,3 +52,5 @@ export type LoginFormData = z.infer<typeof loginSchema>;
 export type ProfileFormData = z.infer<typeof profileSchema>;
 
 export { youtubeVideoId, youtubeChannels } from './youtube';
+
+export { apiErrorCode } from './apiErrors';

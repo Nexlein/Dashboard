@@ -1,3 +1,4 @@
+import { apiErrorCode } from 'shared';
 import { XMLParser, XMLValidator } from 'fast-xml-parser';
 import { youtubeChannels } from 'shared';
 import { getCache, setCache } from '../utils/redisCache.ts';
@@ -17,7 +18,10 @@ type Video = {
     thumbnail: string;
 };
 type ChannelFeed = { id: string; title: string; videos: Video[]; checkedAt: string };
-type FeedResult = { channel: ChannelFeed | null; warning?: { channel: string; message: string } };
+type FeedResult = {
+    channel: ChannelFeed | null;
+    warning?: { channel: string; message: string; code: string };
+};
 
 // Only our fixed YouTube origin is fetched. Redirects, oversized responses and slow reads
 // are rejected; the timeout covers the body as well as the response headers.
@@ -172,6 +176,13 @@ async function channelResult(input: string, force: boolean): Promise<FeedResult>
             channel: cached,
             warning: {
                 channel: cached?.title ?? input,
+                code: apiErrorCode(
+                    cached
+                        ? 'Refresh unavailable; showing saved publications.'
+                        : error instanceof HttpError
+                          ? error.message
+                          : 'YouTube is temporarily unavailable',
+                ),
                 message: cached
                     ? 'Refresh unavailable; showing saved publications.'
                     : error instanceof HttpError

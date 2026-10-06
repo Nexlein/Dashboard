@@ -1,3 +1,6 @@
+import { locale, formatNumber, formatPeriod } from '@/i18n/format';
+import i18n from '@/i18n';
+import { useTranslation } from 'react-i18next';
 import { useMemo, useState } from 'react';
 import type { WidgetViewProps } from '@/features/widgets/lib/types';
 
@@ -82,13 +85,13 @@ function StockLogo({
 
 function currencyValue(value: number, currency: string) {
     try {
-        return new Intl.NumberFormat(undefined, {
+        return new Intl.NumberFormat(locale(), {
             style: 'currency',
             currency,
             maximumFractionDigits: value < 1 ? 4 : 2,
         }).format(value);
     } catch {
-        return `${value.toLocaleString()} ${currency}`;
+        return `${formatNumber(value)} ${currency}`;
     }
 }
 
@@ -102,7 +105,7 @@ function dateLabel(timestamp: number, period: StockMarketData['period']) {
     if (!Number.isFinite(timestamp)) return '';
     const date = new Date(timestamp);
     if (Number.isNaN(date.getTime())) return '';
-    return new Intl.DateTimeFormat(undefined, options).format(date);
+    return new Intl.DateTimeFormat(locale(), options).format(date);
 }
 
 function chartPath(points: ChartPoint[], bounds: ChartBounds) {
@@ -126,6 +129,7 @@ export function StockMarketWidget({
     onPeriodChange,
     periodUpdating,
 }: WidgetViewProps<StockMarketData>) {
+    useTranslation();
     const [hiddenSymbols, setHiddenSymbols] = useState(() => new Set<string>());
     const activePeriod = String(selectedPeriod ?? data.period).toUpperCase();
     const normalizedSeries = useMemo(
@@ -220,7 +224,12 @@ export function StockMarketWidget({
                                     positive ? 'text-emerald-500' : 'text-red-500'
                                 }`}
                             >
-                                {positive ? '↑' : '↓'} {Math.abs(change).toFixed(2)}%
+                                {positive ? '↑' : '↓'}{' '}
+                                {formatNumber(Math.abs(change), {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                })}
+                                %
                             </p>
                         </div>
                     );
@@ -258,7 +267,7 @@ export function StockMarketWidget({
                 </div>
                 <div
                     className="flex items-center rounded-md bg-muted p-0.5"
-                    aria-label="Stock chart period"
+                    aria-label={i18n.t('markets:stockPeriod')}
                 >
                     {PERIODS.map((period) => (
                         <button
@@ -273,7 +282,7 @@ export function StockMarketWidget({
                             disabled={periodUpdating}
                             onClick={() => onPeriodChange(period)}
                         >
-                            {period}
+                            {formatPeriod(period)}
                         </button>
                     ))}
                 </div>
@@ -284,7 +293,7 @@ export function StockMarketWidget({
                     viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
                     className="h-full min-h-32 w-full"
                     role="img"
-                    aria-label="Stock performance comparison chart"
+                    aria-label={i18n.t('markets:stockChart')}
                 >
                     {yTicks.map((tick) => {
                         const y =
@@ -307,7 +316,7 @@ export function StockMarketWidget({
                                     textAnchor="end"
                                     className="fill-muted-foreground text-[11px]"
                                 >
-                                    {tick.toFixed(0)}%
+                                    {formatNumber(tick, { maximumFractionDigits: 0 })}%
                                 </text>
                             </g>
                         );
@@ -349,7 +358,7 @@ export function StockMarketWidget({
                             textAnchor="middle"
                             className="fill-muted-foreground text-sm"
                         >
-                            Select a stock from the legend
+                            {i18n.t('markets:selectStock')}
                         </text>
                     )}
                 </svg>

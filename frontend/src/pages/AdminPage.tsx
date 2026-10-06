@@ -1,3 +1,7 @@
+import { getErrorMessage } from '@/i18n/errors';
+import i18n from '@/i18n';
+import { formatDate, formatNumber } from '@/i18n/format';
+import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, Loader2, Search, ShieldCheck, Ban, Users } from 'lucide-react';
 import type { User } from 'shared';
@@ -19,40 +23,58 @@ import {
 const PAGE_SIZE = 20;
 
 const FILTERS: { value: UserFilter; label: string; icon: typeof Users }[] = [
-    { value: 'all', label: 'Utilisateurs', icon: Users },
-    { value: 'admin', label: 'Administrateurs', icon: ShieldCheck },
-    { value: 'banned', label: 'Bannis', icon: Ban },
+    {
+        value: 'all',
+        get label() {
+            return i18n.t('admin:users');
+        },
+        icon: Users,
+    },
+    {
+        value: 'admin',
+        get label() {
+            return i18n.t('admin:admins');
+        },
+        icon: ShieldCheck,
+    },
+    {
+        value: 'banned',
+        get label() {
+            return i18n.t('admin:bannedUsers');
+        },
+        icon: Ban,
+    },
 ];
 
-const dateFormat = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium' });
-
-const errorMessage = (error: unknown) =>
-    error instanceof Error ? error.message : 'L’action a échoué. Réessayez.';
+const dateFormat = { format: (date: Date) => formatDate(date, { dateStyle: 'medium' }) };
 
 /** The confirmation asked before an action, or null when it needs none. */
 function confirmation(action: UserAction, label: string): string | null {
     switch (action) {
         case 'promote':
-            return `Nommer ${label} administrateur ? Cette personne pourra gérer tous les comptes.`;
+            return i18n.t('admin:promoteConfirm', { name: label });
         case 'demote':
-            return `Retirer le rôle administrateur à ${label} ?`;
+            return i18n.t('admin:demoteConfirm', { name: label });
         case 'signOut':
-            return `Déconnecter ${label} de tous ses appareils ?`;
+            return i18n.t('admin:signOutConfirm', { name: label });
         case 'remove':
-            return `Supprimer définitivement le compte de ${label}, ses widgets et ses services connectés ? Cette action est irréversible.`;
+            return i18n.t('admin:removeConfirm', { name: label });
         default:
             return null;
     }
 }
 
 function StatusBadges({ user, isSelf }: { user: AdminUser; isSelf: boolean }) {
+    useTranslation();
     const badge = 'rounded-full px-2 py-0.5 text-xs font-medium';
     return (
         <div className="flex flex-wrap gap-1">
-            {isSelf && <span className={`${badge} bg-primary/10 text-primary`}>Vous</span>}
+            {isSelf && (
+                <span className={`${badge} bg-primary/10 text-primary`}>{i18n.t('admin:you')}</span>
+            )}
             {user.role === 'admin' && (
                 <span className={`${badge} bg-sky-500/10 text-sky-600 dark:text-sky-400`}>
-                    Admin
+                    {i18n.t('admin:admin')}
                 </span>
             )}
             {user.banned && (
@@ -61,13 +83,13 @@ function StatusBadges({ user, isSelf }: { user: AdminUser; isSelf: boolean }) {
                     title={user.banReason ?? undefined}
                 >
                     {user.banExpires
-                        ? `Banni jusqu’au ${dateFormat.format(user.banExpires)}`
-                        : 'Banni'}
+                        ? i18n.t('admin:bannedUntil', { date: dateFormat.format(user.banExpires) })
+                        : i18n.t('admin:banned')}
                 </span>
             )}
             {!user.emailVerified && (
                 <span className={`${badge} bg-muted text-muted-foreground`}>
-                    E-mail non vérifié
+                    {i18n.t('admin:emailUnverified')}
                 </span>
             )}
         </div>
@@ -76,12 +98,13 @@ function StatusBadges({ user, isSelf }: { user: AdminUser; isSelf: boolean }) {
 
 /** Administration: every account, with role, ban, sign-out and deletion actions. */
 export default function AdminPage({ currentUser }: { currentUser: User }) {
+    useTranslation();
     const [searchInput, setSearchInput] = useState('');
     const [search, setSearch] = useState('');
     const [filter, setFilter] = useState<UserFilter>('all');
     const [page, setPage] = useState(0);
     const [banning, setBanning] = useState<AdminUser | null>(null);
-    const [error, setError] = useState('');
+    const [error, setError] = useState<unknown>('');
 
     // Search once typing pauses, from the first page.
     useEffect(() => {
@@ -114,7 +137,7 @@ export default function AdminPage({ currentUser }: { currentUser: User }) {
         if (type === 'ban') return setBanning(user);
         const question = confirmation(type, user.name || user.email);
         if (question && !window.confirm(question)) return;
-        action.mutate({ user, type }, { onError: (err) => setError(errorMessage(err)) });
+        action.mutate({ user, type }, { onError: (err) => setError(err) });
     }
 
     const total = users.data?.total ?? 0;
@@ -126,10 +149,10 @@ export default function AdminPage({ currentUser }: { currentUser: User }) {
     return (
         <main className="mx-auto w-full max-w-6xl p-4 sm:p-8">
             <div className="mb-8">
-                <h1 className="text-3xl font-semibold tracking-tight">Administration</h1>
-                <p className="mt-2 text-muted-foreground">
-                    Gérez les comptes : rôles, bannissements, sessions et suppression.
-                </p>
+                <h1 className="text-3xl font-semibold tracking-tight">
+                    {i18n.t('common:administration')}
+                </h1>
+                <p className="mt-2 text-muted-foreground">{i18n.t('admin:subtitle')}</p>
             </div>
 
             <div className="mb-6 grid grid-cols-3 gap-2 sm:gap-3">
@@ -151,7 +174,7 @@ export default function AdminPage({ currentUser }: { currentUser: User }) {
                         </span>
                         <span>
                             <span className="block text-2xl font-semibold tabular-nums">
-                                {counts.data ? counts.data[value] : '–'}
+                                {counts.data ? formatNumber(counts.data[value]) : '–'}
                             </span>
                             <span className="text-xs text-muted-foreground sm:text-sm">
                                 {label}
@@ -165,20 +188,20 @@ export default function AdminPage({ currentUser }: { currentUser: User }) {
                 <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                     type="search"
-                    aria-label="Rechercher par adresse e-mail"
-                    placeholder="Rechercher par e-mail"
+                    aria-label={i18n.t('admin:searchLabel')}
+                    placeholder={i18n.t('admin:searchPlaceholder')}
                     className="pl-9"
                     value={searchInput}
                     onChange={(event) => setSearchInput(event.target.value)}
                 />
             </div>
 
-            {(error || users.isError) && (
+            {(Boolean(error) || users.isError) && (
                 <div
                     role="alert"
                     className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
                 >
-                    {error || errorMessage(users.error)}
+                    {getErrorMessage(error || users.error)}
                 </div>
             )}
 
@@ -187,16 +210,16 @@ export default function AdminPage({ currentUser }: { currentUser: User }) {
                     <thead className="border-b bg-muted/50 text-left text-muted-foreground">
                         <tr>
                             <th scope="col" className="px-4 py-3 font-medium">
-                                Utilisateur
+                                {i18n.t('admin:user')}
                             </th>
                             <th scope="col" className="hidden px-4 py-3 font-medium sm:table-cell">
-                                Statut
+                                {i18n.t('admin:status')}
                             </th>
                             <th scope="col" className="hidden px-4 py-3 font-medium md:table-cell">
-                                Inscription
+                                {i18n.t('admin:registration')}
                             </th>
                             <th scope="col" className="px-4 py-3">
-                                <span className="sr-only">Actions</span>
+                                <span className="sr-only">{i18n.t('admin:actions')}</span>
                             </th>
                         </tr>
                     </thead>
@@ -240,31 +263,34 @@ export default function AdminPage({ currentUser }: { currentUser: User }) {
                     </div>
                 )}
                 {users.data && users.data.users.length === 0 && (
-                    <p className="p-8 text-center text-muted-foreground">Aucun compte trouvé.</p>
+                    <p className="p-8 text-center text-muted-foreground">
+                        {i18n.t('admin:noUsers')}
+                    </p>
                 )}
             </div>
 
             <div className="mt-4 flex items-center justify-between gap-4 text-sm text-muted-foreground">
-                <span>
-                    {total} compte{total > 1 ? 's' : ''}
-                </span>
+                <span>{i18n.t('admin:accountCount', { count: total })}</span>
                 <div className="flex items-center gap-2">
                     <Button
                         variant="outline"
                         size="icon"
-                        aria-label="Page précédente"
+                        aria-label={i18n.t('admin:previousPage')}
                         disabled={page === 0}
                         onClick={() => setPage(page - 1)}
                     >
                         <ChevronLeft />
                     </Button>
                     <span>
-                        Page {page + 1} / {pageCount}
+                        {i18n.t('admin:page', {
+                            page: formatNumber(page + 1),
+                            total: formatNumber(pageCount),
+                        })}
                     </span>
                     <Button
                         variant="outline"
                         size="icon"
-                        aria-label="Page suivante"
+                        aria-label={i18n.t('admin:nextPage')}
                         disabled={page + 1 >= pageCount}
                         onClick={() => setPage(page + 1)}
                     >

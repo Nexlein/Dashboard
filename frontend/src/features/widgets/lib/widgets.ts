@@ -1,3 +1,4 @@
+import i18n from '@/i18n';
 import { fetchClient } from '@/lib/apiClient';
 import type { ServiceDefinition, WidgetDefinition } from './types';
 
@@ -49,69 +50,95 @@ const DEFAULT_WIDGET_LAYOUT: WidgetLayout = { x: 0, y: 0, w: 4, h: 2 };
 
 const WIDGET_PRESENTATION: Record<string, WidgetPresentation> = {
     'weather:current_weather': {
-        title: 'Weather',
+        get title() {
+            return i18n.t('widgets:weather');
+        },
         defaultLayout: { x: 0, y: 0, w: 3, h: 2 },
     },
     'weather:weather-current': {
-        title: 'Weather',
+        get title() {
+            return i18n.t('widgets:weather');
+        },
         defaultLayout: { x: 0, y: 0, w: 3, h: 2 },
     },
     'weather:forecast': {
-        title: 'Weather',
+        get title() {
+            return i18n.t('widgets:weather');
+        },
         defaultLayout: { x: 0, y: 0, w: 4, h: 3 },
     },
     'weather:weather-forecast': {
-        title: 'Weather',
+        get title() {
+            return i18n.t('widgets:weather');
+        },
         defaultLayout: { x: 0, y: 0, w: 4, h: 3 },
     },
     'github:repo_stats': {
-        title: 'GitHub - Repository Stats',
+        get title() {
+            return i18n.t('widgets:githubStatsTitle');
+        },
         defaultLayout: { x: 0, y: 0, w: 3, h: 3 },
         minW: 3,
         minH: 3,
     },
     'github:latest_commits': {
-        title: 'GitHub - Latest Commits',
+        get title() {
+            return i18n.t('widgets:githubCommitsTitle');
+        },
         defaultLayout: { x: 0, y: 0, w: 4, h: 3 },
         minW: 3,
         minH: 3,
     },
     'github:user_profile': {
-        title: 'GitHub - User Profile',
+        get title() {
+            return i18n.t('widgets:githubProfileTitle');
+        },
         defaultLayout: { x: 0, y: 0, w: 3, h: 3 },
         minW: 3,
         minH: 3,
     },
     'youtube:video_player': {
-        title: 'YouTube Video',
+        get title() {
+            return i18n.t('widgets:youtubeVideoTitle');
+        },
         defaultLayout: { x: 0, y: 0, w: 4, h: 4 },
         minW: 3,
         minH: 4,
     },
     'youtube:channel_watch': {
-        title: 'YouTube Watch',
+        get title() {
+            return i18n.t('widgets:youtubeWatchTitle');
+        },
         defaultLayout: { x: 0, y: 0, w: 5, h: 5 },
         minW: 3,
         minH: 4,
     },
     'crypto:crypto_price': {
-        title: 'Crypto Price',
+        get title() {
+            return i18n.t('widgets:cryptoPriceTitle');
+        },
         defaultLayout: { x: 0, y: 0, w: 3, h: 2 },
     },
     'stocks:stock_market': {
-        title: 'Stock Market',
+        get title() {
+            return i18n.t('widgets:stockMarket');
+        },
         defaultLayout: { x: 0, y: 0, w: 6, h: 5 },
         minW: 3,
         minH: 4,
     },
     'stocks:stock_profile': {
-        title: 'Stock Profile',
+        get title() {
+            return i18n.t('widgets:stockProfile');
+        },
         defaultLayout: { x: 0, y: 0, w: 4, h: 4 },
         minW: 3,
         minH: 4,
     },
     'crypto:crypto_chart': {
-        title: 'Crypto Market',
+        get title() {
+            return i18n.t('widgets:cryptoMarketTitle');
+        },
         defaultLayout: { x: 0, y: 0, w: 6, h: 5 },
         minW: 3,
         minH: 4,
@@ -135,11 +162,6 @@ export function getDefaultWidgetLayout(serviceName: string, widgetName: string):
 
 export function toDashboardWidget(widget: ApiWidget): DashboardWidget {
     const presentation = WIDGET_PRESENTATION[widgetKey(widget.serviceName, widget.widgetName)];
-    let title = presentation?.title || widget.widgetName;
-
-    if (widget.serviceName === 'chatbot' && widget.params?.model) {
-        title = `Ollama - ${widget.params.model}`;
-    }
 
     return {
         ...widget,
@@ -151,8 +173,19 @@ export function toDashboardWidget(widget: ApiWidget): DashboardWidget {
         h: widget.layout.h,
         minW: presentation?.minW,
         minH: presentation?.minH,
-        title,
+        title: getWidgetTitle(widget),
     };
+}
+
+/** Resolve titles at render time as cached widget data survives a language change. */
+export function getWidgetTitle(widget: Pick<ApiWidget, 'serviceName' | 'widgetName' | 'params'>) {
+    if (widget.serviceName === 'chatbot' && widget.params?.model) {
+        return `Ollama - ${widget.params.model}`;
+    }
+    return (
+        WIDGET_PRESENTATION[widgetKey(widget.serviceName, widget.widgetName)]?.title ||
+        widget.widgetName
+    );
 }
 
 export async function fetchUserWidgets(): Promise<DashboardWidget[]> {

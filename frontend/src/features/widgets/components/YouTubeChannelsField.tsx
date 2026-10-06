@@ -1,3 +1,5 @@
+import i18n from '@/i18n';
+import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { Plus, X } from 'lucide-react';
 import { youtubeChannels } from 'shared';
@@ -16,21 +18,22 @@ export function YouTubeChannelsField({
     value: string;
     onChange: (value: string) => void;
 }) {
+    useTranslation();
     const selected = value
         .split(/[\n,]+/)
         .map((item) => item.trim())
         .filter(Boolean);
     const [draft, setDraft] = useState('');
-    const [error, setError] = useState('');
+    const [error, setError] = useState(false);
     const add = () => {
         const channels = youtubeChannels([...selected, draft].join('\n'));
         if (!channels || !draft.trim()) {
-            setError('Enter a YouTube channel link, @handle or channel ID. Maximum 5 channels.');
+            setError(true);
             return;
         }
         onChange(channels.join('\n'));
         setDraft('');
-        setError('');
+        setError(false);
     };
     return (
         <div className="grid gap-2">
@@ -38,7 +41,7 @@ export function YouTubeChannelsField({
                 <Label htmlFor={id}>{label}</Label>
                 <span className="text-xs text-muted-foreground">{selected.length}/5</span>
             </div>
-            <div className="flex flex-wrap gap-1.5" aria-label="Selected YouTube channels">
+            <div className="flex flex-wrap gap-1.5" aria-label={i18n.t('widgets:selectedChannels')}>
                 {selected.map((channel) => (
                     <span
                         key={channel}
@@ -47,11 +50,11 @@ export function YouTubeChannelsField({
                         <span className="truncate">{channel}</span>
                         <button
                             type="button"
-                            aria-label={`Remove ${channel}`}
+                            aria-label={i18n.t('widgets:removeCoin', { name: channel })}
                             className="shrink-0 cursor-pointer rounded-full p-1 hover:bg-red-500/20"
                             onClick={() => {
                                 onChange(selected.filter((item) => item !== channel).join('\n'));
-                                setError('');
+                                setError(false);
                             }}
                         >
                             <X className="size-3" aria-hidden="true" />
@@ -69,7 +72,7 @@ export function YouTubeChannelsField({
                     aria-invalid={!!error}
                     onChange={(event) => {
                         setDraft(event.target.value);
-                        setError('');
+                        setError(false);
                     }}
                     onKeyDown={(event) => {
                         if (event.key === 'Enter') {
@@ -82,7 +85,7 @@ export function YouTubeChannelsField({
                     type="button"
                     variant="outline"
                     size="icon"
-                    aria-label="Add channel"
+                    aria-label={i18n.t('widgets:addChannel')}
                     disabled={!draft.trim() || selected.length >= 5}
                     onClick={add}
                 >
@@ -90,12 +93,11 @@ export function YouTubeChannelsField({
                 </Button>
             </div>
             <p id={`${id}-help`} className="text-xs text-muted-foreground">
-                Add up to 5 public channels. Paste a link or @handle, then press +. Updates every 10
-                minutes.
+                {i18n.t('widgets:channelHint')}
             </p>
             {error && (
                 <p id={`${id}-error`} role="alert" className="text-xs text-destructive">
-                    {error}
+                    {i18n.t('widgets:channelInvalid')}
                 </p>
             )}
         </div>

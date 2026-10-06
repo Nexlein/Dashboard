@@ -28,12 +28,12 @@ describe('Navbar Component', () => {
 
         expect(document.documentElement).not.toHaveClass('dark');
 
-        fireEvent.click(screen.getByRole('button', { name: /ouvrir le menu du compte/i }));
-        fireEvent.click(screen.getByRole('menuitem', { name: /thème sombre/i }));
+        fireEvent.click(screen.getByRole('button', { name: /open the account menu/i }));
+        fireEvent.click(screen.getByRole('menuitem', { name: /dark theme/i }));
         expect(document.documentElement).toHaveClass('dark');
 
-        fireEvent.click(screen.getByRole('button', { name: /ouvrir le menu du compte/i }));
-        fireEvent.click(screen.getByRole('menuitem', { name: /thème clair/i }));
+        fireEvent.click(screen.getByRole('button', { name: /open the account menu/i }));
+        fireEvent.click(screen.getByRole('menuitem', { name: /light theme/i }));
         expect(document.documentElement).not.toHaveClass('dark');
     });
 
@@ -41,8 +41,8 @@ describe('Navbar Component', () => {
         const onLogout = vi.fn();
         renderNavbar({ onLogout });
 
-        fireEvent.click(screen.getByRole('button', { name: /ouvrir le menu du compte/i }));
-        fireEvent.click(screen.getByRole('menuitem', { name: /se déconnecter/i }));
+        fireEvent.click(screen.getByRole('button', { name: /open the account menu/i }));
+        fireEvent.click(screen.getByRole('menuitem', { name: /sign out/i }));
 
         expect(onLogout).toHaveBeenCalledOnce();
     });

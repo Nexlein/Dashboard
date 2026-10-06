@@ -1,3 +1,6 @@
+import { getErrorMessage, notice } from '@/i18n/errors';
+import i18n from '@/i18n';
+import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
@@ -9,16 +12,17 @@ import {
 import type { ServiceConnection } from '@/features/services/lib/services';
 import { ServiceCard } from '@/features/services/components/ServiceCard';
 
-/** Error codes GitHub linking sends back in `?error=` (Better Auth). */
-const LINK_ERRORS: Record<string, string> = {
-    account_already_linked_to_different_user:
-        'This GitHub account is already linked to another Dashboard account.',
-};
-
 export default function ServicesPage() {
+    useTranslation();
     const linkError = new URLSearchParams(useLocation().search).get('error');
-    const [error, setError] = useState<string | null>(
-        linkError ? (LINK_ERRORS[linkError] ?? 'Linking the account failed. Try again.') : null,
+    const [error, setError] = useState<unknown>(
+        linkError
+            ? notice(
+                  linkError === 'account_already_linked_to_different_user'
+                      ? 'services:alreadyLinked'
+                      : 'services:linkFailed',
+              )
+            : null,
     );
 
     const { data: services = [], isLoading: loading, isError, error: queryError } = useServices();
@@ -30,7 +34,7 @@ export default function ServicesPage() {
             { serviceName, apiKey },
             {
                 onSuccess: () => setError(null),
-                onError: (err: Error) => setError(err.message),
+                onError: (err: Error) => setError(err),
             },
         );
     }
@@ -38,7 +42,7 @@ export default function ServicesPage() {
     async function handleDisconnect(serviceName: string) {
         return disconnectMutation.mutateAsync(serviceName, {
             onSuccess: () => setError(null),
-            onError: (err: Error) => setError(err.message),
+            onError: (err: Error) => setError(err),
         });
     }
 
@@ -49,18 +53,18 @@ export default function ServicesPage() {
     return (
         <main className="mx-auto w-full max-w-5xl p-4 sm:p-8">
             <div className="mb-8">
-                <h1 className="text-3xl font-semibold tracking-tight">Services</h1>
-                <p className="mt-2 text-muted-foreground">
-                    Connect your own provider credentials before adding their widgets.
-                </p>
+                <h1 className="text-3xl font-semibold tracking-tight">
+                    {i18n.t('common:services')}
+                </h1>
+                <p className="mt-2 text-muted-foreground">{i18n.t('services:subtitle')}</p>
             </div>
 
-            {(error || isError) && (
+            {(Boolean(error) || isError) && (
                 <div
                     role="alert"
                     className="mb-5 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
                 >
-                    {error || (queryError as Error)?.message}
+                    {getErrorMessage(error || queryError)}
                 </div>
             )}
 

@@ -1,3 +1,4 @@
+import { apiError } from '../utils/apiError.ts';
 import type { Response } from 'express';
 import { z } from 'zod';
 import { encryptJson, decryptJson } from '../utils/encryption.ts';
@@ -61,7 +62,7 @@ function parseWidgetId(raw: unknown): number | null {
 }
 
 function invalid(res: Response, result: { error: z.ZodError }) {
-    return res.status(400).json({ error: result.error.issues[0].message });
+    return res.status(400).json({ ...apiError(result.error.issues[0].message) });
 }
 
 /** Decrypts a stored JSON object (params, credentials); anything else becomes {}. */
@@ -150,16 +151,16 @@ export const addWidget = asyncHandler(async (req, res) => {
     const { serviceName, widgetName, params, refreshRate, layout } = validated.data;
 
     const service = registry.getService(serviceName);
-    if (!service) return res.status(400).json({ error: `Unknown service: ${serviceName}` });
+    if (!service) return res.status(400).json({ ...apiError(`Unknown service: ${serviceName}`) });
 
     const widgetDef = service.widgets.find((w) => w.name === widgetName);
     if (!widgetDef)
         return res
             .status(400)
-            .json({ error: `Unknown widget: ${widgetName} in service ${serviceName}` });
+            .json({ ...apiError(`Unknown widget: ${widgetName} in service ${serviceName}`) });
 
     const result = await serviceAccess(authUser(req).userId, service, params);
-    if ('error' in result) return res.status(result.status).json({ error: result.error });
+    if ('error' in result) return res.status(result.status).json({ ...apiError(result.error) });
     const { access } = result;
 
     if (service.validateParams || typeof service.execute === 'function') {
@@ -174,7 +175,7 @@ export const addWidget = asyncHandler(async (req, res) => {
         } catch (execError) {
             return res
                 .status(400)
-                .json({ error: errorMessage(execError, 'Widget validation failed') });
+                .json({ ...apiError(errorMessage(execError, 'Widget validation failed')) });
         }
     }
 
@@ -213,23 +214,25 @@ export const updateLayout = asyncHandler(async (req, res) => {
 
 export const getWidgetData = asyncHandler(async (req, res) => {
     const widgetId = parseWidgetId(req.params.id);
-    if (!widgetId) return res.status(400).json({ error: 'Invalid widget id' });
+    if (!widgetId) return res.status(400).json({ ...apiError('Invalid widget id') });
     const widget = await prisma.widgetConfig.findUnique({ where: { id: widgetId } });
-    if (!widget) return res.status(404).json({ error: 'Widget not found' });
+    if (!widget) return res.status(404).json({ ...apiError('Widget not found') });
     if (widget.userId !== authUser(req).userId)
-        return res.status(403).json({ error: 'Unauthorized to view this widget' });
+        return res.status(403).json({ ...apiError('Unauthorized to view this widget') });
 
     const service = registry.getService(widget.serviceName);
-    if (!service) return res.status(404).json({ error: 'Service not found' });
+    if (!service) return res.status(404).json({ ...apiError('Service not found') });
 
     const params: WidgetParams = decryptObject(widget.params);
     const result = await serviceAccess(authUser(req).userId, service, params);
-    if ('error' in result) return res.status(result.status).json({ error: result.error });
+    if ('error' in result) return res.status(result.status).json({ ...apiError(result.error) });
     const { access } = result;
 
     // Services that declare widgets without fetching any data.
     if (!service.execute)
-        return res.status(501).json({ error: 'Widget data is not available for this service' });
+        return res
+            .status(501)
+            .json({ ...apiError('Widget data is not available for this service') });
 
     let data: unknown;
     try {
@@ -240,14 +243,14 @@ export const getWidgetData = asyncHandler(async (req, res) => {
             ...access,
         });
     } catch (execError) {
-        const details = execError as { statusCode?: number; retryAfter?: number };
+        const details = execError as { statusCode?: number; retryAfter?: number; code?: string };
         if (details.retryAfter) res.set('Retry-After', String(details.retryAfter));
         // Provider statuses such as 401 would read as this API's own session errors.
         const status = FORWARDED_ERROR_STATUSES.has(details.statusCode ?? 0)
             ? details.statusCode!
             : 502;
         return res.status(status).json({
-            error: errorMessage(execError, 'Failed to fetch widget data'),
+            ...apiError(errorMessage(execError, 'Failed to fetch widget data'), details.code),
             ...(details.retryAfter && { retryAfter: details.retryAfter }),
         });
     }
@@ -257,22 +260,24 @@ export const getWidgetData = asyncHandler(async (req, res) => {
 
 export const updateWidget = asyncHandler(async (req, res) => {
     const widgetId = parseWidgetId(req.params.id);
-    if (!widgetId) return res.status(400).json({ error: 'Invalid widget id' });
+    if (!widgetId) return res.status(400).json({ ...apiError('Invalid widget id') });
     const validated = updateWidgetSchema.safeParse(req.body);
     if (!validated.success) return invalid(res, validated);
     const { params, refreshRate, layout } = validated.data;
 
     const existing = await prisma.widgetConfig.findUnique({ where: { id: widgetId } });
-    if (!existing) return res.status(404).json({ error: 'Widget not found' });
+    if (!existing) return res.status(404).json({ ...apiError('Widget not found') });
     if (existing.userId !== authUser(req).userId)
-        return res.status(403).json({ error: 'Unauthorized to update this widget' });
+        return res.status(403).json({ ...apiError('Unauthorized to update this widget') });
 
     if (params) {
         const service = registry.getService(existing.serviceName);
         try {
             service?.validateParams?.(existing.widgetName, params);
         } catch (error) {
-            return res.status(400).json({ error: errorMessage(error, 'Widget validation failed') });
+            return res
+                .status(400)
+                .json({ ...apiError(errorMessage(error, 'Widget validation failed')) });
         }
     }
 
@@ -290,11 +295,11 @@ export const updateWidget = asyncHandler(async (req, res) => {
 
 export const deleteWidget = asyncHandler(async (req, res) => {
     const widgetId = parseWidgetId(req.params.id);
-    if (!widgetId) return res.status(400).json({ error: 'Invalid widget id' });
+    if (!widgetId) return res.status(400).json({ ...apiError('Invalid widget id') });
     const existing = await prisma.widgetConfig.findUnique({ where: { id: widgetId } });
-    if (!existing) return res.status(404).json({ error: 'Widget not found' });
+    if (!existing) return res.status(404).json({ ...apiError('Widget not found') });
     if (existing.userId !== authUser(req).userId)
-        return res.status(403).json({ error: 'Unauthorized to delete this widget' });
+        return res.status(403).json({ ...apiError('Unauthorized to delete this widget') });
 
     await prisma.widgetConfig.delete({ where: { id: widgetId } });
     res.status(204).send();
@@ -302,18 +307,18 @@ export const deleteWidget = asyncHandler(async (req, res) => {
 
 export const chatWidget = asyncHandler(async (req, res) => {
     const widgetId = parseWidgetId(req.params.id);
-    if (!widgetId) return res.status(400).json({ error: 'Invalid widget id' });
+    if (!widgetId) return res.status(400).json({ ...apiError('Invalid widget id') });
     const validated = chatSchema.safeParse(req.body);
     if (!validated.success) return invalid(res, validated);
 
     const widget = await prisma.widgetConfig.findUnique({ where: { id: widgetId } });
-    if (!widget) return res.status(404).json({ error: 'Widget not found' });
+    if (!widget) return res.status(404).json({ ...apiError('Widget not found') });
     if (widget.userId !== authUser(req).userId)
-        return res.status(403).json({ error: 'Unauthorized' });
+        return res.status(403).json({ ...apiError('Unauthorized') });
 
     const service = registry.getService(widget.serviceName);
     if (typeof service?.chat !== 'function')
-        return res.status(400).json({ error: 'Widget does not support chat' });
+        return res.status(400).json({ ...apiError('Widget does not support chat') });
 
     try {
         const data = await service.chat(
@@ -325,6 +330,6 @@ export const chatWidget = asyncHandler(async (req, res) => {
     } catch (chatError) {
         // Ollama answered with an error status: forward it. Otherwise it is unreachable.
         if ((chatError as { statusCode?: number }).statusCode) throw chatError;
-        res.status(502).json({ error: 'Failed to communicate with chatbot' });
+        res.status(502).json({ ...apiError('Failed to communicate with chatbot') });
     }
 });

@@ -1,3 +1,6 @@
+import { getErrorMessage } from '@/i18n/errors';
+import i18n from '@/i18n';
+import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { useUpdateWidget } from '@/features/widgets/hooks/useWidgets';
 import {
@@ -30,10 +33,11 @@ export function WidgetEditDialog({
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }) {
+    useTranslation();
     const updateWidgetMutation = useUpdateWidget();
     const [params, setParams] = useState(widget.params || {});
     const [refreshTimer, setRefreshTimer] = useState(widget.refreshRate?.toString() || '60');
-    const [error, setError] = useState('');
+    const [error, setError] = useState<unknown>('');
 
     const service = widget.serviceName;
     const widgetType = widget.widgetName;
@@ -61,7 +65,7 @@ export function WidgetEditDialog({
             });
             onOpenChange(false);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to update widget');
+            setError(err);
         }
     };
 
@@ -71,9 +75,11 @@ export function WidgetEditDialog({
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-106.25">
                 <DialogHeader>
-                    <DialogTitle>Edit Widget</DialogTitle>
+                    <DialogTitle>{i18n.t('widgets:editTitle')}</DialogTitle>
                     <DialogDescription>
-                        Modify the settings for your {widgetDef?.name || 'Widget'}.
+                        {i18n.t('widgets:editSubtitle', {
+                            name: widgetDef?.name || widget.widgetName,
+                        })}
                     </DialogDescription>
                 </DialogHeader>
 
@@ -88,9 +94,11 @@ export function WidgetEditDialog({
                     />
                 )}
 
-                {error && (
+                {Boolean(error) && (
                     <div className="grid gap-4">
-                        <p className="text-sm font-medium text-destructive">{error}</p>
+                        <p className="text-sm font-medium text-destructive">
+                            {getErrorMessage(error)}
+                        </p>
                     </div>
                 )}
 
@@ -100,7 +108,7 @@ export function WidgetEditDialog({
                         onClick={() => onOpenChange(false)}
                         disabled={isSaving}
                     >
-                        Cancel
+                        {i18n.t('common:cancel')}
                     </Button>
                     <Button
                         onClick={handleSave}
@@ -108,7 +116,7 @@ export function WidgetEditDialog({
                             isSaving || !isRefreshRateValid(refreshTimer, serviceDef, widgetDef)
                         }
                     >
-                        {isSaving ? 'Saving...' : 'Save Changes'}
+                        {isSaving ? i18n.t('common:saving') : i18n.t('common:saveChanges')}
                     </Button>
                 </DialogFooter>
             </DialogContent>

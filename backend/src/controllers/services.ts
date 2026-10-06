@@ -1,3 +1,4 @@
+import { apiError } from '../utils/apiError.ts';
 import type { Request } from 'express';
 import { fromNodeHeaders } from 'better-auth/node';
 import { auth } from '../auth.ts';
@@ -80,19 +81,20 @@ export const getServices = asyncHandler(async (req, res) => {
 
 export const connectService = asyncHandler(async (req, res) => {
     const service = registry.getService(String(req.params.serviceName));
-    if (!service) return res.status(404).json({ error: 'Service not found' });
-    if (!service.connection) return res.status(400).json({ error: 'Service is not configurable' });
+    if (!service) return res.status(404).json({ ...apiError('Service not found') });
+    if (!service.connection)
+        return res.status(400).json({ ...apiError('Service is not configurable') });
     if (service.connection.type === 'oauth')
-        return res.status(400).json({ error: 'Use OAuth flow for this service' });
+        return res.status(400).json({ ...apiError('Use OAuth flow for this service') });
     if (!service.verifyCredentials)
-        return res.status(400).json({ error: 'Service does not accept an API key' });
+        return res.status(400).json({ ...apiError('Service does not accept an API key') });
 
     const { apiKey } = req.body as { apiKey?: unknown };
     if (typeof apiKey !== 'string' || !apiKey.trim())
-        return res.status(400).json({ error: 'API key is required' });
+        return res.status(400).json({ ...apiError('API key is required') });
     const normalizedApiKey = apiKey.trim();
     if (normalizedApiKey.length > 256)
-        return res.status(400).json({ error: 'API key is too long' });
+        return res.status(400).json({ ...apiError('API key is too long') });
 
     await service.verifyCredentials({ apiKey: normalizedApiKey });
     const verifiedAt = new Date();
@@ -128,8 +130,9 @@ async function unlinkAccounts(req: Request, accountIds: number[]) {
 export const disconnectService = asyncHandler(async (req, res) => {
     const service = registry.getService(String(req.params.serviceName));
 
-    if (!service) return res.status(404).json({ error: 'Service not found' });
-    if (!service.connection) return res.status(400).json({ error: 'Service is not configurable' });
+    if (!service) return res.status(404).json({ ...apiError('Service not found') });
+    if (!service.connection)
+        return res.status(400).json({ ...apiError('Service is not configurable') });
 
     const provider = service.connection.provider;
     if (provider) {
@@ -152,12 +155,12 @@ export const disconnectService = asyncHandler(async (req, res) => {
 export const disconnectAccount = asyncHandler(async (req, res) => {
     const service = registry.getService(String(req.params.serviceName));
     const provider = service?.connection?.provider;
-    if (!provider) return res.status(404).json({ error: 'Service not found' });
+    if (!provider) return res.status(404).json({ ...apiError('Service not found') });
 
     const accountId = Number(req.params.accountId);
     const accounts = await linkedAccounts(authUser(req).userId, provider);
     if (!accounts.some((account) => account.id === accountId))
-        return res.status(404).json({ error: 'Account not found' });
+        return res.status(404).json({ ...apiError('Account not found') });
 
     await unlinkAccounts(req, [accountId]);
     res.status(204).send();
@@ -165,9 +168,9 @@ export const disconnectAccount = asyncHandler(async (req, res) => {
 
 export const searchService = asyncHandler(async (req, res) => {
     const service = registry.getService(String(req.params.serviceName));
-    if (!service) return res.status(404).json({ error: 'Service not found' });
+    if (!service) return res.status(404).json({ ...apiError('Service not found') });
     if (typeof service.search !== 'function')
-        return res.status(400).json({ error: 'Service does not support search' });
+        return res.status(400).json({ ...apiError('Service does not support search') });
 
     const connection = await prisma.serviceConnection.findUnique({
         where: {
@@ -180,7 +183,7 @@ export const searchService = asyncHandler(async (req, res) => {
     if (!connection)
         return res
             .status(409)
-            .json({ error: `${service.displayName || service.name} is not connected` });
+            .json({ ...apiError(`${service.displayName || service.name} is not connected`) });
 
     const results = await service.search(String(req.query.q || ''), {
         credentials: decryptJson(connection.encryptedCredentials) as ServiceCredentials,

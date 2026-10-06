@@ -1,5 +1,6 @@
+import i18n from '@/i18n';
+import { useTranslation } from 'react-i18next';
 import { useState, type ComponentType, type SVGProps } from 'react';
-import { Bitcoin, Play } from 'lucide-react';
 import { Github } from '@/components/ui/Github';
 
 // Every logo is served by the app itself: loading them from the brands' sites would send
@@ -10,8 +11,8 @@ const SERVICE_BRANDS: Record<
 > = {
     weather: { name: 'OpenWeather', logo: '/logos/openweather.svg' },
     github: { name: 'GitHub', icon: Github },
-    youtube: { name: 'YouTube', icon: Play },
-    crypto: { name: 'CoinGecko', icon: Bitcoin },
+    youtube: { name: 'YouTube', logo: '/logos/youtube.svg' },
+    crypto: { name: 'CoinGecko', logo: '/logos/coingecko.svg' },
     stocks: { name: 'Twelve Data', logo: '/logos/twelve-data.png' },
     chatbot: { name: 'Ollama', logo: '/logos/ollama.png' },
 };
@@ -27,6 +28,7 @@ export function ServiceLogo({
     size?: 'sm' | 'md';
     decorative?: boolean;
 }) {
+    useTranslation();
     const [failed, setFailed] = useState(false);
     const brand = SERVICE_BRANDS[name];
     const label = displayName || brand?.name || name;
@@ -43,7 +45,7 @@ export function ServiceLogo({
             {logo && !failed ? (
                 <img
                     src={logo}
-                    alt={decorative ? '' : `${label} logo`}
+                    alt={decorative ? '' : i18n.t('services:logo', { name: label })}
                     className="size-full object-contain"
                     draggable={false}
                     onError={() => setFailed(true)}
@@ -52,7 +54,7 @@ export function ServiceLogo({
                 <Icon
                     className="size-full"
                     role={decorative ? undefined : 'img'}
-                    aria-label={decorative ? undefined : `${label} logo`}
+                    aria-label={decorative ? undefined : i18n.t('services:logo', { name: label })}
                     aria-hidden={decorative || undefined}
                 />
             ) : (

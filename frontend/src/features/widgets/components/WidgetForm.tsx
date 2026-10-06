@@ -1,3 +1,5 @@
+import i18n from '@/i18n';
+import { useTranslation } from 'react-i18next';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { WidgetParameterField } from './WidgetParameterField';
@@ -19,6 +21,7 @@ export function WidgetForm({
     refreshTimer: string;
     setRefreshTimer: (value: string) => void;
 }) {
+    useTranslation();
     const CustomConfigUi = widgetDef.customConfigUi;
     const hasRefresh = widgetDef.hasRefresh ?? serviceDef.hasRefresh;
 
@@ -48,7 +51,7 @@ export function WidgetForm({
             {/* Refresh Rate Timer */}
             {hasRefresh && (
                 <div className="grid gap-2 animate-in fade-in slide-in-from-top-2">
-                    <Label htmlFor="refreshTimer">Refresh Rate (seconds)</Label>
+                    <Label htmlFor="refreshTimer">{i18n.t('widgets:refreshRate')}</Label>
                     <Input
                         id="refreshTimer"
                         type="number"
@@ -57,7 +60,7 @@ export function WidgetForm({
                         onChange={(e) => setRefreshTimer(e.target.value)}
                     />
                     <p className="text-[0.8rem] text-muted-foreground">
-                        Minimum refresh rate is {MIN_REFRESH_RATE_SECONDS}s.
+                        {i18n.t('widgets:minimumRefresh', { seconds: MIN_REFRESH_RATE_SECONDS })}
                     </p>
                 </div>
             )}

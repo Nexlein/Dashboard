@@ -1,3 +1,7 @@
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { notice, getErrorMessage } from '@/i18n/errors';
+import i18n from '@/i18n';
+import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useTheme } from '@/lib/theme';
@@ -39,11 +43,12 @@ export default function Navbar({
     onLogout: () => void;
     showWidgetConfigurator?: boolean;
 }) {
+    useTranslation();
     const { theme, setTheme } = useTheme();
     const [profileOpen, setProfileOpen] = useState(false);
-    const [privacyError, setPrivacyError] = useState('');
+    const [privacyError, setPrivacyError] = useState<unknown>('');
     const [privacyBusy, setPrivacyBusy] = useState(false);
-    const accountLabel = user?.name || user?.email || 'Compte';
+    const accountLabel = user?.name || user?.email || i18n.t('common:account');
     const initial = accountLabel.charAt(0).toUpperCase();
 
     useEffect(() => {
@@ -74,19 +79,14 @@ export default function Navbar({
             link.remove();
             setTimeout(() => URL.revokeObjectURL(url), 0);
         } catch {
-            setPrivacyError('Le téléchargement a échoué. Veuillez réessayer.');
+            setPrivacyError(notice('common:downloadError'));
         } finally {
             setPrivacyBusy(false);
         }
     }
 
     async function deleteAccount() {
-        if (
-            !window.confirm(
-                'Supprimer définitivement votre compte et toutes ses données ? Cette action est irréversible.',
-            )
-        )
-            return;
+        if (!window.confirm(i18n.t('common:deleteConfirmation'))) return;
         setPrivacyError('');
         setPrivacyBusy(true);
         try {
@@ -95,8 +95,8 @@ export default function Navbar({
         } catch (err) {
             setPrivacyError(
                 (err as { code?: string }).code === 'SESSION_EXPIRED'
-                    ? 'Par sécurité, reconnectez-vous puis supprimez votre compte.'
-                    : 'La suppression n’a pas pu être confirmée. Veuillez réessayer.',
+                    ? notice('common:deleteFreshSession')
+                    : notice('common:deleteError'),
             );
         } finally {
             setPrivacyBusy(false);
@@ -108,6 +108,7 @@ export default function Navbar({
             <div className="flex items-center gap-1">
                 <NavLink
                     to="/"
+                    aria-label={i18n.t('common:dashboard')}
                     end
                     className={({ isActive }) =>
                         `flex h-10 items-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors ${
@@ -118,10 +119,11 @@ export default function Navbar({
                     }
                 >
                     <LayoutDashboard className="size-4" />
-                    <span className="hidden sm:inline">Dashboard</span>
+                    <span className="hidden sm:inline">{i18n.t('common:dashboard')}</span>
                 </NavLink>
                 <NavLink
                     to="/services"
+                    aria-label={i18n.t('common:services')}
                     className={({ isActive }) =>
                         `flex h-10 items-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors ${
                             isActive
@@ -131,11 +133,12 @@ export default function Navbar({
                     }
                 >
                     <Plug className="size-4" />
-                    <span className="hidden sm:inline">Services</span>
+                    <span className="hidden sm:inline">{i18n.t('common:services')}</span>
                 </NavLink>
                 {user?.role === 'admin' && (
                     <NavLink
                         to="/admin"
+                        aria-label={i18n.t('common:administration')}
                         className={({ isActive }) =>
                             `flex h-10 items-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors ${
                                 isActive
@@ -145,12 +148,13 @@ export default function Navbar({
                         }
                     >
                         <ShieldCheck className="size-4" />
-                        <span className="hidden sm:inline">Administration</span>
+                        <span className="hidden sm:inline">{i18n.t('common:administration')}</span>
                     </NavLink>
                 )}
             </div>
-            <div className="flex min-w-0 items-center gap-3">
+            <div className="flex min-w-0 flex-wrap items-center gap-3">
                 {showWidgetConfigurator && <WidgetConfigurator />}
+                <LanguageSwitcher />
 
                 <DropdownMenu>
                     <DropdownMenuTrigger
@@ -158,7 +162,7 @@ export default function Navbar({
                             <Button
                                 variant="outline"
                                 className="h-11 min-w-0 gap-2 rounded-xl px-2.5 sm:px-3"
-                                aria-label={`Ouvrir le menu du compte ${accountLabel}`}
+                                aria-label={i18n.t('common:accountMenu', { name: accountLabel })}
                             />
                         }
                     >
@@ -185,13 +189,15 @@ export default function Navbar({
 
                         <DropdownMenuSeparator />
                         <DropdownMenuGroup>
-                            <DropdownMenuLabel className="px-2 pt-2">Thème</DropdownMenuLabel>
+                            <DropdownMenuLabel className="px-2 pt-2">
+                                {i18n.t('common:theme')}
+                            </DropdownMenuLabel>
                             <DropdownMenuItem
                                 className="min-h-9 px-2"
                                 onClick={() => setTheme('light')}
                             >
                                 <Sun />
-                                Thème clair
+                                {i18n.t('common:lightTheme')}
                                 {theme === 'light' && <Check className="ml-auto" />}
                             </DropdownMenuItem>
                             <DropdownMenuItem
@@ -199,7 +205,7 @@ export default function Navbar({
                                 onClick={() => setTheme('dark')}
                             >
                                 <Moon />
-                                Thème sombre
+                                {i18n.t('common:darkTheme')}
                                 {theme === 'dark' && <Check className="ml-auto" />}
                             </DropdownMenuItem>
                         </DropdownMenuGroup>
@@ -209,19 +215,19 @@ export default function Navbar({
                             onClick={() => setProfileOpen(true)}
                         >
                             <UserRound className="mr-2 size-4" />
-                            Edit Profile
+                            {i18n.t('common:editProfile')}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuGroup>
                             <DropdownMenuLabel className="px-2 pt-2">
-                                Data & Privacy (GDPR)
+                                {i18n.t('common:dataPrivacy')}
                             </DropdownMenuLabel>
                             <DropdownMenuItem
                                 className="min-h-9 px-2"
                                 render={<NavLink to="/privacy" />}
                             >
                                 <Shield className="mr-2 size-4" />
-                                Privacy Policy
+                                {i18n.t('common:privacyPolicy')}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                                 className="min-h-9 px-2 cursor-pointer"
@@ -229,7 +235,7 @@ export default function Navbar({
                                 onClick={downloadData}
                             >
                                 <Download className="mr-2 size-4" />
-                                Download My Data
+                                {i18n.t('common:downloadData')}
                             </DropdownMenuItem>
                         </DropdownMenuGroup>
                         <DropdownMenuSeparator />
@@ -240,7 +246,7 @@ export default function Navbar({
                             onClick={deleteAccount}
                         >
                             <Trash2 className="mr-2 size-4" />
-                            Delete My Account
+                            {i18n.t('common:deleteAccount')}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                             variant="destructive"
@@ -248,15 +254,15 @@ export default function Navbar({
                             onClick={onLogout}
                         >
                             <LogOut className="mr-2 size-4" />
-                            Se déconnecter
+                            {i18n.t('common:signOut')}
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
             </div>
 
-            {privacyError && (
+            {Boolean(privacyError) && (
                 <p role="alert" className="order-last w-full text-sm text-destructive">
-                    {privacyError}
+                    {getErrorMessage(privacyError)}
                 </p>
             )}
             <ProfileSettingsModal

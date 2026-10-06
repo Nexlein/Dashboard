@@ -1,3 +1,4 @@
+import i18n from '@/i18n';
 import { CurrentWeather, Forecast } from '@/features/widgets/catalog/WeatherWidgets';
 import {
     GithubRepoWidget,
@@ -16,23 +17,47 @@ import type { ServiceDefinition, WidgetDefinition } from './types';
 
 export const REGISTRY: Record<string, ServiceDefinition> = {
     weather: {
-        name: 'Weather',
+        get name() {
+            return i18n.t('widgets:weather');
+        },
         hasRefresh: true,
         widgets: [
             {
                 id: 'current_weather',
-                name: 'Current Temperature',
+                get name() {
+                    return i18n.t('widgets:currentTemperature');
+                },
                 component: CurrentWeather,
                 params: [
-                    { id: 'city', label: 'City Name', type: 'text', placeholder: 'e.g. Paris' },
+                    {
+                        id: 'city',
+                        get label() {
+                            return i18n.t('widgets:city');
+                        },
+                        type: 'text',
+                        get placeholder() {
+                            return i18n.t('widgets:cityExample');
+                        },
+                    },
                 ],
             },
             {
                 id: 'forecast',
-                name: '5-Day Forecast',
+                get name() {
+                    return i18n.t('widgets:forecast');
+                },
                 component: Forecast,
                 params: [
-                    { id: 'city', label: 'City Name', type: 'text', placeholder: 'e.g. Paris' },
+                    {
+                        id: 'city',
+                        get label() {
+                            return i18n.t('widgets:city');
+                        },
+                        type: 'text',
+                        get placeholder() {
+                            return i18n.t('widgets:cityExample');
+                        },
+                    },
                 ],
             },
         ],
@@ -44,75 +69,116 @@ export const REGISTRY: Record<string, ServiceDefinition> = {
             {
                 id: 'repo_stats',
                 aliases: ['github-repo'],
-                name: 'Repository Stats',
+                get name() {
+                    return i18n.t('widgets:repositoryStats');
+                },
                 component: GithubRepoWidget,
                 params: [
                     {
                         id: 'account',
-                        label: 'GitHub account',
+                        get label() {
+                            return i18n.t('widgets:githubAccount');
+                        },
                         type: 'account',
                         service: 'github',
                     },
                     {
                         id: 'owner',
-                        label: 'Owner (Organization/User)',
+                        get label() {
+                            return i18n.t('widgets:ownerDetailed');
+                        },
                         type: 'text',
-                        placeholder: 'e.g. facebook',
+                        get placeholder() {
+                            return i18n.t('widgets:ownerExample');
+                        },
                     },
                     {
                         id: 'repo',
-                        label: 'Repository Name',
+                        get label() {
+                            return i18n.t('widgets:repository');
+                        },
                         type: 'text',
-                        placeholder: 'e.g. react',
+                        get placeholder() {
+                            return i18n.t('widgets:repositoryExample');
+                        },
                     },
                 ],
             },
             {
                 id: 'latest_commits',
                 aliases: ['github-commits'],
-                name: 'Latest Commits',
+                get name() {
+                    return i18n.t('widgets:commits');
+                },
                 component: GithubCommitsWidget,
                 params: [
                     {
                         id: 'account',
-                        label: 'GitHub account',
+                        get label() {
+                            return i18n.t('widgets:githubAccount');
+                        },
                         type: 'account',
                         service: 'github',
                     },
-                    { id: 'owner', label: 'Owner', type: 'text', placeholder: 'e.g. facebook' },
+                    {
+                        id: 'owner',
+                        get label() {
+                            return i18n.t('widgets:owner');
+                        },
+                        type: 'text',
+                        get placeholder() {
+                            return i18n.t('widgets:ownerExample');
+                        },
+                    },
                     {
                         id: 'repo',
-                        label: 'Repository Name',
+                        get label() {
+                            return i18n.t('widgets:repository');
+                        },
                         type: 'text',
-                        placeholder: 'e.g. react',
+                        get placeholder() {
+                            return i18n.t('widgets:repositoryExample');
+                        },
                     },
                     {
                         id: 'branch',
-                        label: 'Branch (optional)',
+                        get label() {
+                            return i18n.t('widgets:branch');
+                        },
                         optional: true,
                         type: 'text',
-                        placeholder: 'e.g. main',
+                        get placeholder() {
+                            return i18n.t('widgets:branchExample');
+                        },
                     },
                 ],
             },
             {
                 id: 'user_profile',
                 aliases: ['github-user'],
-                name: 'User Profile',
+                get name() {
+                    return i18n.t('widgets:userProfile');
+                },
                 component: GithubProfileWidget,
                 params: [
                     {
                         id: 'account',
-                        label: 'GitHub account',
+                        get label() {
+                            return i18n.t('widgets:githubAccount');
+                        },
                         type: 'account',
                         service: 'github',
                     },
                     {
                         id: 'username',
-                        label: 'GitHub Username (leave empty for your profile)',
+                        get label() {
+                            return i18n.t('widgets:githubUsername');
+                        },
                         optional: true,
                         type: 'text',
-                        placeholder: 'e.g. nexlein',
+                        get placeholder() {
+                            return i18n.t('widgets:usernameExample');
+                        },
                     },
                 ],
             },
@@ -124,14 +190,18 @@ export const REGISTRY: Record<string, ServiceDefinition> = {
         widgets: [
             {
                 id: 'video_player',
-                name: 'Video Player',
+                get name() {
+                    return i18n.t('widgets:videoPlayer');
+                },
                 component: YouTubeVideoWidget,
                 hasRefresh: false,
                 fullBleed: true,
                 params: [
                     {
                         id: 'video_url',
-                        label: 'YouTube video link',
+                        get label() {
+                            return i18n.t('widgets:videoLink');
+                        },
                         type: 'text',
                         placeholder: 'https://www.youtube.com/watch?v=...',
                     },
@@ -139,45 +209,73 @@ export const REGISTRY: Record<string, ServiceDefinition> = {
             },
             {
                 id: 'channel_watch',
-                name: 'Channel Watch',
+                get name() {
+                    return i18n.t('widgets:channelWatch');
+                },
                 component: YouTubeWatchWidget,
-                params: [{ id: 'channels', label: 'YouTube channels', type: 'youtube-channels' }],
+                params: [
+                    {
+                        id: 'channels',
+                        get label() {
+                            return i18n.t('widgets:youtubeChannels');
+                        },
+                        type: 'youtube-channels',
+                    },
+                ],
             },
         ],
     },
     crypto: {
-        name: 'Crypto',
+        get name() {
+            return i18n.t('widgets:crypto');
+        },
         hasRefresh: true,
         widgets: [
             {
                 id: 'crypto_price',
-                name: 'Price & Market Stats',
+                get name() {
+                    return i18n.t('widgets:priceStats');
+                },
                 component: CryptoPrice,
                 params: [
                     {
                         id: 'coin',
-                        label: 'CoinGecko Coin ID',
+                        get label() {
+                            return i18n.t('widgets:coinIdLabel');
+                        },
                         type: 'text',
-                        placeholder: 'e.g. bitcoin, ethereum, solana',
+                        get placeholder() {
+                            return i18n.t('widgets:coinExample');
+                        },
                     },
                     {
                         id: 'currency',
-                        label: 'Currency',
+                        get label() {
+                            return i18n.t('widgets:currency');
+                        },
                         type: 'text',
-                        placeholder: 'e.g. eur or usd',
+                        get placeholder() {
+                            return i18n.t('widgets:currencyExample');
+                        },
                     },
                 ],
             },
             {
                 id: 'crypto_chart',
-                name: 'Market Comparison Chart',
+                get name() {
+                    return i18n.t('widgets:marketComparison');
+                },
                 component: CryptoChartWidget,
                 params: [
                     {
                         id: 'coins',
-                        label: 'Cryptocurrencies',
+                        get label() {
+                            return i18n.t('widgets:cryptocurrencies');
+                        },
                         type: 'coin-multiselect',
-                        placeholder: 'CoinGecko ID, e.g. dogecoin',
+                        get placeholder() {
+                            return i18n.t('widgets:customCoinExample');
+                        },
                         options: [
                             { value: 'bitcoin', label: 'BTC' },
                             { value: 'ethereum', label: 'ETH' },
@@ -193,9 +291,13 @@ export const REGISTRY: Record<string, ServiceDefinition> = {
                     },
                     {
                         id: 'currency',
-                        label: 'Currency',
+                        get label() {
+                            return i18n.t('widgets:currency');
+                        },
                         type: 'select',
-                        placeholder: 'Select a currency',
+                        get placeholder() {
+                            return i18n.t('widgets:selectCurrency');
+                        },
                         options: [
                             { value: 'eur', label: 'EUR (€)' },
                             { value: 'usd', label: 'USD ($)' },
@@ -204,14 +306,38 @@ export const REGISTRY: Record<string, ServiceDefinition> = {
                     },
                     {
                         id: 'days',
-                        label: 'Period',
+                        get label() {
+                            return i18n.t('widgets:period');
+                        },
                         type: 'select',
-                        placeholder: 'Select a period',
+                        get placeholder() {
+                            return i18n.t('widgets:selectPeriod');
+                        },
                         options: [
-                            { value: '7', label: '1 week' },
-                            { value: '30', label: '1 month' },
-                            { value: '90', label: '3 months' },
-                            { value: '365', label: '1 year' },
+                            {
+                                value: '7',
+                                get label() {
+                                    return i18n.t('widgets:week');
+                                },
+                            },
+                            {
+                                value: '30',
+                                get label() {
+                                    return i18n.t('widgets:month');
+                                },
+                            },
+                            {
+                                value: '90',
+                                get label() {
+                                    return i18n.t('widgets:threeMonths');
+                                },
+                            },
+                            {
+                                value: '365',
+                                get label() {
+                                    return i18n.t('widgets:year');
+                                },
+                            },
                         ],
                     },
                 ],
@@ -219,21 +345,29 @@ export const REGISTRY: Record<string, ServiceDefinition> = {
         ],
     },
     stocks: {
-        name: 'Stock Market',
+        get name() {
+            return i18n.t('widgets:stockMarket');
+        },
         hasRefresh: true,
         periodParam: 'period',
         quotaLimited: true,
         widgets: [
             {
                 id: 'stock_market',
-                name: 'Stock Comparison Chart',
+                get name() {
+                    return i18n.t('widgets:stockComparison');
+                },
                 component: StockMarketWidget,
                 params: [
                     {
                         id: 'symbols',
-                        label: 'Companies',
+                        get label() {
+                            return i18n.t('widgets:companies');
+                        },
                         type: 'stock-multiselect',
-                        placeholder: 'Search by company or ticker',
+                        get placeholder() {
+                            return i18n.t('widgets:stockSearchExample');
+                        },
                         options: [
                             { value: 'AAPL', label: 'Apple' },
                             { value: 'NVDA', label: 'NVIDIA' },
@@ -243,30 +377,65 @@ export const REGISTRY: Record<string, ServiceDefinition> = {
                     },
                     {
                         id: 'period',
-                        label: 'Period',
+                        get label() {
+                            return i18n.t('widgets:period');
+                        },
                         type: 'segmented',
                         defaultValue: '1M',
-                        placeholder: 'Select a period',
+                        get placeholder() {
+                            return i18n.t('widgets:selectPeriod');
+                        },
                         options: [
-                            { value: '1W', label: '1 week' },
-                            { value: '1M', label: '1 month' },
-                            { value: '1Y', label: '1 year' },
-                            { value: '5Y', label: '5 years' },
-                            { value: 'ALL', label: 'All available history' },
+                            {
+                                value: '1W',
+                                get label() {
+                                    return i18n.t('widgets:week');
+                                },
+                            },
+                            {
+                                value: '1M',
+                                get label() {
+                                    return i18n.t('widgets:month');
+                                },
+                            },
+                            {
+                                value: '1Y',
+                                get label() {
+                                    return i18n.t('widgets:year');
+                                },
+                            },
+                            {
+                                value: '5Y',
+                                get label() {
+                                    return i18n.t('widgets:fiveYears');
+                                },
+                            },
+                            {
+                                value: 'ALL',
+                                get label() {
+                                    return i18n.t('widgets:allHistory');
+                                },
+                            },
                         ],
                     },
                 ],
             },
             {
                 id: 'stock_profile',
-                name: 'Stock Profile',
+                get name() {
+                    return i18n.t('widgets:stockProfile');
+                },
                 component: StockProfileWidget,
                 params: [
                     {
                         id: 'symbols',
-                        label: 'Company',
+                        get label() {
+                            return i18n.t('widgets:company');
+                        },
                         type: 'stock-select',
-                        placeholder: 'Search by company or ticker',
+                        get placeholder() {
+                            return i18n.t('widgets:stockSearchExample');
+                        },
                         options: [
                             { value: 'AAPL', label: 'Apple' },
                             { value: 'NVDA', label: 'NVIDIA' },
@@ -276,16 +445,45 @@ export const REGISTRY: Record<string, ServiceDefinition> = {
                     },
                     {
                         id: 'period',
-                        label: 'Period',
+                        get label() {
+                            return i18n.t('widgets:period');
+                        },
                         type: 'segmented',
                         defaultValue: '1M',
-                        placeholder: 'Select a period',
+                        get placeholder() {
+                            return i18n.t('widgets:selectPeriod');
+                        },
                         options: [
-                            { value: '1W', label: '1 week' },
-                            { value: '1M', label: '1 month' },
-                            { value: '1Y', label: '1 year' },
-                            { value: '5Y', label: '5 years' },
-                            { value: 'ALL', label: 'All available history' },
+                            {
+                                value: '1W',
+                                get label() {
+                                    return i18n.t('widgets:week');
+                                },
+                            },
+                            {
+                                value: '1M',
+                                get label() {
+                                    return i18n.t('widgets:month');
+                                },
+                            },
+                            {
+                                value: '1Y',
+                                get label() {
+                                    return i18n.t('widgets:year');
+                                },
+                            },
+                            {
+                                value: '5Y',
+                                get label() {
+                                    return i18n.t('widgets:fiveYears');
+                                },
+                            },
+                            {
+                                value: 'ALL',
+                                get label() {
+                                    return i18n.t('widgets:allHistory');
+                                },
+                            },
                         ],
                     },
                 ],
@@ -298,13 +496,17 @@ export const REGISTRY: Record<string, ServiceDefinition> = {
         widgets: [
             {
                 id: 'ai_chat',
-                name: 'Ollama Chat',
+                get name() {
+                    return i18n.t('widgets:ollamaChat');
+                },
                 component: ChatbotWidget,
                 customConfigUi: OllamaModelManager,
                 params: [
                     {
                         id: 'model',
-                        label: 'Ollama Model',
+                        get label() {
+                            return i18n.t('widgets:ollamaModel');
+                        },
                         type: 'hidden',
                     },
                 ],

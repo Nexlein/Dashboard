@@ -21,22 +21,22 @@ describe('errorHandler', () => {
     it('uses the status code an error carries', () => {
         expect(respond(Object.assign(new Error('Nope'), { statusCode: 418 }))).toEqual({
             status: 418,
-            body: { error: 'Nope' },
+            body: { error: 'Nope', code: 'REQUEST_FAILED' },
         });
     });
 
     it.each([
-        ['P2002', 409, 'Resource already exists (conflict)'],
-        ['P2025', 404, 'Resource not found'],
-        ['P2003', 500, 'Internal server error'],
-    ])('maps the Prisma error %s to %i', (code, status, error) => {
-        expect(respond(prismaError(code))).toEqual({ status, body: { error } });
+        ['P2002', 409, 'Resource already exists (conflict)', 'RESOURCE_EXISTS'],
+        ['P2025', 404, 'Resource not found', 'RESOURCE_NOT_FOUND'],
+        ['P2003', 500, 'Internal server error', 'INTERNAL_SERVER_ERROR'],
+    ])('maps the Prisma error %s to %i', (code, status, error, errorCode) => {
+        expect(respond(prismaError(code))).toEqual({ status, body: { error, code: errorCode } });
     });
 
     it('hides the message of unexpected errors', () => {
         expect(respond(new Error('connection string with password'))).toEqual({
             status: 500,
-            body: { error: 'Internal server error' },
+            body: { error: 'Internal server error', code: 'INTERNAL_SERVER_ERROR' },
         });
     });
 });

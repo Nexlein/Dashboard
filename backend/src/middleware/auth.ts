@@ -1,3 +1,4 @@
+import { apiError } from '../utils/apiError.ts';
 import type { NextFunction, Request, Response } from 'express';
 import { fromNodeHeaders } from 'better-auth/node';
 import { auth } from '../auth.ts';
@@ -18,11 +19,11 @@ const API_ORIGIN = new URL(env.BETTER_AUTH_URL).origin;
  */
 async function requireAuth(req: Request, res: Response, next: NextFunction) {
     const session = await auth.api.getSession({ headers: fromNodeHeaders(req.headers) });
-    if (!session) return res.status(401).json({ error: 'Authentication required' });
+    if (!session) return res.status(401).json({ ...apiError('Authentication required') });
 
     const origin = req.get('Origin');
     if (!SAFE_METHODS.has(req.method) && !isAllowedOrigin(origin) && origin !== API_ORIGIN) {
-        return res.status(403).json({ error: 'Request origin not allowed' });
+        return res.status(403).json({ ...apiError('Request origin not allowed') });
     }
 
     req.user = { userId: Number(session.user.id) };

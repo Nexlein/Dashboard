@@ -1,3 +1,6 @@
+import { locale, formatNumber, formatPeriod } from '@/i18n/format';
+import i18n from '@/i18n';
+import { useTranslation } from 'react-i18next';
 import { useId, useState } from 'react';
 import type { WidgetViewProps } from '@/features/widgets/lib/types';
 import type { StockMarketData } from './StockMarketWidget';
@@ -10,24 +13,24 @@ const PAD = 8;
 function money(value: number, currency: string) {
     if (!Number.isFinite(value)) return '—';
     try {
-        return new Intl.NumberFormat(undefined, {
+        return new Intl.NumberFormat(locale(), {
             style: 'currency',
             currency,
             maximumFractionDigits: value < 1 ? 4 : 2,
         }).format(value);
     } catch {
-        return `${value.toFixed(2)} ${currency}`;
+        return `${formatNumber(value, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
     }
 }
 
 function percent(value: number | null) {
     return value !== null && Number.isFinite(value)
-        ? `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`
+        ? `${value >= 0 ? '+' : ''}${formatNumber(value, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`
         : '—';
 }
 
 function date(timestamp: number) {
-    return new Intl.DateTimeFormat(undefined, {
+    return new Intl.DateTimeFormat(locale(), {
         day: 'numeric',
         month: 'short',
         year: 'numeric',
@@ -40,11 +43,13 @@ export function StockProfileWidget({
     onPeriodChange,
     periodUpdating,
 }: WidgetViewProps<StockMarketData>) {
+    useTranslation();
     const gradientId = useId().replace(/:/g, '');
     const [hoverIndex, setHoverIndex] = useState<number | null>(null);
     const [failedLogo, setFailedLogo] = useState<string | null>(null);
     const stock = data.series[0];
-    if (!stock) return <p className="text-sm text-muted-foreground">No company data available.</p>;
+    if (!stock)
+        return <p className="text-sm text-muted-foreground">{i18n.t('markets:noCompany')}</p>;
 
     const points = (Array.isArray(stock.prices) ? stock.prices : [])
         .filter(
@@ -93,7 +98,7 @@ export function StockProfileWidget({
                     <div className="flex items-center gap-2">
                         <span className="text-sm font-bold tracking-wide">{stock.symbol}</span>
                         <span className="truncate rounded-md bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                            {stock.exchange || 'Listed stock'} · {stock.currency}
+                            {stock.exchange || i18n.t('markets:listedStock')} · {stock.currency}
                         </span>
                     </div>
                     <p className="truncate text-xs text-muted-foreground" title={stock.name}>
@@ -112,7 +117,7 @@ export function StockProfileWidget({
                     >
                         {percent(stock.change)}
                     </span>
-                    <span className="text-muted-foreground">Last trading session</span>
+                    <span className="text-muted-foreground">{i18n.t('markets:lastSession')}</span>
                 </div>
             </div>
 
@@ -121,7 +126,7 @@ export function StockProfileWidget({
                 role="group"
                 onMouseDown={(event) => event.stopPropagation()}
                 onPointerDown={(event) => event.stopPropagation()}
-                aria-label="Stock chart period"
+                aria-label={i18n.t('markets:stockPeriod')}
             >
                 {PERIODS.map((period) => (
                     <button
@@ -135,7 +140,7 @@ export function StockProfileWidget({
                         }}
                         className={`min-w-0 flex-1 rounded-md py-1.5 text-[11px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-50 ${period === activePeriod ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:bg-background/60 hover:text-foreground'}`}
                     >
-                        {period}
+                        {formatPeriod(period)}
                     </button>
                 ))}
             </div>
@@ -159,7 +164,7 @@ export function StockProfileWidget({
                             preserveAspectRatio="none"
                             className="min-h-0 w-full flex-1"
                             role="img"
-                            aria-label={`${stock.symbol} price history chart`}
+                            aria-label={i18n.t('markets:priceHistory', { symbol: stock.symbol })}
                             onPointerLeave={() => setHoverIndex(null)}
                             onPointerMove={(event) => {
                                 const rect = event.currentTarget.getBoundingClientRect();
@@ -256,26 +261,32 @@ export function StockProfileWidget({
                     </>
                 ) : (
                     <p className="m-auto text-xs text-muted-foreground">
-                        No price history available for this period.
+                        {i18n.t('markets:noHistory')}
                     </p>
                 )}
             </div>
 
             <div className="grid shrink-0 grid-cols-3 gap-2 border-t pt-2 text-xs">
                 <div>
-                    <p className="text-[10px] text-muted-foreground">Lowest close</p>
+                    <p className="text-[10px] text-muted-foreground">
+                        {i18n.t('markets:lowestClose')}
+                    </p>
                     <p className="mt-0.5 truncate font-medium tabular-nums">
                         {low === null ? '—' : money(low, stock.currency)}
                     </p>
                 </div>
                 <div>
-                    <p className="text-[10px] text-muted-foreground">Highest close</p>
+                    <p className="text-[10px] text-muted-foreground">
+                        {i18n.t('markets:highestClose')}
+                    </p>
                     <p className="mt-0.5 truncate font-medium tabular-nums">
                         {high === null ? '—' : money(high, stock.currency)}
                     </p>
                 </div>
                 <div className="text-right">
-                    <p className="text-[10px] text-muted-foreground">Period change</p>
+                    <p className="text-[10px] text-muted-foreground">
+                        {i18n.t('markets:periodChange')}
+                    </p>
                     <p
                         className="mt-0.5 font-semibold tabular-nums"
                         style={{ color: change === null ? undefined : color }}

@@ -25,7 +25,7 @@ describe('ErrorBoundary', () => {
             </>,
         );
         expect(screen.getByText('Something went wrong')).toBeInTheDocument();
-        expect(screen.getByText('Widget exploded')).toBeInTheDocument();
+        expect(screen.getByText('The request failed. Please try again.')).toBeInTheDocument();
         expect(screen.getByText('Other widget')).toBeInTheDocument();
     });
 

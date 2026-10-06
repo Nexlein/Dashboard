@@ -1,3 +1,5 @@
+import i18n from '@/i18n';
+import { useTranslation } from 'react-i18next';
 import { Responsive, WidthProvider } from 'react-grid-layout/legacy';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
@@ -19,10 +21,12 @@ import { ServiceLogo } from '@/features/services/components/ServiceLogo';
 import { WidgetEditDialog } from './WidgetEditDialog';
 import { findWidgetDefinition } from '@/features/widgets/lib/registry';
 import type { DashboardWidget } from '@/features/widgets/lib/widgets';
+import { getWidgetTitle } from '@/features/widgets/lib/widgets';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
 export default function DashboardGrid() {
+    useTranslation();
     const { data: widgets = [], isLoading } = useWidgets();
     const removeMutation = useRemoveWidget();
     const { onLayoutChange } = useWidgetLayoutManager();
@@ -30,7 +34,8 @@ export default function DashboardGrid() {
     const [editingWidget, setEditingWidget] = useState<DashboardWidget | null>(null);
 
     const handleDelete = (widget: DashboardWidget) => {
-        if (!window.confirm(`Delete ${widget.title}?`)) return;
+        if (!window.confirm(i18n.t('widgets:deleteConfirm', { name: getWidgetTitle(widget) })))
+            return;
         removeMutation.mutate(widget.id);
     };
 
@@ -60,14 +65,16 @@ export default function DashboardGrid() {
                             <CardHeader className="flex shrink-0 flex-row items-center justify-between border-b border-border bg-muted/50 p-4">
                                 <CardTitle className="flex items-center gap-2 text-sm">
                                     <ServiceLogo name={widget.serviceName} size="sm" decorative />
-                                    <span>{widget.title}</span>
+                                    <span>{getWidgetTitle(widget)}</span>
                                 </CardTitle>
                                 <DropdownMenu modal={false}>
                                     <DropdownMenuTrigger
                                         render={
                                             <Button
                                                 type="button"
-                                                aria-label={`Configure ${widget.title}`}
+                                                aria-label={i18n.t('widgets:configure', {
+                                                    name: getWidgetTitle(widget),
+                                                })}
                                                 variant="ghost"
                                                 size="icon-sm"
                                                 className="cursor-pointer text-muted-foreground"
@@ -86,14 +93,16 @@ export default function DashboardGrid() {
                                             className="min-h-9 px-2"
                                             onClick={() => setEditingWidget(widget)}
                                         >
-                                            <Edit2 className="mr-2 h-4 w-4" /> Edit
+                                            <Edit2 className="mr-2 h-4 w-4" />
+                                            {i18n.t('common:edit')}
                                         </DropdownMenuItem>
                                         <DropdownMenuItem
                                             variant="destructive"
                                             className="min-h-9 px-2 text-destructive"
                                             onClick={() => handleDelete(widget)}
                                         >
-                                            <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                            <Trash2 className="mr-2 h-4 w-4" />
+                                            {i18n.t('common:delete')}
                                         </DropdownMenuItem>
                                     </DropdownMenuContent>
                                 </DropdownMenu>

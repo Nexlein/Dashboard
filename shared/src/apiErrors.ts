@@ -1,0 +1,123 @@
+/** Stable API error codes; English messages stay available for existing API consumers. */
+const MESSAGE_CODES: Record<string, string> = {
+    'The request failed. Please try again.': 'REQUEST_FAILED',
+    'Unable to reach the server. Check your connection and try again.': 'NETWORK_ERROR',
+    'Authentication required': 'AUTHENTICATION_REQUIRED',
+    'You do not have permission to perform this action.': 'FORBIDDEN',
+    'User not found': 'USER_NOT_FOUND',
+    'Internal server error': 'INTERNAL_SERVER_ERROR',
+    'Failed to fetch models from Ollama': 'OLLAMA_MODELS_FAILED',
+    'Model name is required': 'MODEL_REQUIRED',
+    'Failed to pull model': 'MODEL_PULL_FAILED',
+    'Service not found': 'SERVICE_NOT_FOUND',
+    'Service is not configurable': 'SERVICE_NOT_CONFIGURABLE',
+    'Use OAuth flow for this service': 'OAUTH_REQUIRED',
+    'Service does not accept an API key': 'API_KEY_UNSUPPORTED',
+    'API key is required': 'API_KEY_REQUIRED',
+    'API key is too long': 'API_KEY_TOO_LONG',
+    'Account not found': 'ACCOUNT_NOT_FOUND',
+    'Service does not support search': 'SEARCH_UNSUPPORTED',
+    'Refresh rate must be at least 60 seconds': 'REFRESH_RATE_INVALID',
+    'Messages array is required': 'MESSAGES_REQUIRED',
+    'Widget validation failed': 'VALIDATION_ERROR',
+    'Invalid widget id': 'WIDGET_ID_INVALID',
+    'Widget not found': 'WIDGET_NOT_FOUND',
+    'Unauthorized to view this widget': 'WIDGET_VIEW_FORBIDDEN',
+    'Widget data is not available for this service': 'WIDGET_DATA_UNSUPPORTED',
+    'Failed to fetch widget data': 'WIDGET_DATA_FAILED',
+    'Unauthorized to update this widget': 'WIDGET_UPDATE_FORBIDDEN',
+    'Unauthorized to delete this widget': 'WIDGET_DELETE_FORBIDDEN',
+    Unauthorized: 'UNAUTHORIZED',
+    'Widget does not support chat': 'CHAT_UNSUPPORTED',
+    'Failed to communicate with chatbot': 'CHAT_FAILED',
+    'Resource already exists (conflict)': 'RESOURCE_EXISTS',
+    'Resource not found': 'RESOURCE_NOT_FOUND',
+    'Missing model parameter': 'MODEL_PARAMETER_REQUIRED',
+    'CoinGecko is not connected. Configure it in Services.': 'COINGECKO_NOT_CONNECTED',
+    'CoinGecko provider is unavailable': 'COINGECKO_UNAVAILABLE',
+    'CoinGecko API key is invalid': 'COINGECKO_KEY_INVALID',
+    'CoinGecko API rate limit reached': 'COINGECKO_RATE_LIMIT',
+    'CoinGecko provider request failed': 'COINGECKO_REQUEST_FAILED',
+    'CoinGecko API key could not be verified': 'COINGECKO_KEY_UNVERIFIED',
+    'Chart period is invalid': 'CHART_PERIOD_INVALID',
+    'Unsupported crypto widget': 'CRYPTO_WIDGET_UNSUPPORTED',
+    'Cryptocurrency or currency not found': 'CRYPTO_NOT_FOUND',
+    'GitHub account is not connected': 'GITHUB_NOT_CONNECTED',
+    'Unknown widget name': 'WIDGET_UNKNOWN',
+    'Stock data is waiting for available Twelve Data credits': 'STOCK_CREDITS_PENDING',
+    'Another stock widget is loading; your data will follow automatically': 'STOCK_QUEUE_PENDING',
+    'The daily Twelve Data limit is reached; loading will resume after its reset':
+        'STOCK_DAILY_LIMIT',
+    'Twelve Data is not connected. Configure it in Services.': 'TWELVE_DATA_NOT_CONNECTED',
+    'Twelve Data provider is unavailable': 'TWELVE_DATA_UNAVAILABLE',
+    'Twelve Data API key is invalid or lacks access': 'TWELVE_DATA_KEY_INVALID',
+    'Twelve Data request failed': 'TWELVE_DATA_REQUEST_FAILED',
+    'Twelve Data API rate limit reached': 'TWELVE_DATA_RATE_LIMIT',
+    'Twelve Data API key could not be verified': 'TWELVE_DATA_KEY_UNVERIFIED',
+    'Stock chart period is invalid': 'STOCK_PERIOD_INVALID',
+    'Not available with the connected Twelve Data plan': 'STOCK_PLAN_UNSUPPORTED',
+    'No market data available': 'MARKET_DATA_UNAVAILABLE',
+    'Enter a stock name or symbol': 'STOCK_SEARCH_REQUIRED',
+    'Unsupported stock widget': 'STOCK_WIDGET_UNSUPPORTED',
+    'Select exactly one company for a stock profile': 'STOCK_PROFILE_SINGLE_COMPANY',
+    'OpenWeather is not connected. Configure it in Services.': 'OPENWEATHER_NOT_CONNECTED',
+    'Weather provider is unavailable': 'WEATHER_UNAVAILABLE',
+    'Weather API key is invalid or not active yet': 'WEATHER_KEY_INVALID',
+    'Weather API rate limit reached': 'WEATHER_RATE_LIMIT',
+    'Weather provider request failed': 'WEATHER_REQUEST_FAILED',
+    'City not found': 'CITY_NOT_FOUND',
+    'City is required': 'CITY_REQUIRED',
+    'Unsupported weather widget': 'WEATHER_WIDGET_UNSUPPORTED',
+    'Add between 1 and 5 valid YouTube channels': 'YOUTUBE_CHANNELS_INVALID',
+    'Unsupported YouTube widget': 'YOUTUBE_WIDGET_UNSUPPORTED',
+    'Enter a valid YouTube video link': 'YOUTUBE_VIDEO_INVALID',
+    'This widget does not provide feed data': 'YOUTUBE_FEED_UNSUPPORTED',
+    'Channel not found': 'YOUTUBE_CHANNEL_NOT_FOUND',
+    'YouTube is temporarily unavailable': 'YOUTUBE_UNAVAILABLE',
+    'YouTube returned an empty response': 'YOUTUBE_EMPTY_RESPONSE',
+    'YouTube response is too large': 'YOUTUBE_RESPONSE_TOO_LARGE',
+    'Cannot resolve this handle. Try its youtube.com/channel/UC… link.':
+        'YOUTUBE_HANDLE_UNRESOLVED',
+    'Invalid YouTube feed': 'YOUTUBE_FEED_INVALID',
+    'Invalid YouTube channel feed': 'YOUTUBE_CHANNEL_FEED_INVALID',
+    'Refresh unavailable; showing saved publications.': 'YOUTUBE_SAVED_FEED',
+    'No access token for this account': 'ACCOUNT_TOKEN_MISSING',
+    'This service is not connected. Configure it in Services.': 'SERVICE_NOT_CONNECTED',
+    'Choose which connected account to use.': 'ACCOUNT_SELECTION_REQUIRED',
+    'This account no longer works. Reconnect it in Services.': 'ACCOUNT_CONNECTION_EXPIRED',
+    'Invalid email address': 'INVALID_EMAIL',
+    'Password must be between 8 and 128 characters': 'PASSWORD_LENGTH',
+    'Display name must be 50 characters or fewer': 'DISPLAY_NAME_LENGTH',
+    'You must accept the CGU to register.': 'TERMS_REQUIRED',
+    'You must confirm you are 16 or older to register.': 'AGE_REQUIRED',
+    'Email and password required': 'CREDENTIALS_REQUIRED',
+    'Invalid email or password': 'INVALID_EMAIL_OR_PASSWORD',
+    'Email not verified': 'EMAIL_NOT_VERIFIED',
+    'A user with this email already exists.': 'USER_ALREADY_EXISTS',
+    'Invalid OTP': 'INVALID_OTP',
+    'The verification code has expired. Request a new code.': 'OTP_EXPIRED',
+    'Too many attempts. Please try again later.': 'TOO_MANY_ATTEMPTS',
+    'Your session has expired. Please sign in again.': 'SESSION_EXPIRED',
+    'This account is banned.': 'BANNED_USER',
+    'The role must be "user" or "admin".': 'INVALID_ROLE',
+    'You cannot change your own role.': 'YOU_CANNOT_CHANGE_YOUR_OWN_ROLE',
+    'You must accept the CGU and confirm you are 16 or older to register.':
+        'REGISTRATION_REQUIREMENTS',
+};
+
+export function apiErrorCode(message: string): string {
+    const normalized = message.replace(/\.$/, '');
+    const exact = Object.prototype.hasOwnProperty.call(MESSAGE_CODES, message)
+        ? MESSAGE_CODES[message]
+        : Object.prototype.hasOwnProperty.call(MESSAGE_CODES, normalized)
+          ? MESSAGE_CODES[normalized]
+          : undefined;
+    if (exact) return exact;
+    if (/is not connected/.test(message)) return 'SERVICE_NOT_CONNECTED';
+    if (/^Choose which .* account to use/.test(message)) return 'ACCOUNT_SELECTION_REQUIRED';
+    if (/account no longer works/.test(message)) return 'ACCOUNT_CONNECTION_EXPIRED';
+    if (/^Unknown service:/.test(message)) return 'SERVICE_NOT_FOUND';
+    if (/^Unknown widget:/.test(message)) return 'WIDGET_UNKNOWN';
+    if (/stock symbol not found/i.test(message)) return 'MARKET_DATA_UNAVAILABLE';
+    return 'REQUEST_FAILED';
+}

@@ -1,3 +1,6 @@
+import { locale, formatNumber } from '@/i18n/format';
+import i18n from '@/i18n';
+import { useTranslation } from 'react-i18next';
 import type { WidgetViewProps } from '@/features/widgets/lib/types';
 
 export type CryptoPriceData = {
@@ -14,18 +17,19 @@ function formatCurrency(value: number | null, currency: string, compact = false)
     if (typeof value !== 'number') return '—';
 
     try {
-        return new Intl.NumberFormat(undefined, {
+        return new Intl.NumberFormat(locale(), {
             style: 'currency',
             currency: currency.toUpperCase(),
             notation: compact ? 'compact' : 'standard',
             maximumFractionDigits: compact ? 2 : value < 1 ? 6 : 2,
         }).format(value);
     } catch {
-        return `${value.toLocaleString()} ${currency.toUpperCase()}`;
+        return `${formatNumber(value)} ${currency.toUpperCase()}`;
     }
 }
 
 export function CryptoPrice({ data }: WidgetViewProps<CryptoPriceData>) {
+    useTranslation();
     const change = typeof data.change24h === 'number' ? data.change24h : null;
     const isPositive = change !== null && change >= 0;
 
@@ -48,24 +52,28 @@ export function CryptoPrice({ data }: WidgetViewProps<CryptoPriceData>) {
                             }`}
                         >
                             {isPositive ? '+' : ''}
-                            {change.toFixed(2)}%
+                            {formatNumber(change, {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                            })}
+                            %
                         </span>
                     )}
                 </div>
                 <p className="mt-2 text-3xl font-semibold tracking-tight">
                     {formatCurrency(data.price, data.currency)}
                 </p>
-                <p className="mt-1 text-xs text-muted-foreground">24-hour market change</p>
+                <p className="mt-1 text-xs text-muted-foreground">{i18n.t('markets:change24h')}</p>
             </div>
             <div className="grid grid-cols-2 gap-3 border-t pt-3 text-sm">
                 <div>
-                    <p className="text-xs text-muted-foreground">Market cap</p>
+                    <p className="text-xs text-muted-foreground">{i18n.t('markets:marketCap')}</p>
                     <p className="font-medium">
                         {formatCurrency(data.marketCap, data.currency, true)}
                     </p>
                 </div>
                 <div>
-                    <p className="text-xs text-muted-foreground">24h volume</p>
+                    <p className="text-xs text-muted-foreground">{i18n.t('markets:volume24h')}</p>
                     <p className="font-medium">
                         {formatCurrency(data.volume24h, data.currency, true)}
                     </p>

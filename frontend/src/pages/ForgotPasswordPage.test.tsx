@@ -1,3 +1,8 @@
+import i18n from '@/i18n';
+import { beforeEach as beforeLocaleTest } from 'vitest';
+beforeLocaleTest(async () => {
+    await i18n.changeLanguage('fr');
+});
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { beforeEach, it, expect, vi } from 'vitest';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
@@ -54,7 +59,9 @@ it('sends a code, then sets the new password and returns to the sign-in page', a
 });
 
 it('keeps the form and shows the error of a wrong code', async () => {
-    vi.mocked(resetPassword).mockRejectedValueOnce(new Error('Invalid OTP'));
+    vi.mocked(resetPassword).mockRejectedValueOnce(
+        Object.assign(new Error('Invalid OTP'), { code: 'INVALID_OTP' }),
+    );
     renderPage();
     await requestCode();
     fireEvent.change(screen.getByLabelText('Code reçu par e-mail'), {
@@ -65,6 +72,6 @@ it('keeps the form and shows the error of a wrong code', async () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Changer le mot de passe' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Invalid OTP');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Code de vérification invalide');
     expect(screen.getByLabelText('Code reçu par e-mail')).toBeInTheDocument();
 });

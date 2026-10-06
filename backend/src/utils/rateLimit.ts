@@ -91,7 +91,7 @@ function createRateLimiter({ name, windowMs, limit, message }: LimiterOptions) {
         limit,
         standardHeaders: 'draft-8',
         legacyHeaders: false,
-        message: { error: message },
+        message: { error: message, code: 'TOO_MANY_ATTEMPTS' },
         passOnStoreError: true,
         ...(client && { store: new SharedRedisStore(client, `rl:${name}:`) }),
     });

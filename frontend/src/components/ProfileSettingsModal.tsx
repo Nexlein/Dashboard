@@ -1,3 +1,6 @@
+import { getErrorMessage, notice, translateNotice, type LocalizedNotice } from '@/i18n/errors';
+import i18n from '@/i18n';
+import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -20,11 +23,12 @@ export function ProfileSettingsModal({
     user,
     onUserUpdated,
 }: ProfileProps & { open: boolean }) {
+    useTranslation();
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                    <DialogTitle>Profile Settings</DialogTitle>
+                    <DialogTitle>{i18n.t('account:title')}</DialogTitle>
                 </DialogHeader>
                 {/* DialogContent unmounts when closed: the form starts fresh on each open. */}
                 <ProfileForm
@@ -38,17 +42,18 @@ export function ProfileSettingsModal({
 }
 
 function ProfileForm({ user, onUserUpdated, onOpenChange }: ProfileProps) {
+    useTranslation();
     const [name, setName] = useState(user?.name || '');
     const [email, setEmail] = useState(user?.email || '');
     // The new address waiting for its emailed code.
     const [pendingEmail, setPendingEmail] = useState<string | null>(null);
     const [code, setCode] = useState('');
-    const [error, setError] = useState('');
-    const [success, setSuccess] = useState('');
+    const [error, setError] = useState<unknown>('');
+    const [success, setSuccess] = useState<LocalizedNotice | null>(null);
 
     const queryClient = useQueryClient();
 
-    function saved(updatedUser: User, message: string) {
+    function saved(updatedUser: User, message: LocalizedNotice) {
         onUserUpdated(updatedUser);
         queryClient.setQueryData(CURRENT_USER_KEY, updatedUser);
         setSuccess(message);
@@ -66,7 +71,7 @@ function ProfileForm({ user, onUserUpdated, onOpenChange }: ProfileProps) {
         },
         onMutate: () => {
             setError('');
-            setSuccess('');
+            setSuccess(null);
         },
         onSuccess: ({ updatedUser, pending }) => {
             if (updatedUser) onUserUpdated(updatedUser);
@@ -75,16 +80,16 @@ function ProfileForm({ user, onUserUpdated, onOpenChange }: ProfileProps) {
                 setPendingEmail(pending);
                 return;
             }
-            saved(updatedUser ?? user!, 'Profile updated successfully');
+            saved(updatedUser ?? user!, notice('account:profileUpdated'));
         },
-        onError: (err: Error) => setError(err.message),
+        onError: (err: Error) => setError(err),
     });
 
     const confirmMutation = useMutation({
         mutationFn: () => changeEmail(pendingEmail!, code.trim()),
         onMutate: () => setError(''),
-        onSuccess: (updatedUser) => saved(updatedUser, 'Email address updated'),
-        onError: (err: Error) => setError(err.message),
+        onSuccess: (updatedUser) => saved(updatedUser, notice('account:emailUpdated')),
+        onError: (err: Error) => setError(err),
     });
 
     if (pendingEmail) {
@@ -97,12 +102,10 @@ function ProfileForm({ user, onUserUpdated, onOpenChange }: ProfileProps) {
                 className="space-y-4"
             >
                 <p className="text-sm text-muted-foreground" role="status">
-                    We sent a 6-digit code to{' '}
-                    <span className="font-medium text-foreground">{pendingEmail}</span>. Your
-                    address changes once you enter it.
+                    {i18n.t('account:emailCodeSent', { email: pendingEmail })}
                 </p>
                 <div className="space-y-2">
-                    <Label htmlFor="email-code">Verification code</Label>
+                    <Label htmlFor="email-code">{i18n.t('account:code')}</Label>
                     <Input
                         id="email-code"
                         inputMode="numeric"
@@ -113,11 +116,19 @@ function ProfileForm({ user, onUserUpdated, onOpenChange }: ProfileProps) {
                         required
                     />
                 </div>
-                {error && <p className="text-sm text-destructive">{error}</p>}
-                {success && <p className="text-sm text-green-600 dark:text-green-400">{success}</p>}
+                {Boolean(error) && (
+                    <p className="text-sm text-destructive">{getErrorMessage(error)}</p>
+                )}
+                {success && (
+                    <p className="text-sm text-green-600 dark:text-green-400">
+                        {translateNotice(success)}
+                    </p>
+                )}
                 <div className="flex justify-end pt-4">
                     <Button type="submit" disabled={confirmMutation.isPending || code.length !== 6}>
-                        {confirmMutation.isPending ? 'Checking...' : 'Confirm Email'}
+                        {confirmMutation.isPending
+                            ? i18n.t('account:checking')
+                            : i18n.t('account:confirmEmail')}
                     </Button>
                 </div>
             </form>
@@ -134,7 +145,7 @@ function ProfileForm({ user, onUserUpdated, onOpenChange }: ProfileProps) {
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-                <Label htmlFor="displayName">Display Name</Label>
+                <Label htmlFor="displayName">{i18n.t('account:displayName')}</Label>
                 <Input
                     id="displayName"
                     maxLength={50}
@@ -143,7 +154,7 @@ function ProfileForm({ user, onUserUpdated, onOpenChange }: ProfileProps) {
                 />
             </div>
             <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
+                <Label htmlFor="email">{i18n.t('account:emailAddress')}</Label>
                 <Input
                     id="email"
                     type="email"
@@ -153,14 +164,18 @@ function ProfileForm({ user, onUserUpdated, onOpenChange }: ProfileProps) {
                     required
                 />
                 <p id="email-help" className="text-xs text-muted-foreground">
-                    A new address is confirmed with a code sent to it.
+                    {i18n.t('account:emailHint')}
                 </p>
             </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
-            {success && <p className="text-sm text-green-600 dark:text-green-400">{success}</p>}
+            {Boolean(error) && <p className="text-sm text-destructive">{getErrorMessage(error)}</p>}
+            {success && (
+                <p className="text-sm text-green-600 dark:text-green-400">
+                    {translateNotice(success)}
+                </p>
+            )}
             <div className="flex justify-end pt-4">
                 <Button type="submit" disabled={loading}>
-                    {loading ? 'Saving...' : 'Save Changes'}
+                    {loading ? i18n.t('common:saving') : i18n.t('common:saveChanges')}
                 </Button>
             </div>
         </form>

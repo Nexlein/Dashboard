@@ -1,3 +1,8 @@
+import i18n from '@/i18n';
+import { beforeEach as beforeLocaleTest } from 'vitest';
+beforeLocaleTest(async () => {
+    await i18n.changeLanguage('fr');
+});
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { beforeEach, it, expect, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
@@ -70,7 +75,7 @@ it('allows existing users to start GitHub login without registration checkboxes'
 it.each([
     ['/login?error=signup_disabled', 'Créez-en un depuis l’onglet Inscription'],
     ['/login?error=account_not_linked', 'liez GitHub depuis la page Services'],
-    ['/register?error=EMAIL_NOT_VERIFIED', 'adresse email vérifiée'],
+    ['/register?error=EMAIL_NOT_VERIFIED', 'adresse e-mail vérifiée'],
     ['/login?error=invalid_code', 'La connexion avec GitHub a échoué'],
 ])('explains the GitHub error of %s', (path, message) => {
     renderPage(path);
@@ -83,7 +88,7 @@ it('reports a GitHub sign-in that cannot start', async () => {
     );
     renderPage('/login');
     fireEvent.click(screen.getByRole('button', { name: 'Continuer avec GitHub' }));
-    expect((await screen.findByRole('alert')).textContent).toBe('GitHub sign-in is not configured');
+    expect((await screen.findByRole('alert')).textContent).toBe('La requête a échoué. Réessayez.');
 });
 
 it('explains why a new GitHub user was redirected to registration', () => {
@@ -106,7 +111,7 @@ it('asks for the emailed code after registering, then signs in', async () => {
     fireEvent.click(screen.getByRole('button', { name: 'Créer mon compte' }));
 
     const code = await screen.findByLabelText('Code de vérification');
-    expect(screen.getByText('new@example.com')).toBeInTheDocument();
+    expect(screen.getByText(/new@example.com/)).toBeInTheDocument();
     fireEvent.change(code, { target: { value: '12a3456' } });
     expect((code as HTMLInputElement).value).toBe('123456');
     fireEvent.click(screen.getByRole('button', { name: 'Vérifier' }));
@@ -130,7 +135,9 @@ it('asks for the code when an unverified account signs in, and can send a new on
 });
 
 it('shows a wrong code without leaving the step', async () => {
-    vi.mocked(verifyEmailCode).mockRejectedValueOnce(new Error('Invalid OTP'));
+    vi.mocked(verifyEmailCode).mockRejectedValueOnce(
+        Object.assign(new Error('Invalid OTP'), { code: 'INVALID_OTP' }),
+    );
     renderPage();
     fillCredentials();
     confirmRegistration();
@@ -140,7 +147,7 @@ it('shows a wrong code without leaving the step', async () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Vérifier' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Invalid OTP');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Code de vérification invalide');
     expect(screen.getByLabelText('Code de vérification')).toBeInTheDocument();
 });
 

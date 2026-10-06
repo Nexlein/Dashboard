@@ -1,99 +1,77 @@
+import i18n from '@/i18n';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function PrivacyPage() {
+    useTranslation();
     const navigate = useNavigate();
 
     return (
         <main className="min-h-screen bg-background text-foreground p-8">
             <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4">
-                <ArrowLeft className="mr-2 h-4 w-4" /> Back
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                {i18n.t('common:back')}
             </Button>
             <div className="max-w-4xl mx-auto space-y-8">
                 <Card>
                     <CardHeader>
                         <h1 className="text-3xl font-bold leading-none tracking-tight">
-                            Privacy Policy (RGPD / GDPR)
+                            {i18n.t('legal:privacyTitle')}
                         </h1>
                     </CardHeader>
                     <CardContent className="prose dark:prose-invert max-w-none space-y-6">
                         <section>
-                            <h2 className="text-2xl font-semibold mb-2">Data Storage</h2>
-                            <p>We store the following user data:</p>
+                            <h2 className="text-2xl font-semibold mb-2">
+                                {i18n.t('legal:storage')}
+                            </h2>
+                            <p>{i18n.t('legal:storageIntro')}</p>
                             <ul className="list-disc pl-6 mt-2 space-y-1">
-                                <li>Email address (for authentication and account recovery)</li>
-                                <li>Password hashes (if not using OAuth)</li>
-                                <li>Encrypted OAuth tokens (for connected services like GitHub)</li>
-                                <li>Widget configurations (parameters and layouts)</li>
-                                <li>Linked GitHub account ID (to preserve your login)</li>
+                                <li>{i18n.t('legal:storedEmail')}</li>
+                                <li>{i18n.t('legal:storedPassword')}</li>
+                                <li>{i18n.t('legal:storedTokens')}</li>
+                                <li>{i18n.t('legal:storedWidgets')}</li>
+                                <li>{i18n.t('legal:storedGithub')}</li>
                             </ul>
                         </section>
 
                         <section>
-                            <h2 className="text-2xl font-semibold mb-2">Data Usage</h2>
+                            <h2 className="text-2xl font-semibold mb-2">{i18n.t('legal:usage')}</h2>
                             <ul className="list-disc pl-6 mt-2 space-y-1">
-                                <li>
-                                    User data is used strictly to provide the dashboard features and
-                                    widget functionalities.
-                                </li>
-                                <li>
-                                    OAuth tokens are used solely to fetch data for the connected
-                                    services as configured by the user.
-                                </li>
-                                <li>We do not sell your data.</li>
-                                <li>
-                                    YouTube widgets load thumbnails from i.ytimg.com and, when you
-                                    click Play, the video player from youtube-nocookie.com. These
-                                    requests send your IP address and browser information to Google
-                                    / YouTube, under their privacy policy.
-                                </li>
-                                <li>
-                                    Administrators see each account's name, email, role, email
-                                    verification, ban state and registration date, to manage
-                                    accounts (role, ban, sign-out, deletion). They never see
-                                    passwords, API keys, OAuth tokens or widget settings.
-                                </li>
+                                <li>{i18n.t('legal:usageDashboard')}</li>
+                                <li>{i18n.t('legal:usageTokens')}</li>
+                                <li>{i18n.t('legal:noSale')}</li>
+                                <li>{i18n.t('legal:youtubePrivacy')}</li>
+                                <li>{i18n.t('legal:adminPrivacy')}</li>
                             </ul>
                         </section>
 
                         <section>
                             <h2 className="text-2xl font-semibold mb-2">
-                                Profile and registration
+                                {i18n.t('legal:profileRegistration')}
                             </h2>
-                            <p>
-                                You can edit your display name and email, including with a
-                                GitHub-only account. Your GitHub account ID keeps your login linked
-                                to the same Dashboard account after an email change.
-                            </p>
-                            <p>
-                                New accounts require accepting the terms and confirming that you are
-                                at least 16, including when signing up with GitHub. This is a
-                                self-declaration; we do not collect or verify your birth date.
-                            </p>
+                            <p>{i18n.t('legal:profilePolicy')}</p>
+                            <p>{i18n.t('legal:registrationPolicy')}</p>
                         </section>
 
                         <section>
                             <h2 className="text-2xl font-semibold mb-2">
-                                Your Rights (GDPR Compliance)
+                                {i18n.t('legal:rights')}
                             </h2>
                             <ul className="list-disc pl-6 mt-2 space-y-1">
                                 <li>
-                                    <strong>Right to Access</strong>: "Download My Data" exports
-                                    your profile, readable widget configurations and
-                                    connected-service metadata. Password hashes, API keys and OAuth
-                                    tokens are excluded.
+                                    <strong>{i18n.t('legal:access')}</strong>
+                                    {i18n.t('legal:accessDetails')}
                                 </li>
                                 <li>
-                                    <strong>Right to Erasure</strong>: You can permanently delete
-                                    your account, widgets and stored service credentials from the
-                                    active database via "Delete My Account". This does not delete
-                                    data held by external providers or retained backups.
+                                    <strong>{i18n.t('legal:erasure')}</strong>
+                                    {i18n.t('legal:erasureDetails')}
                                 </li>
                                 <li>
-                                    <strong>Consent</strong>: By registering, you accept our Terms
-                                    of Service (CGU) and this Privacy Policy.
+                                    <strong>{i18n.t('legal:consent')}</strong>
+                                    {i18n.t('legal:consentDetails')}
                                 </li>
                             </ul>
                         </section>

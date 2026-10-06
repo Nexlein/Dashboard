@@ -68,7 +68,9 @@ describe('ChatbotWidget', () => {
 
     it('shows error message on failure', async () => {
         fetchMock.mockResolvedValueOnce(
-            new Response(JSON.stringify({ error: 'API Error' }), { status: 500 }),
+            new Response(JSON.stringify({ error: 'API Error', code: 'CHAT_FAILED' }), {
+                status: 500,
+            }),
         );
 
         customRender(<ChatbotWidget widget={mockWidget} />);
@@ -79,7 +81,7 @@ describe('ChatbotWidget', () => {
         fireEvent.click(screen.getByRole('button', { name: /send/i }));
 
         await waitFor(() => {
-            expect(screen.getByText(/API Error/)).toBeInTheDocument();
+            expect(screen.getByText(/Failed to communicate with chatbot/)).toBeInTheDocument();
         });
     });
 });
