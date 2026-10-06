@@ -156,13 +156,10 @@ export const auth = betterAuth({
     hooks: {
         before: createAuthMiddleware(async (ctx) => {
             const body = (ctx.body ?? {}) as Record<string, unknown>;
-            if (
-                ctx.path === '/sign-in/social' &&
-                [GITHUB_SERVICE_PROVIDER].includes(String(body.provider))
-            ) {
+            if (ctx.path === '/sign-in/social' && body.provider === GITHUB_SERVICE_PROVIDER) {
                 throw APIError.from('BAD_REQUEST', {
                     code: 'NOT_A_SIGN_IN_PROVIDER',
-                    message: 'Service accounts cannot be used to sign in.',
+                    message: 'GitHub service accounts cannot be used to sign in.',
                 });
             }
             if (ctx.path === '/sign-up/email') {
@@ -240,18 +237,18 @@ export const auth = betterAuth({
         },
     },
     plugins: [
-        genericOAuth({
-            config: [
-                ...(env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET
-                    ? [
+        ...(env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET
+            ? [
+                  genericOAuth({
+                      config: [
                           githubServiceProvider(
                               env.GITHUB_SERVICE_CLIENT_ID ?? env.GITHUB_CLIENT_ID,
                               env.GITHUB_SERVICE_CLIENT_SECRET ?? env.GITHUB_CLIENT_SECRET,
                           ),
-                      ]
-                    : []),
-            ],
-        }),
+                      ],
+                  }),
+              ]
+            : []),
         admin(),
         emailOTP({
             // Codes replace Better Auth's verification links.

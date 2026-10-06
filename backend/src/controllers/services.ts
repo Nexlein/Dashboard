@@ -40,7 +40,7 @@ export const getServices = asyncHandler(async (req, res) => {
                 service.connection?.type === 'oauth'
                     ? await connectedAccounts(userId, service)
                     : [];
-            // Services without a connection (chatbot) need nothing from the user.
+            // Services without a connection (YouTube, chatbot) need nothing from the user.
             const isConnected = !service.connection
                 ? true
                 : service.connection.type === 'oauth'
