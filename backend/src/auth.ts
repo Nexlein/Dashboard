@@ -1,6 +1,6 @@
 import { betterAuth } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
-import { APIError, createAuthMiddleware, getOAuthState } from 'better-auth/api';
+import { APIError, createAuthMiddleware, getOAuthState, getSessionFromCtx } from 'better-auth/api';
 import { admin, emailOTP, genericOAuth } from 'better-auth/plugins';
 import { github } from 'better-auth/social-providers';
 import { profileSchema, registerSchema } from 'shared';
@@ -186,6 +186,23 @@ export const auth = betterAuth({
                     });
                 }
                 return { context: { body: { ...body, name: parsed.data.name } } };
+            }
+            if (ctx.path === '/admin/set-role') {
+                // Without a roles option the admin plugin stores any string as the role.
+                if (body.role !== 'user' && body.role !== 'admin') {
+                    throw APIError.from('BAD_REQUEST', {
+                        code: 'INVALID_ROLE',
+                        message: 'The role must be "user" or "admin".',
+                    });
+                }
+                // An administrator demoting themselves could leave nobody able to administer.
+                const session = await getSessionFromCtx(ctx);
+                if (session && String(session.user.id) === String(body.userId)) {
+                    throw APIError.from('BAD_REQUEST', {
+                        code: 'YOU_CANNOT_CHANGE_YOUR_OWN_ROLE',
+                        message: 'You cannot change your own role.',
+                    });
+                }
             }
             if (ctx.path === '/email-otp/send-verification-otp' && body.type === 'sign-in') {
                 throw APIError.from('BAD_REQUEST', {

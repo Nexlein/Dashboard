@@ -155,8 +155,9 @@ parameters cannot be decrypted, `404` if the account no longer exists.
 Better Auth's admin plugin, under `/api/auth/admin/*`, for users whose `role` is `admin`
 (others get `403`). The routes offered: `GET list-users`, `GET get-user`, `POST remove-user`,
 `POST ban-user`, `POST unban-user`, `POST set-role` and `POST revoke-user-sessions`. A ban
-revokes the user's sessions and blocks sign-in. Administrators cannot remove their own account
-this way.
+revokes the user's sessions and blocks sign-in. Administrators cannot remove, ban or change the
+role of their own account this way, and `set-role` only accepts `user` or `admin` (`400`
+otherwise). The frontend's `/admin` page uses these routes.
 
 The plugin's other routes answer `404` (`disabledPaths` in `backend/src/auth.ts`):
 impersonation (`impersonate-user`, `stop-impersonating`), `list-user-sessions` and
