@@ -83,6 +83,9 @@ Requirements: Node.js 24 (see `.nvmrc`, `nvm use`) and Docker with Docker Compos
    No API key, Google account linking or public website is needed. The player loads
    directly in the browser and has no refresh timer. Playback depends on the video's
    availability and whether its owner permits embedding.
+   The Channel Watch widget follows up to five public channels from their links or
+   `@handles`, merging their recent publications every ten minutes without an API
+   key. Filter by channel, refresh manually, or mark publications as seen.
    `CORS_ORIGINS` lists the frontend origins allowed to call the API; the example
    includes Vite on ports 5173/5174 and the Docker frontend on port 8081.
    `SMTP_*` configure the emails (verification and reset codes). With Gmail: turn on

@@ -9,6 +9,7 @@ export type WidgetParamDefinition = {
     label: string;
     type:
         | 'text'
+        | 'youtube-channels'
         | 'number'
         | 'select'
         | 'coin-multiselect'

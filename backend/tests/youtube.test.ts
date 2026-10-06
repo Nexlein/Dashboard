@@ -39,10 +39,11 @@ beforeEach(() => {
     }));
 });
 
-const create = (body = payload) => request(app).post('/widgets').set('Origin', FRONTEND).send(body);
+const create = (body: Record<string, unknown> = payload) =>
+    request(app).post('/widgets').set('Origin', FRONTEND).send(body);
 
 describe('YouTube video player without credentials', () => {
-    it('publishes only the video player and its link parameter in about.json', async () => {
+    it('publishes the player and channel watch with their parameters in about.json', async () => {
         const result = await request(app).get('/about.json').expect(200);
         expect(
             result.body.server.services.find(
@@ -56,8 +57,29 @@ describe('YouTube video player without credentials', () => {
                     description: 'Embeds a YouTube video player without credentials',
                     params: [{ name: 'video_url', type: 'string' }],
                 },
+                {
+                    name: 'channel_watch',
+                    description: 'Latest publications from up to five public YouTube channels',
+                    params: [{ name: 'channels', type: 'string' }],
+                },
             ],
         });
+    });
+
+    it('saves a channel watch without fetching providers and rejects unsafe channels', async () => {
+        const fetch = stubFetch();
+        const result = await create({
+            ...payload,
+            widgetName: 'channel_watch',
+            params: { channels: '@GoogleDevelopers\nhttps://youtube.com/@YouTube' },
+        }).expect(201);
+        expect(result.body.widgetName).toBe('channel_watch');
+        expect(fetch).not.toHaveBeenCalled();
+        await create({
+            ...payload,
+            widgetName: 'channel_watch',
+            params: { channels: 'https://127.0.0.1/secret' },
+        }).expect(400);
     });
 
     it('requires only a Dashboard session to save the widget', async () => {

@@ -84,6 +84,12 @@ const WIDGET_PRESENTATION: Record<string, WidgetPresentation> = {
         minW: 3,
         minH: 4,
     },
+    'youtube:channel_watch': {
+        title: 'YouTube Watch',
+        defaultLayout: { x: 0, y: 0, w: 5, h: 5 },
+        minW: 3,
+        minH: 4,
+    },
     'crypto:crypto_price': {
         title: 'Crypto Price',
         defaultLayout: { x: 0, y: 0, w: 3, h: 2 },

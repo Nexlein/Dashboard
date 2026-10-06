@@ -21,6 +21,56 @@ async function choose(dialog: HTMLElement, label: string, option: string) {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('WidgetConfigurator', () => {
+    it('adds a channel watch from the server catalogue with normalized channel chips', async () => {
+        const fetch = mockApi({
+            'GET /about.json': {
+                body: makeAbout([
+                    {
+                        name: 'youtube',
+                        widgets: [
+                            {
+                                name: 'channel_watch',
+                                description: 'Public channel watch',
+                                params: [{ name: 'channels', type: 'string' }],
+                            },
+                        ],
+                    },
+                ]),
+            },
+            'GET /services': {
+                body: [
+                    makeService({
+                        name: 'youtube',
+                        displayName: 'YouTube',
+                        configurable: false,
+                        connected: true,
+                    }),
+                ],
+            },
+            'POST /widgets': (init) => ({ id: 9, ...JSON.parse(String(init.body)) }),
+        });
+        const dialog = await openDialog();
+        await choose(dialog, 'Service', 'YouTube');
+        const input = await within(dialog).findByLabelText('YouTube channels');
+        fireEvent.change(input, { target: { value: 'https://www.youtube.com/@GoogleDevelopers' } });
+        fireEvent.click(within(dialog).getByRole('button', { name: 'Add channel' }));
+        expect(within(dialog).getByText('@googledevelopers')).toBeInTheDocument();
+        fireEvent.change(input, { target: { value: 'http://localhost/private' } });
+        fireEvent.click(within(dialog).getByRole('button', { name: 'Add channel' }));
+        expect(within(dialog).getByRole('alert')).toHaveTextContent('Enter a YouTube channel link');
+        fireEvent.change(input, { target: { value: '@YouTube' } });
+        fireEvent.keyDown(input, { key: 'Enter' });
+        expect(within(dialog).queryByLabelText('Refresh Rate (seconds)')).toBeNull();
+        fireEvent.click(within(dialog).getByRole('button', { name: 'Add to Dashboard' }));
+        await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+        const post = fetch.mock.calls.find(([, init]) => init?.method === 'POST');
+        expect(JSON.parse(String(post?.[1]?.body))).toMatchObject({
+            serviceName: 'youtube',
+            widgetName: 'channel_watch',
+            params: { channels: '@googledevelopers\n@youtube' },
+            layout: { x: 0, y: 0, w: 5, h: 5 },
+        });
+    });
     it('creates the YouTube player declared by about.json without a key or refresh timer', async () => {
         const fetchMock = mockApi({
             'GET /about.json': {

@@ -5,6 +5,7 @@ import {
     GithubCommitsWidget,
 } from '@/features/widgets/catalog/GithubWidgets';
 import { YouTubeVideoWidget } from '@/features/widgets/catalog/YouTubeVideoWidget';
+import { YouTubeWatchWidget } from '@/features/widgets/catalog/YouTubeWatchWidget';
 import { CryptoPrice } from '@/features/widgets/catalog/CryptoPrice';
 import { CryptoChartWidget } from '@/features/widgets/catalog/CryptoChartWidget';
 import { StockProfileWidget } from '@/features/widgets/catalog/StockProfileWidget';
@@ -133,6 +134,12 @@ export const REGISTRY: Record<string, ServiceDefinition> = {
                         placeholder: 'https://www.youtube.com/watch?v=...',
                     },
                 ],
+            },
+            {
+                id: 'channel_watch',
+                name: 'Channel Watch',
+                component: YouTubeWatchWidget,
+                params: [{ id: 'channels', label: 'YouTube channels', type: 'youtube-channels' }],
             },
         ],
     },

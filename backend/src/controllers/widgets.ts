@@ -236,6 +236,7 @@ export const getWidgetData = asyncHandler(async (req, res) => {
     try {
         data = await service.execute(widget.widgetName, params, {
             userId: authUser(req).userId,
+            ...(req.query.refresh === 'true' && { forceRefresh: true }),
             refreshRate: Math.max(widget.refreshRate, MIN_REFRESH_RATE_SECONDS),
             ...access,
         });

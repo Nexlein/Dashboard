@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/select';
 import { searchStocks, type StockSearchResult } from '@/features/services/lib/services';
 import type { WidgetParamDefinition } from '@/features/widgets/lib/types';
+import { YouTubeChannelsField } from './YouTubeChannelsField';
 
 type FieldProps = {
     param: WidgetParamDefinition;
@@ -343,6 +344,15 @@ function AccountField({ param, value, onChange }: FieldProps) {
 
 export function WidgetParameterField({ param, value, onChange }: FieldProps) {
     const groupName = useId();
+    if (param.type === 'youtube-channels')
+        return (
+            <YouTubeChannelsField
+                id={param.id}
+                label={param.label}
+                value={value}
+                onChange={onChange}
+            />
+        );
     if (param.type === 'hidden') return null;
 
     if (param.type === 'account') {

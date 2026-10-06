@@ -13,6 +13,10 @@ export default defineConfig({
     },
     test: {
         environment: 'happy-dom',
+        // Assert embed markup in unit tests without loading third-party players.
+        environmentOptions: {
+            happyDOM: { settings: { disableIframePageLoading: true } },
+        },
         globals: true,
         setupFiles: './src/test/setup.ts',
         coverage: {

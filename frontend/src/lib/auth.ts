@@ -72,6 +72,7 @@ export async function getCurrentUser(): Promise<User> {
 
 /** Prefix of the chat histories kept in localStorage by the chatbot widget. */
 export const CHAT_HISTORY_PREFIX = 'dashboard-chat-';
+export const YOUTUBE_WATCH_HISTORY_PREFIX = 'dashboard-youtube-seen-';
 
 /**
  * Ends the session (the API revokes it and clears the cookie), and removes the chat histories
@@ -82,7 +83,11 @@ export async function logout() {
         unwrap(await authClient.signOut());
     } finally {
         Object.keys(localStorage)
-            .filter((key) => key.startsWith(CHAT_HISTORY_PREFIX))
+            .filter(
+                (key) =>
+                    key.startsWith(CHAT_HISTORY_PREFIX) ||
+                    key.startsWith(YOUTUBE_WATCH_HISTORY_PREFIX),
+            )
             .forEach((key) => localStorage.removeItem(key));
     }
 }

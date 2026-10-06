@@ -14,9 +14,12 @@ const widget = toDashboardWidget({
     layout: getDefaultWidgetLayout('youtube', 'video_player'),
 });
 
-it('offers a single player with no refresh timer or account parameter', () => {
+it('offers a player and watch feed without connection parameters', () => {
     expect(REGISTRY.youtube.hasRefresh).toBe(false);
-    expect(REGISTRY.youtube.widgets.map((item) => item.id)).toEqual(['video_player']);
+    expect(REGISTRY.youtube.widgets.map((item) => item.id)).toEqual([
+        'video_player',
+        'channel_watch',
+    ]);
     expect(REGISTRY.youtube.widgets[0].params.map((item) => item.id)).toEqual(['video_url']);
     expect(widget.title).toBe('YouTube Video');
 });
