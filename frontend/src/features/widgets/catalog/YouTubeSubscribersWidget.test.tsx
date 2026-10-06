@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { YouTubeSubscribersWidget } from './YouTubeSubscribersWidget';
-import { findWidgetDefinition } from '@/features/widgets/lib/registry';
+import { REGISTRY, findWidgetDefinition } from '@/features/widgets/lib/registry';
 import { getDefaultWidgetLayout, toDashboardWidget } from '@/features/widgets/lib/widgets';
 
 describe('YouTube subscriber widget', () => {
@@ -14,7 +14,9 @@ describe('YouTube subscriber widget', () => {
             refreshRate: 60,
             layout: getDefaultWidgetLayout('youtube', 'channel_stats'),
         });
-        expect(findWidgetDefinition('youtube', 'channel_stats')?.params[1].id).toBe('channel_id');
+        expect(findWidgetDefinition('youtube', 'channel_stats')?.params[0].id).toBe('channel_id');
+        expect(REGISTRY.youtube.widgets.map((item) => item.id)).toEqual(['channel_stats']);
+        expect(REGISTRY.youtube.widgets[0].params).toHaveLength(1);
         expect(widget.title).toBe('YouTube Subscribers');
         render(
             <YouTubeSubscribersWidget

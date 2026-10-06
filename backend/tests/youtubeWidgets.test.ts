@@ -1,177 +1,158 @@
-import { vi, it, expect, beforeEach, afterEach, type Mock } from 'vitest';
+import { createHash } from 'node:crypto';
+import { beforeEach, expect, it, vi } from 'vitest';
 import youtube from '../src/services/youtube.ts';
 import { getCache, setCache } from '../src/utils/redisCache.ts';
 import { stubFetch } from './helpers.ts';
+
 vi.mock('../src/utils/redisCache.ts', () => ({ getCache: vi.fn(), setCache: vi.fn() }));
-let fetchMock: Mock;
 const CHANNEL_ID = `UC${'a'.repeat(22)}`;
-const VIDEO_ID = 'abcdefghijk';
-const context = () => ({ userId: 7, cacheScope: '7:3', credentials: { accessToken: 'token' } });
-const response = (items: unknown[]) => ({ ok: true, status: 200, json: async () => ({ items }) });
-const channel = {
-    id: CHANNEL_ID,
-    snippet: { title: 'Our channel' },
-    contentDetails: { relatedPlaylists: { uploads: 'UUuploads' } },
-};
+const context = { userId: 7, cacheScope: '7:key-version', credentials: { apiKey: 'public-key' } };
+const response = (items: unknown[]) => Response.json({ items });
+let fetchMock: ReturnType<typeof stubFetch>;
 
 beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(getCache).mockResolvedValue(null);
     fetchMock = stubFetch();
 });
-afterEach(() => vi.restoreAllMocks());
 
-it('exposes exactly three YouTube widget types', () => {
-    expect(youtube.widgets.map((widget) => widget.name)).toEqual([
-        'channel_stats',
-        'latest_videos',
-        'video_stats',
-    ]);
+it('uses an API key and exposes only public channel subscribers', () => {
+    expect(youtube.connection.type).toBe('apiKey');
+    expect(youtube.widgets.map((widget) => widget.name)).toEqual(['channel_stats']);
+    expect(youtube.widgets[0].params).toEqual([{ name: 'channel_id', type: 'string' }]);
 });
 
-it.each([
-    ['latest_videos', { channel_id: 'bad' }],
-    ['video_stats', { video_id: 'https://youtube.com/watch?v=abcdefghijk' }],
-    ['video_stats', { video_id: '' }],
-    ['unknown', {}],
-])('rejects invalid configuration for %s without an API request', async (name, params) => {
-    await expect(youtube.execute(name, params, context())).rejects.toMatchObject({
+it.each(['', 'bad', 'https://youtube.com/@YouTube', '@bad/path'])(
+    'rejects invalid target %s before calling Google',
+    async (channel_id) => {
+        await expect(
+            youtube.execute('channel_stats', { channel_id }, context),
+        ).rejects.toMatchObject({ statusCode: 400 });
+        expect(fetchMock).not.toHaveBeenCalled();
+    },
+);
+
+it.each(['latest_videos', 'video_stats', 'unknown'])('rejects removed widget %s', async (name) => {
+    await expect(youtube.execute(name, { channel_id: CHANNEL_ID }, context)).rejects.toMatchObject({
         statusCode: 400,
     });
     expect(fetchMock).not.toHaveBeenCalled();
 });
 
-it.each(['latest_videos', 'video_stats'])('requires a connection for %s', async (name) => {
+it('requires an API key even when a result is cached', async () => {
+    vi.mocked(getCache).mockResolvedValue({ subscriberCount: 10 });
     await expect(
-        youtube.execute(name, { channel_id: CHANNEL_ID, video_id: VIDEO_ID }, { userId: 7 }),
+        youtube.execute('channel_stats', { channel_id: CHANNEL_ID }, { userId: 7 }),
     ).rejects.toMatchObject({ statusCode: 409 });
-});
-
-it('reads the uploads playlist, keeps publication order and skips unavailable videos', async () => {
-    fetchMock.mockResolvedValueOnce(response([channel])).mockResolvedValueOnce(
-        response([
-            {
-                contentDetails: { videoId: VIDEO_ID, videoPublishedAt: '2026-10-01T12:00:00Z' },
-                snippet: { title: 'Newest' },
-                status: { privacyStatus: 'public' },
-            },
-            {
-                contentDetails: {
-                    videoId: 'lmnopqrstuv',
-                    videoPublishedAt: '2026-09-01T12:00:00Z',
-                },
-                snippet: { title: 'Older' },
-            },
-            {
-                contentDetails: {
-                    videoId: 'privateabcd',
-                    videoPublishedAt: '2026-10-01T12:00:00Z',
-                },
-                status: { privacyStatus: 'private' },
-            },
-            { contentDetails: { videoId: 'deletedabcd' }, snippet: { title: 'Deleted video' } },
-        ]),
-    );
-    const result = await youtube.execute('latest_videos', { channel_id: CHANNEL_ID }, context());
-    expect(
-        ((result as Record<string, unknown>).videos as { title: string }[]).map(
-            (video) => video.title,
-        ),
-    ).toEqual(['Newest', 'Older']);
-    const url = new URL(fetchMock.mock.calls[1][0]);
-    expect(url.pathname).toBe('/youtube/v3/playlistItems');
-    expect(url.searchParams.get('playlistId')).toBe('UUuploads');
-    expect(url.searchParams.get('maxResults')).toBe('5');
-    expect(fetchMock.mock.calls[1][1].headers.Authorization).toBe('Bearer token');
-    expect(setCache).toHaveBeenCalledWith(`7:3:youtube:latest_videos:${CHANNEL_ID}`, result, 60000);
-});
-
-it('returns an empty list for a channel without uploads', async () => {
-    fetchMock.mockResolvedValueOnce(response([channel])).mockResolvedValueOnce(response([]));
-    await expect(
-        youtube.execute('latest_videos', { channel_id: CHANNEL_ID }, context()),
-    ).resolves.toMatchObject({ videos: [] });
-});
-
-it('reports missing channels and uploads playlists', async () => {
-    fetchMock.mockResolvedValueOnce(response([]));
-    await expect(
-        youtube.execute('latest_videos', { channel_id: CHANNEL_ID }, context()),
-    ).rejects.toMatchObject({ statusCode: 404 });
-    fetchMock.mockResolvedValueOnce(response([{ id: CHANNEL_ID }]));
-    await expect(
-        youtube.execute('latest_videos', { channel_id: CHANNEL_ID }, context()),
-    ).rejects.toMatchObject({ statusCode: 404 });
-});
-
-it('distinguishes unavailable counters from zero and caches video statistics', async () => {
-    fetchMock.mockResolvedValueOnce(
-        response([
-            {
-                id: VIDEO_ID,
-                snippet: { title: 'Video', channelTitle: 'Channel' },
-                statistics: { viewCount: '1200', likeCount: '0' },
-            },
-        ]),
-    );
-    const result = await youtube.execute(
-        'video_stats',
-        { video_id: VIDEO_ID },
-        { ...context(), refreshRate: 900 },
-    );
-    expect(result).toEqual({
-        videoId: VIDEO_ID,
-        title: 'Video',
-        channelTitle: 'Channel',
-        viewCount: 1200,
-        likeCount: 0,
-        commentCount: null,
-    });
-    expect(new URL(fetchMock.mock.calls[0][0]).pathname).toBe('/youtube/v3/videos');
-    expect(setCache).toHaveBeenCalledWith(`7:3:youtube:video_stats:${VIDEO_ID}`, result, 300000);
-    vi.mocked(getCache).mockResolvedValueOnce(result);
-    await expect(
-        youtube.execute('video_stats', { video_id: VIDEO_ID }, context()),
-    ).resolves.toEqual(result);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-});
-
-it('reports missing videos and rejects malformed counters without caching', async () => {
-    fetchMock.mockResolvedValueOnce(response([]));
-    await expect(
-        youtube.execute('video_stats', { video_id: VIDEO_ID }, context()),
-    ).rejects.toMatchObject({ statusCode: 404 });
-    fetchMock.mockResolvedValueOnce(response([{ id: VIDEO_ID, statistics: { viewCount: '-1' } }]));
-    await expect(
-        youtube.execute('video_stats', { video_id: VIDEO_ID }, context()),
-    ).rejects.toMatchObject({ statusCode: 502 });
-    expect(setCache).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
 });
 
 it.each([
-    [401, 409],
-    [403, 502],
-    [500, 502],
-])('handles upstream status %s', async (status, statusCode) => {
-    fetchMock.mockResolvedValueOnce({ ok: false, status });
+    [CHANNEL_ID, 'id'],
+    ['@YouTube', 'forHandle'],
+])('reads public subscribers for %s without OAuth', async (target, selector) => {
+    fetchMock.mockResolvedValue(
+        response([
+            {
+                id: CHANNEL_ID,
+                snippet: { title: 'Our channel' },
+                statistics: { subscriberCount: '1230' },
+            },
+        ]),
+    );
+    const result = await youtube.execute('channel_stats', { channel_id: ` ${target} ` }, context);
+    expect(result).toEqual({
+        channelId: CHANNEL_ID,
+        channelTitle: 'Our channel',
+        subscriberCount: 1230,
+    });
+    const url = new URL(fetchMock.mock.calls[0][0]);
+    expect(url.pathname).toBe('/youtube/v3/channels');
+    expect(url.searchParams.get(selector)).toBe(target);
+    expect(url.searchParams.get('key')).toBe('public-key');
+    expect(url.searchParams.get('part')).toBe('snippet,statistics');
+    expect(url.searchParams.has('mine')).toBe(false);
+    expect(fetchMock.mock.calls[0][1].headers).toBeUndefined();
+    expect(setCache).toHaveBeenCalledWith(
+        `7:key-version:youtube:${createHash('sha256').update('public-key').digest('hex').slice(0, 16)}:channel_stats:${target}`,
+        result,
+        60000,
+    );
+    vi.mocked(getCache).mockResolvedValue(result);
     await expect(
-        youtube.execute('video_stats', { video_id: VIDEO_ID }, context()),
+        youtube.execute('channel_stats', { channel_id: target }, context),
+    ).resolves.toEqual(result);
+    expect(fetchMock).toHaveBeenCalledOnce();
+});
+
+it('caps caching at five minutes and preserves zero subscribers', async () => {
+    fetchMock.mockResolvedValue(
+        response([{ id: CHANNEL_ID, statistics: { subscriberCount: '0' } }]),
+    );
+    const result = await youtube.execute(
+        'channel_stats',
+        { channel_id: CHANNEL_ID },
+        { ...context, refreshRate: 900 },
+    );
+    expect(result.subscriberCount).toBe(0);
+    expect(setCache).toHaveBeenCalledWith(expect.any(String), result, 300000);
+});
+
+it.each([
+    [[], 404],
+    [[{ id: CHANNEL_ID, statistics: { hiddenSubscriberCount: true } }], 409],
+    [[{ id: CHANNEL_ID, statistics: { subscriberCount: '-1' } }], 502],
+    [[{ id: CHANNEL_ID, statistics: { subscriberCount: '9007199254740992' } }], 502],
+])('reports unavailable or malformed channel data', async (items, statusCode) => {
+    fetchMock.mockResolvedValue(response(items));
+    await expect(
+        youtube.execute('channel_stats', { channel_id: CHANNEL_ID }, context),
     ).rejects.toMatchObject({ statusCode });
     expect(setCache).not.toHaveBeenCalled();
 });
 
-it('handles network and malformed JSON responses', async () => {
-    fetchMock.mockRejectedValueOnce(new Error('network'));
-    await expect(
-        youtube.execute('video_stats', { video_id: VIDEO_ID }, context()),
-    ).rejects.toMatchObject({ statusCode: 502 });
-    fetchMock.mockResolvedValueOnce({
-        ok: true,
-        json: async () => {
-            throw new Error('invalid json');
-        },
+it('verifies the key against a public channel without caching or OAuth', async () => {
+    fetchMock.mockResolvedValue(response([{ id: CHANNEL_ID }]));
+    await youtube.verifyCredentials({ apiKey: ' key ' });
+    const url = new URL(fetchMock.mock.calls[0][0]);
+    expect(url.searchParams.get('key')).toBe('key');
+    expect(url.searchParams.get('part')).toBe('id');
+    expect(url.searchParams.get('id')).toBeTruthy();
+    expect(url.searchParams.has('mine')).toBe(false);
+    expect(setCache).not.toHaveBeenCalled();
+});
+
+it.each([
+    [400, 'keyInvalid', 400],
+    [403, 'forbidden', 400],
+    [403, 'accessNotConfigured', 400],
+    [403, 'quotaExceeded', 429],
+    [429, '', 429],
+    [500, '', 502],
+])(
+    'handles Google status %s and reason %s without leaking the key',
+    async (status, reason, statusCode) => {
+        fetchMock.mockResolvedValue(
+            Response.json(
+                { error: { message: 'secret public-key', errors: [{ reason }] } },
+                { status },
+            ),
+        );
+        await expect(youtube.verifyCredentials(context.credentials)).rejects.toMatchObject({
+            statusCode,
+            message: expect.not.stringContaining('public-key'),
+        });
+    },
+);
+
+it('reports network errors and malformed responses', async () => {
+    fetchMock.mockRejectedValueOnce(new Error('private URL with public-key'));
+    await expect(youtube.verifyCredentials(context.credentials)).rejects.toMatchObject({
+        statusCode: 502,
+        message: 'YouTube is unavailable',
     });
-    await expect(
-        youtube.execute('video_stats', { video_id: VIDEO_ID }, context()),
-    ).rejects.toMatchObject({ statusCode: 502 });
+    fetchMock.mockResolvedValueOnce(Response.json({}));
+    await expect(youtube.verifyCredentials(context.credentials)).rejects.toMatchObject({
+        statusCode: 502,
+    });
 });

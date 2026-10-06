@@ -1,112 +1,89 @@
 import { expect, it, vi } from 'vitest';
-import { randomUUID } from 'node:crypto';
 import prisma from '../../src/utils/prisma.ts';
-import { auth } from '../../src/auth.ts';
+import { decryptJson } from '../../src/utils/encryption.ts';
 import { browser, FRONTEND, registerVerified, userByEmail } from './helpers.ts';
 
-it('connects YouTube with offline read-only access, encrypts tokens and refreshes them', async () => {
+it('saves a verified YouTube API key and reads a public channel without Google OAuth', async () => {
     const agent = browser();
     const email = await registerVerified(agent);
-    const subject = randomUUID();
+    const channelId = `UC${'a'.repeat(22)}`;
     const fetchMock = vi.fn(async (input: string | URL | Request) => {
-        const url = String(input instanceof Request ? input.url : input);
-        if (url === 'https://oauth2.googleapis.com/token')
-            return Response.json({
-                access_token: 'youtube-access',
-                refresh_token: 'youtube-refresh',
-                expires_in: 3600,
-                token_type: 'Bearer',
-            });
-        if (url === 'https://openidconnect.googleapis.com/v1/userinfo')
-            return Response.json({
-                sub: subject,
-                email: `${subject}@google.test`,
-                email_verified: true,
-                name: 'YouTube creator',
-            });
-        throw new Error(`Unexpected request: ${url}`);
+        const url = new URL(String(input instanceof Request ? input.url : input));
+        expect(url.origin).toBe('https://www.googleapis.com');
+        expect(url.pathname).toBe('/youtube/v3/channels');
+        expect(url.searchParams.get('key')).toBe('youtube-public-key');
+        expect(url.searchParams.has('mine')).toBe(false);
+        return Response.json({
+            items: [
+                {
+                    id: channelId,
+                    snippet: { title: 'Public channel' },
+                    statistics: { subscriberCount: '1230' },
+                },
+            ],
+        });
     });
     vi.stubGlobal('fetch', fetchMock);
-    const start = await agent
-        .post('/api/auth/link-social')
+    const saved = await agent
+        .put('/services/youtube/connection')
         .set('Origin', FRONTEND)
-        .send({
-            provider: 'youtube-service',
-            callbackURL: `${FRONTEND}/services?linked=youtube`,
-            errorCallbackURL: `${FRONTEND}/services`,
-            disableRedirect: true,
-        })
+        .send({ apiKey: 'youtube-public-key' })
         .expect(200);
-    const url = new URL(start.body.url);
-    expect(url.hostname).toBe('accounts.google.com');
-    expect(url.searchParams.get('access_type')).toBe('offline');
-    expect(url.searchParams.get('scope')).toContain(
-        'https://www.googleapis.com/auth/youtube.readonly',
-    );
-    expect(url.searchParams.get('prompt')).toBe('select_account consent');
-    expect(url.searchParams.get('redirect_uri')).toBe(
-        'http://localhost:8080/api/auth/callback/youtube-service',
-    );
-    expect(url.searchParams.get('code_challenge')).toBeTruthy();
-    const callback = await agent
-        .get('/api/auth/callback/youtube-service')
-        .query({ code: 'code', state: url.searchParams.get('state') });
-    expect(callback.headers.location).toBe(`${FRONTEND}/services?linked=youtube`);
+    expect(saved.body.keyHint).toBe('-key');
     const user = await userByEmail(email);
-    const account = user!.accounts.find((account) => account.providerId === 'youtube-service')!;
-    expect(account.accountId).toBe(subject);
-    expect(account.accessToken).toBeTruthy();
-    expect(account.accessToken).not.toContain('youtube-access');
-    expect(account.refreshToken).not.toContain('youtube-refresh');
-    await prisma.account.update({
-        where: { id: account.id },
-        data: { accessTokenExpiresAt: new Date(0) },
+    const connection = await prisma.serviceConnection.findUnique({
+        where: { userId_serviceName: { userId: user!.id, serviceName: 'youtube' } },
     });
-    fetchMock.mockImplementation(async () =>
-        Response.json({ access_token: 'renewed-access', expires_in: 3600, token_type: 'Bearer' }),
-    );
-    const renewed = await auth.api.getAccessToken({
-        body: { accountId: String(account.id), userId: String(user!.id) },
-    });
-    expect(renewed.accessToken).toBe('renewed-access');
-    await agent
-        .delete(`/services/youtube/accounts/${account.id}`)
-        .set('Origin', FRONTEND)
-        .expect(204);
-    expect(await prisma.account.findUnique({ where: { id: account.id } })).toBeNull();
-});
-
-it('does not allow YouTube service accounts to sign in or link without a session', async () => {
-    const agent = browser();
-    await agent
-        .post('/api/auth/sign-in/social')
-        .set('Origin', FRONTEND)
-        .send({ provider: 'youtube-service', callbackURL: FRONTEND })
-        .expect(400);
-    await agent
-        .post('/api/auth/link-social')
-        .set('Origin', FRONTEND)
-        .send({ provider: 'youtube-service', callbackURL: FRONTEND })
-        .expect(401);
-});
-
-it('rejects an OAuth callback arriving in a different browser', async () => {
-    const agent = browser();
-    await registerVerified(agent);
-    const start = await agent
-        .post('/api/auth/link-social')
+    expect(decryptJson(connection!.encryptedCredentials)).toEqual({ apiKey: 'youtube-public-key' });
+    expect(JSON.stringify(connection!.encryptedCredentials)).not.toContain('youtube-public-key');
+    expect(user!.accounts.some((account) => account.providerId === 'youtube-service')).toBe(false);
+    const widget = await agent
+        .post('/widgets')
         .set('Origin', FRONTEND)
         .send({
-            provider: 'youtube-service',
-            callbackURL: `${FRONTEND}/services`,
-            disableRedirect: true,
+            serviceName: 'youtube',
+            widgetName: 'channel_stats',
+            params: { channel_id: '@YouTube' },
+            refreshRate: 60,
+            layout: { x: 0, y: 0, w: 3, h: 2 },
         })
-        .expect(200);
-    const fetchMock = vi.fn();
-    vi.stubGlobal('fetch', fetchMock);
-    const callback = await browser()
-        .get('/api/auth/callback/youtube-service')
-        .query({ code: 'code', state: new URL(start.body.url).searchParams.get('state') });
-    expect(String(callback.headers.location)).toContain('error=');
-    expect(fetchMock).not.toHaveBeenCalled();
+        .expect(201);
+    const data = await agent.get(`/widgets/${widget.body.id}/data`).expect(200);
+    expect(data.body).toMatchObject({
+        channelId,
+        channelTitle: 'Public channel',
+        subscriberCount: 1230,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const calls = fetchMock.mock.calls.map(([input]) => new URL(String(input)));
+    expect(calls[1].searchParams.get('forHandle')).toBe('@YouTube');
+    await agent.delete('/services/youtube/connection').set('Origin', FRONTEND).expect(204);
+    await agent.get(`/widgets/${widget.body.id}/data`).expect(409);
+    expect(
+        await prisma.serviceConnection.findUnique({
+            where: { userId_serviceName: { userId: user!.id, serviceName: 'youtube' } },
+        }),
+    ).toBeNull();
+});
+
+it('rejects an invalid YouTube key without creating a connection', async () => {
+    const agent = browser();
+    const email = await registerVerified(agent);
+    vi.stubGlobal(
+        'fetch',
+        vi.fn(async () =>
+            Response.json({ error: { errors: [{ reason: 'keyInvalid' }] } }, { status: 400 }),
+        ),
+    );
+    await agent
+        .put('/services/youtube/connection')
+        .set('Origin', FRONTEND)
+        .send({ apiKey: 'bad-key' })
+        .expect(400);
+    const user = await userByEmail(email);
+    expect(
+        await prisma.serviceConnection.findUnique({
+            where: { userId_serviceName: { userId: user!.id, serviceName: 'youtube' } },
+        }),
+    ).toBeNull();
 });

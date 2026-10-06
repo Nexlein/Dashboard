@@ -60,7 +60,7 @@ export function ServiceCard({ service, onConnect, onDisconnect, setError }: Serv
                         <p className="mt-1 text-sm text-muted-foreground">
                             {service.description ||
                                 (service.name === 'youtube'
-                                    ? 'Channel subscribers, latest videos and video statistics'
+                                    ? 'Public channel subscribers — API key only'
                                     : service.name === 'github'
                                       ? 'Statistiques et activité des dépôts'
                                       : 'Current weather and forecasts')}

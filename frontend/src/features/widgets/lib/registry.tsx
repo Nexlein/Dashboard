@@ -1,7 +1,3 @@
-import {
-    YouTubeLatestVideosWidget,
-    YouTubeVideoStatsWidget,
-} from '@/features/widgets/catalog/YouTubeWidgets';
 import { CurrentWeather, Forecast } from '@/features/widgets/catalog/WeatherWidgets';
 import {
     GithubRepoWidget,
@@ -131,44 +127,10 @@ export const REGISTRY: Record<string, ServiceDefinition> = {
                 component: YouTubeSubscribersWidget,
                 params: [
                     {
-                        id: 'account',
-                        label: 'YouTube account',
-                        type: 'account',
-                        service: 'youtube',
-                    },
-                    { id: 'channel_id', label: 'Channel ID', type: 'text', placeholder: 'UC...' },
-                ],
-            },
-            {
-                id: 'latest_videos',
-                name: 'Latest Videos',
-                component: YouTubeLatestVideosWidget,
-                params: [
-                    {
-                        id: 'account',
-                        label: 'YouTube account',
-                        type: 'account',
-                        service: 'youtube',
-                    },
-                    { id: 'channel_id', label: 'Channel ID', type: 'text', placeholder: 'UC...' },
-                ],
-            },
-            {
-                id: 'video_stats',
-                name: 'Video Statistics',
-                component: YouTubeVideoStatsWidget,
-                params: [
-                    {
-                        id: 'account',
-                        label: 'YouTube account',
-                        type: 'account',
-                        service: 'youtube',
-                    },
-                    {
-                        id: 'video_id',
-                        label: 'Video ID (from the YouTube URL)',
+                        id: 'channel_id',
+                        label: 'Channel ID or @handle',
                         type: 'text',
-                        placeholder: 'e.g. dQw4w9WgXcQ',
+                        placeholder: 'e.g. @YouTube or UC...',
                     },
                 ],
             },

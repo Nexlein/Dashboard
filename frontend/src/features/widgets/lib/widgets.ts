@@ -82,18 +82,6 @@ const WIDGET_PRESENTATION: Record<string, WidgetPresentation> = {
         title: 'YouTube Subscribers',
         defaultLayout: { x: 0, y: 0, w: 3, h: 2 },
     },
-    'youtube:latest_videos': {
-        title: 'YouTube Latest Videos',
-        defaultLayout: { x: 0, y: 0, w: 4, h: 4 },
-        minW: 3,
-        minH: 3,
-    },
-    'youtube:video_stats': {
-        title: 'YouTube Video Statistics',
-        defaultLayout: { x: 0, y: 0, w: 3, h: 3 },
-        minW: 3,
-        minH: 3,
-    },
     'crypto:crypto_price': {
         title: 'Crypto Price',
         defaultLayout: { x: 0, y: 0, w: 3, h: 2 },

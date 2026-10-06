@@ -4,10 +4,16 @@ import { FRONTEND, signedInAs, stubFetch } from './helpers.ts';
 import app from '../src/app.ts';
 import { auth } from '../src/auth.ts';
 import { clearCache } from '../src/utils/redisCache.ts';
+import { decryptJson, encryptJson } from '../src/utils/encryption.ts';
 
 const prisma = vi.hoisted(() => ({
     account: { findMany: vi.fn() },
-    serviceConnection: { findMany: vi.fn() },
+    serviceConnection: {
+        findMany: vi.fn(),
+        findUnique: vi.fn(),
+        upsert: vi.fn(),
+        deleteMany: vi.fn(),
+    },
     widgetConfig: { findUnique: vi.fn(), create: vi.fn() },
 }));
 vi.mock('../src/utils/prisma.ts', () => ({ default: prisma }));
@@ -19,160 +25,135 @@ const payload = {
     refreshRate: 60,
     layout: { x: 0, y: 0, w: 3, h: 2 },
 };
-const response = (items: unknown[]) => ({ ok: true, status: 200, json: async () => ({ items }) });
+const publicChannel = () =>
+    Response.json({
+        items: [
+            {
+                id: CHANNEL_ID,
+                snippet: { title: 'Our channel' },
+                statistics: { subscriberCount: '1230' },
+            },
+        ],
+    });
 
 beforeEach(async () => {
     vi.clearAllMocks();
     await clearCache();
     signedInAs(7);
-    prisma.account.findMany.mockResolvedValue([{ id: 3, accountId: 'google-account' }]);
-    prisma.serviceConnection.findMany.mockResolvedValue([]);
-    vi.mocked(auth.api.getAccessToken).mockResolvedValue({ accessToken: 'access-token' } as never);
+    const connection = {
+        encryptedCredentials: encryptJson({ apiKey: 'public-key' }),
+        verifiedAt: new Date(),
+        keyHint: '-key',
+    };
+    prisma.serviceConnection.findUnique.mockResolvedValue(connection);
+    prisma.serviceConnection.findMany.mockResolvedValue([
+        { ...connection, serviceName: 'youtube' },
+    ]);
+    prisma.serviceConnection.upsert.mockImplementation(async ({ create }) => create);
+    prisma.account.findMany.mockResolvedValue([]);
     prisma.widgetConfig.create.mockImplementation(async ({ data }) => ({ id: 9, ...data }));
-    prisma.widgetConfig.findUnique.mockResolvedValue({ id: 9, userId: 7, ...payload });
+    prisma.widgetConfig.findUnique.mockResolvedValue({
+        id: 9,
+        userId: 7,
+        ...payload,
+        params: encryptJson(payload.params),
+    });
 });
 
 const create = (body = payload) => request(app).post('/widgets').set('Origin', FRONTEND).send(body);
+const connect = (apiKey = 'public-key') =>
+    request(app).put('/services/youtube/connection').set('Origin', FRONTEND).send({ apiKey });
 
-describe('YouTube widgets with Better Auth accounts', () => {
-    it('requires a signed-in session', async () => {
+describe('YouTube public-data service', () => {
+    it('still requires a Dashboard session to save a key or widget', async () => {
         vi.mocked(auth.api.getSession).mockResolvedValue(null);
+        await connect().expect(401);
         await create().expect(401);
     });
 
-    it('requires a linked YouTube account and never uses a sign-in account', async () => {
-        prisma.account.findMany.mockResolvedValue([]);
-        await create().expect(409);
-        expect(prisma.account.findMany).toHaveBeenCalledWith(
-            expect.objectContaining({ where: { userId: 7, providerId: 'youtube-service' } }),
-        );
-        expect(prisma.widgetConfig.create).not.toHaveBeenCalled();
-    });
-
-    it('rejects invalid target IDs before fetching YouTube', async () => {
-        const fetch = stubFetch();
-        await create({ ...payload, params: { channel_id: 'invalid' } }).expect(400);
-        expect(fetch).not.toHaveBeenCalled();
-    });
-
-    it.each(['channel_stats', 'latest_videos', 'video_stats'])(
-        'creates and reads %s using the account token',
-        async (widgetName) => {
-            const params =
-                widgetName === 'video_stats' ? { video_id: 'abcdefghijk' } : payload.params;
-            const config = { ...payload, widgetName, params };
-            prisma.widgetConfig.findUnique.mockResolvedValue({ id: 9, userId: 7, ...config });
-            const fetch = stubFetch();
-            if (widgetName === 'video_stats') {
-                fetch.mockResolvedValue(
-                    response([
-                        {
-                            id: 'abcdefghijk',
-                            snippet: { title: 'Video' },
-                            statistics: { viewCount: '42' },
-                        },
-                    ]),
-                );
-            } else if (widgetName === 'latest_videos') {
-                fetch
-                    .mockResolvedValueOnce(
-                        response([
-                            {
-                                id: CHANNEL_ID,
-                                contentDetails: { relatedPlaylists: { uploads: 'UUuploads' } },
-                            },
-                        ]),
-                    )
-                    .mockResolvedValueOnce(response([]));
-            } else {
-                fetch.mockResolvedValue(
-                    response([
-                        {
-                            id: CHANNEL_ID,
-                            snippet: { title: 'Our channel' },
-                            statistics: { subscriberCount: '1230' },
-                        },
-                    ]),
-                );
-            }
-            await request(app).post('/widgets').set('Origin', FRONTEND).send(config).expect(201);
-            const result = await request(app).get('/widgets/9/data').expect(200);
-            expect(result.body).toMatchObject(
-                widgetName === 'video_stats'
-                    ? { viewCount: 42, likeCount: null }
-                    : widgetName === 'latest_videos'
-                      ? { videos: [] }
-                      : { subscriberCount: 1230 },
-            );
-            expect(fetch).toHaveBeenCalledTimes(widgetName === 'latest_videos' ? 2 : 1);
-            expect(fetch.mock.calls[0][1].headers.Authorization).toBe('Bearer access-token');
-            expect(auth.api.getAccessToken).toHaveBeenCalledWith({
-                body: { accountId: '3', userId: '7' },
-            });
-        },
-    );
-
-    it('requires selection among multiple accounts and rejects accounts owned by another user', async () => {
-        prisma.account.findMany.mockResolvedValue([{ id: 3 }, { id: 4 }]);
-        await create().expect(400);
-        await request(app)
-            .post('/widgets')
-            .set('Origin', FRONTEND)
-            .send({ ...payload, params: { ...payload.params, account: '99' } })
-            .expect(409);
+    it('verifies and encrypts the API key without returning it', async () => {
+        stubFetch().mockImplementation(async () => publicChannel());
+        const result = await connect(' public-key ').expect(200);
+        const stored = prisma.serviceConnection.upsert.mock.calls[0][0];
+        expect(stored.where).toEqual({ userId_serviceName: { userId: 7, serviceName: 'youtube' } });
+        expect(decryptJson(stored.create.encryptedCredentials)).toEqual({ apiKey: 'public-key' });
+        expect(stored.create.encryptedCredentials).not.toContain('public-key');
+        expect(result.body.keyHint).toBe('-key');
+        expect(JSON.stringify(result.body)).not.toContain('public-key');
         expect(auth.api.getAccessToken).not.toHaveBeenCalled();
     });
 
-    it('isolates cached results for two linked accounts', async () => {
-        prisma.account.findMany.mockResolvedValue([{ id: 3 }, { id: 4 }]);
-        const fetch = stubFetch().mockResolvedValue(
-            response([{ id: CHANNEL_ID, statistics: { subscriberCount: '10' } }]),
-        );
-        for (const account of ['3', '4']) {
-            await request(app)
-                .post('/widgets')
-                .set('Origin', FRONTEND)
-                .send({ ...payload, params: { ...payload.params, account } })
-                .expect(201);
-        }
-        expect(fetch).toHaveBeenCalledTimes(2);
-    });
-
-    it('reports a token refresh failure from Better Auth', async () => {
-        vi.mocked(auth.api.getAccessToken).mockRejectedValue(new Error('refresh refused'));
-        const result = await request(app).get('/widgets/9/data').expect(502);
-        expect(result.body.error).toMatch(/reconnect/);
-    });
-
-    it('reports hidden subscribers at widget creation', async () => {
+    it('never saves an invalid key', async () => {
         stubFetch().mockResolvedValue(
-            response([{ id: CHANNEL_ID, statistics: { hiddenSubscriberCount: true } }]),
+            Response.json({ error: { errors: [{ reason: 'keyInvalid' }] } }, { status: 400 }),
         );
-        const result = await create().expect(409);
-        expect(result.body.error).toMatch(/hidden/);
+        await connect().expect(400);
+        expect(prisma.serviceConnection.upsert).not.toHaveBeenCalled();
     });
 
-    it('lists and disconnects YouTube accounts through the shared service routes', async () => {
-        stubFetch().mockResolvedValue(
-            response([{ id: CHANNEL_ID, snippet: { title: 'Our channel' } }]),
-        );
-        prisma.account.findMany.mockImplementation(async ({ where }) =>
-            where.providerId === 'youtube-service' ? [{ id: 3 }] : [],
-        );
-        const result = await request(app).get('/services').expect(200);
-        expect(
-            result.body.find((service: { name: string }) => service.name === 'youtube'),
-        ).toMatchObject({
-            provider: 'youtube-service',
-            connected: true,
-            accounts: [{ id: 3, login: 'Our channel' }],
+    it('requires a saved API key and does not fall back to an OAuth account', async () => {
+        prisma.serviceConnection.findUnique.mockResolvedValue(null);
+        prisma.account.findMany.mockResolvedValue([{ id: 3 }]);
+        await create().expect(409);
+        expect(prisma.widgetConfig.create).not.toHaveBeenCalled();
+        expect(auth.api.getAccessToken).not.toHaveBeenCalled();
+    });
+
+    it('creates and reads the subscriber widget without selecting a Google account', async () => {
+        const fetch = stubFetch().mockImplementation(async () => publicChannel());
+        await create().expect(201);
+        const result = await request(app).get('/widgets/9/data').expect(200);
+        expect(result.body).toMatchObject({ channelId: CHANNEL_ID, subscriberCount: 1230 });
+        expect(fetch).toHaveBeenCalledOnce();
+        expect(new URL(fetch.mock.calls[0][0]).searchParams.get('key')).toBe('public-key');
+        expect(auth.api.getAccessToken).not.toHaveBeenCalled();
+    });
+
+    it('rejects invalid targets and the removed widgets before fetching', async () => {
+        const fetch = stubFetch();
+        await create({ ...payload, params: { channel_id: 'invalid' } }).expect(400);
+        for (const widgetName of ['latest_videos', 'video_stats'])
+            await create({ ...payload, widgetName }).expect(400);
+        expect(fetch).not.toHaveBeenCalled();
+    });
+
+    it('isolates cached responses when the user or key changes', async () => {
+        const fetch = stubFetch().mockImplementation(async () => publicChannel());
+        await request(app).get('/widgets/9/data').expect(200);
+        signedInAs(8);
+        prisma.widgetConfig.findUnique.mockResolvedValue({
+            id: 9,
+            userId: 8,
+            ...payload,
+            params: encryptJson(payload.params),
         });
+        await request(app).get('/widgets/9/data').expect(200);
+        prisma.serviceConnection.findUnique.mockResolvedValue({
+            encryptedCredentials: encryptJson({ apiKey: 'replacement-key' }),
+            verifiedAt: new Date(),
+        });
+        await request(app).get('/widgets/9/data').expect(200);
+        expect(fetch).toHaveBeenCalledTimes(3);
+    });
+
+    it('shows an API key connection and disconnects it without OAuth', async () => {
+        const result = await request(app).get('/services').expect(200);
+        const youtube = result.body.find((service: { name: string }) => service.name === 'youtube');
+        expect(youtube).toMatchObject({
+            connected: true,
+            connectionType: 'apiKey',
+            credentialLabel: 'YouTube Data API key',
+            keyHint: '-key',
+        });
+        expect(youtube).not.toHaveProperty('provider');
+        expect(JSON.stringify(youtube)).not.toContain('public-key');
         await request(app)
-            .delete('/services/youtube/accounts/3')
+            .delete('/services/youtube/connection')
             .set('Origin', FRONTEND)
             .expect(204);
-        expect(auth.api.unlinkAccount).toHaveBeenCalledWith(
-            expect.objectContaining({ body: { accountId: '3' } }),
-        );
+        expect(prisma.serviceConnection.deleteMany).toHaveBeenCalledWith({
+            where: { userId: 7, serviceName: 'youtube' },
+        });
+        expect(auth.api.unlinkAccount).not.toHaveBeenCalled();
     });
 });

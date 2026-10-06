@@ -406,34 +406,20 @@ Tokens are stored encrypted (`account.encryptOAuthTokens`), read through Better 
 server (which refreshes them when they expire) and never returned to the page.
 
 
-### YouTube widgets and connected accounts
+### YouTube public-data widget
 
-Connect YouTube through `POST /api/auth/link-social` with `provider: "youtube-service"`
-while signed in, using trusted `callbackURL` and `errorCallbackURL` values and
-`disableRedirect: true`. Register `<BETTER_AUTH_URL>/api/auth/callback/youtube-service`
-in the Google OAuth web client. Set `YOUTUBE_CLIENT_ID` and `YOUTUBE_CLIENT_SECRET`;
-the old `YOUTUBE_CALLBACK_URL` and `/auth/youtube` endpoints are no longer used.
-Better Auth handles OAuth state, encrypted Account tokens and token refresh.
-YouTube service accounts cannot sign in or create Dashboard accounts.
+While signed in to Dashboard, save a YouTube Data API v3 key with
+`PUT /services/youtube/connection` and `{ "apiKey": "..." }`.
+The server verifies the key against a public channel, encrypts it, and only exposes
+its last four characters through `GET /services`. Delete it with
+`DELETE /services/youtube/connection`. No Google OAuth or account selection is used.
+Enable YouTube Data API v3 in the key's Google Cloud project and restrict the key to that API.
 
-`GET /services` lists YouTube's connected accounts. Widgets accept an `account`
-parameter with the selected account ID (optional when only one is connected).
-`DELETE /services/youtube/accounts/:id` disconnects one account;
-`DELETE /services/youtube/connection` disconnects all YouTube accounts.
-
-Exactly three widget types are accepted for `serviceName: "youtube"`:
-
-| `widgetName` | Required target parameter | Data |
-| --- | --- | --- |
-| `channel_stats` | `channel_id` | `channelId`, `channelTitle`, `subscriberCount` |
-| `latest_videos` | `channel_id` | `channelId`, `channelTitle`, `videos: [{ videoId, title, publishedAt }]` |
-| `video_stats` | `video_id` | `videoId`, `title`, `channelTitle`, `viewCount`, `likeCount`, `commentCount` |
-
-Channel IDs start with `UC` followed by 22 ID characters; video IDs have 11 ID
-characters. Invalid IDs return `400`. Latest Videos reads up to five uploads,
-filters unavailable/private entries and can return an empty list. Missing resources
-return `404`. Unavailable likes/comments are `null`, not zero. Hidden subscriber
-counts or revoked YouTube access return `409`; upstream/quota errors return `502`.
-Results are cached separately by connected account, widget type and target ID,
-for 60 seconds to five minutes according to the refresh rate. Subscriber counts
-are YouTube's rounded public counts.
+Only `channel_stats` is accepted for `serviceName: "youtube"`. Its `channel_id`
+parameter accepts a channel ID (`UC` followed by 22 ID characters) or an `@handle`.
+It returns `channelId`, `channelTitle` and `subscriberCount` (YouTube's rounded public count).
+Invalid targets or keys return `400`, missing channels return `404`, missing connections
+or hidden subscriber counts return `409`, quota errors return `429`, and upstream
+failures return `502`. Results are cached per user connection and target for 60 seconds
+to five minutes according to the widget refresh rate. The key is sent to Google by the
+backend and is never returned in widget data.

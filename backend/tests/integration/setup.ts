@@ -12,8 +12,6 @@ process.env.ENCRYPTION_KEY = 'integration-encryption-secret-that-is-at-least-32-
 process.env.CORS_ORIGINS = 'http://localhost:5173';
 process.env.GITHUB_CLIENT_ID = 'integration-client';
 process.env.GITHUB_CLIENT_SECRET = 'integration-client-secret';
-process.env.YOUTUBE_CLIENT_ID = 'youtube-integration-client';
-process.env.YOUTUBE_CLIENT_SECRET = 'youtube-integration-secret';
 // Every test signs in: keep the sign-in limiter out of the way (unit tests cover it).
 process.env.AUTH_RATE_LIMIT_MAX = '100000';
 delete process.env.REDIS_URL;
