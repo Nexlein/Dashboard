@@ -5,6 +5,7 @@ import app from '../src/app.ts';
 import stocks from '../src/services/stocks.ts';
 import { StockPendingError } from '../src/services/stockProvider.ts';
 import weatherService from '../src/services/weather.ts';
+import registry from '../src/services/registry.ts';
 import { HttpError } from '../src/utils/httpError.ts';
 import { getCache, setCache } from '../src/utils/redisCache.ts';
 
@@ -97,6 +98,26 @@ describe('API Endpoints', () => {
                 expect(firstWidget).toHaveProperty('params');
                 expect(Array.isArray(firstWidget.params)).toBe(true);
             }
+        });
+
+        it('lists every registry widget with only the fields of the subject schema', async () => {
+            const res = await request(app).get('/about.json');
+
+            const services = res.body.server.services;
+            expect(services.map((service: { name: string }) => service.name)).toEqual(
+                registry.getAllServices().map((service) => service.name),
+            );
+            for (const service of services) {
+                expect(Object.keys(service).sort()).toEqual(['name', 'widgets']);
+                for (const widget of service.widgets) {
+                    expect(Object.keys(widget).sort()).toEqual(['description', 'name', 'params']);
+                    for (const param of widget.params) {
+                        expect(Object.keys(param).sort()).toEqual(['name', 'type']);
+                        expect(['string', 'integer']).toContain(param.type);
+                    }
+                }
+            }
+            expect(Number.isInteger(res.body.server.current_time)).toBe(true);
         });
 
         it('allows configured frontend origins through CORS', async () => {
