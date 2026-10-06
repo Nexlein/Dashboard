@@ -33,26 +33,6 @@ describe('ServiceCard with an API key service', () => {
         await waitFor(() => expect(input).toHaveValue(''));
     });
 
-    it('connects YouTube with an API key without starting OAuth', async () => {
-        const fetchMock = mockApi({});
-        const { onConnect } = renderCard(
-            makeService({
-                name: 'youtube',
-                displayName: 'YouTube',
-                connectionType: 'apiKey',
-                credentialLabel: 'YouTube Data API key',
-                documentationUrl: 'https://console.cloud.google.com/apis/credentials',
-            }),
-        );
-        fireEvent.change(screen.getByLabelText('YouTube Data API key'), {
-            target: { value: 'public-key' },
-        });
-        fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
-        await waitFor(() => expect(onConnect).toHaveBeenCalledWith('youtube', 'public-key'));
-        expect(screen.queryByRole('button', { name: 'Connect a YouTube account' })).toBeNull();
-        expect(fetchMock).not.toHaveBeenCalled();
-    });
-
     it('reports a failed connection', async () => {
         const props = renderCard();
         props.onConnect.mockRejectedValue(new Error('Invalid API key'));

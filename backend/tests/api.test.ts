@@ -6,7 +6,6 @@ import stocks from '../src/services/stocks.ts';
 import { StockPendingError } from '../src/services/stockProvider.ts';
 import registry from '../src/services/registry.ts';
 import weatherService from '../src/services/weather.ts';
-import registry from '../src/services/registry.ts';
 import { HttpError } from '../src/utils/httpError.ts';
 import { getCache, setCache } from '../src/utils/redisCache.ts';
 
@@ -585,12 +584,12 @@ describe('API Endpoints', () => {
             const res = await request(app).get('/services').set('Origin', FRONTEND);
 
             expect(res.statusCode).toBe(200);
-            for (const name of ['weather', 'crypto', 'stocks', 'github', 'youtube']) {
+            for (const name of ['weather', 'crypto', 'stocks', 'github']) {
                 expect(res.body.find((service: { name: string }) => service.name === name)).toEqual(
                     expect.objectContaining({ connected: false, configurable: true }),
                 );
             }
-            for (const name of ['chatbot']) {
+            for (const name of ['chatbot', 'youtube']) {
                 expect(res.body.find((service: { name: string }) => service.name === name)).toEqual(
                     expect.objectContaining({ connected: true, configurable: false }),
                 );

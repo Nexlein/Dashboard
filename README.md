@@ -78,11 +78,11 @@ Requirements: Node.js 24 (see `.nvmrc`, `nvm use`) and Docker with Docker Compos
    several GitHub accounts per user), and register both callback URLs in your GitHub OAuth
    App (GitHub matches them exactly): `http://localhost:8080/api/auth/callback/github` and
    `http://localhost:8080/api/auth/callback/github-service`.
-   To enable YouTube, enable YouTube Data API v3 in Google Cloud, create an API key,
-   restrict it to YouTube Data API v3, and enter it in Services. No Google account
-   linking, consent screen or public website is needed. The only YouTube widget is
-   Channel Subscribers: enter a public channel ID (`UC...`) or handle (`@YouTube`).
-   It displays the rounded public subscriber count returned by YouTube.
+   YouTube needs no setup: add the Video Player widget and paste a video link
+   (`youtube.com/watch`, `youtu.be`, Shorts, live or embed links).
+   No API key, Google account linking or public website is needed. The player loads
+   directly in the browser and has no refresh timer. Playback depends on the video's
+   availability and whether its owner permits embedding.
    `CORS_ORIGINS` lists the frontend origins allowed to call the API; the example
    includes Vite on ports 5173/5174 and the Docker frontend on port 8081.
    `SMTP_*` configure the emails (verification and reset codes). With Gmail: turn on

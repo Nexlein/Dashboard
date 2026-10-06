@@ -4,7 +4,7 @@ import {
     GithubProfileWidget,
     GithubCommitsWidget,
 } from '@/features/widgets/catalog/GithubWidgets';
-import { YouTubeSubscribersWidget } from '@/features/widgets/catalog/YouTubeSubscribersWidget';
+import { YouTubeVideoWidget } from '@/features/widgets/catalog/YouTubeVideoWidget';
 import { CryptoPrice } from '@/features/widgets/catalog/CryptoPrice';
 import { CryptoChartWidget } from '@/features/widgets/catalog/CryptoChartWidget';
 import { StockProfileWidget } from '@/features/widgets/catalog/StockProfileWidget';
@@ -119,18 +119,18 @@ export const REGISTRY: Record<string, ServiceDefinition> = {
     },
     youtube: {
         name: 'YouTube',
-        hasRefresh: true,
+        hasRefresh: false,
         widgets: [
             {
-                id: 'channel_stats',
-                name: 'Channel Subscribers',
-                component: YouTubeSubscribersWidget,
+                id: 'video_player',
+                name: 'Video Player',
+                component: YouTubeVideoWidget,
                 params: [
                     {
-                        id: 'channel_id',
-                        label: 'Channel ID or @handle',
+                        id: 'video_url',
+                        label: 'YouTube video link',
                         type: 'text',
-                        placeholder: 'e.g. @YouTube or UC...',
+                        placeholder: 'https://www.youtube.com/watch?v=...',
                     },
                 ],
             },

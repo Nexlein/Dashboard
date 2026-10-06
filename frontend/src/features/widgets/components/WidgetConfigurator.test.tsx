@@ -21,6 +21,56 @@ async function choose(dialog: HTMLElement, label: string, option: string) {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('WidgetConfigurator', () => {
+    it('creates the YouTube player declared by about.json without a key or refresh timer', async () => {
+        const fetchMock = mockApi({
+            'GET /about.json': {
+                body: makeAbout([
+                    {
+                        name: 'youtube',
+                        widgets: [
+                            {
+                                name: 'video_player',
+                                description: 'Play a YouTube video',
+                                params: [{ name: 'video_url', type: 'string' }],
+                            },
+                        ],
+                    },
+                ]),
+            },
+            'GET /services': {
+                body: [
+                    makeService({
+                        name: 'youtube',
+                        displayName: 'YouTube',
+                        configurable: false,
+                        connected: true,
+                        connectionType: null,
+                        credentialLabel: null,
+                        documentationUrl: null,
+                    }),
+                ],
+            },
+            'POST /widgets': (init) => ({ id: 9, ...JSON.parse(String(init.body)) }),
+        });
+        const dialog = await openDialog();
+        await choose(dialog, 'Service', 'YouTube');
+
+        const input = await within(dialog).findByLabelText('YouTube video link');
+        expect(within(dialog).queryByLabelText('Refresh Rate (seconds)')).toBeNull();
+        expect(within(dialog).queryByText(/not connected/)).toBeNull();
+        fireEvent.change(input, { target: { value: 'https://youtu.be/M7lc1UVf-VE' } });
+        fireEvent.click(within(dialog).getByRole('button', { name: 'Add to Dashboard' }));
+
+        await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+        const post = fetchMock.mock.calls.find(([, init]) => init?.method === 'POST');
+        expect(JSON.parse(String(post?.[1]?.body))).toMatchObject({
+            serviceName: 'youtube',
+            widgetName: 'video_player',
+            params: { video_url: 'https://youtu.be/M7lc1UVf-VE' },
+            layout: { x: 0, y: 0, w: 4, h: 4 },
+        });
+    });
+
     it('asks to connect a service before adding its widgets', async () => {
         mockApi({
             'GET /services': { body: [makeService()] },

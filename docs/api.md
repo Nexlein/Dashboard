@@ -406,20 +406,13 @@ Tokens are stored encrypted (`account.encryptOAuthTokens`), read through Better 
 server (which refreshes them when they expire) and never returned to the page.
 
 
-### YouTube public-data widget
+### YouTube video player
 
-While signed in to Dashboard, save a YouTube Data API v3 key with
-`PUT /services/youtube/connection` and `{ "apiKey": "..." }`.
-The server verifies the key against a public channel, encrypts it, and only exposes
-its last four characters through `GET /services`. Delete it with
-`DELETE /services/youtube/connection`. No Google OAuth or account selection is used.
-Enable YouTube Data API v3 in the key's Google Cloud project and restrict the key to that API.
-
-Only `channel_stats` is accepted for `serviceName: "youtube"`. Its `channel_id`
-parameter accepts a channel ID (`UC` followed by 22 ID characters) or an `@handle`.
-It returns `channelId`, `channelTitle` and `subscriberCount` (YouTube's rounded public count).
-Invalid targets or keys return `400`, missing channels return `404`, missing connections
-or hidden subscriber counts return `409`, quota errors return `429`, and upstream
-failures return `502`. Results are cached per user connection and target for 60 seconds
-to five minutes according to the widget refresh rate. The key is sent to Google by the
-backend and is never returned in widget data.
+YouTube requires no service connection, API key or Google OAuth.
+`GET /services` reports it as connected and not configurable.
+The only supported widget is `video_player` with a `video_url` parameter containing
+an 11-character video ID or a YouTube video URL (`watch`, `youtu.be`, `shorts`, `live`,
+`embed`). Invalid links return `400` when creating or editing the widget.
+The browser renders the official player on `www.youtube-nocookie.com`; arbitrary
+iframe URLs are never accepted. Playback requires the video to be available and
+embeddable. The widget has no refresh timer and does not call `/widgets/:id/data`.

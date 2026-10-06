@@ -267,6 +267,15 @@ export const updateWidget = asyncHandler(async (req, res) => {
     if (existing.userId !== authUser(req).userId)
         return res.status(403).json({ error: 'Unauthorized to update this widget' });
 
+    if (params) {
+        const service = registry.getService(existing.serviceName);
+        try {
+            service?.validateParams?.(existing.widgetName, params);
+        } catch (error) {
+            return res.status(400).json({ error: errorMessage(error, 'Widget validation failed') });
+        }
+    }
+
     const updated = await prisma.widgetConfig.update({
         where: { id: widgetId },
         data: {
