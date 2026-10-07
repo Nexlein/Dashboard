@@ -18,6 +18,28 @@ describe('Weather service', () => {
         vi.restoreAllMocks();
     });
 
+    it('calls OpenWeather once for two widgets loading the same city together', async () => {
+        fetchMock.mockImplementation(async (url: string) => ({
+            ok: true,
+            json: async () =>
+                url.includes('/geo/')
+                    ? [{ name: 'Paris', country: 'FR', lat: 48.85, lon: 2.35 }]
+                    : {
+                          dt: 123,
+                          main: { temp: 18, feels_like: 18, humidity: 70 },
+                          weather: [{ description: 'clear sky', icon: '01d' }],
+                      },
+        }));
+
+        const [first, second] = await Promise.all([
+            weather.execute('current_weather', { city: 'Paris' }, connectionOptions),
+            weather.execute('current_weather', { city: 'paris' }, connectionOptions),
+        ]);
+
+        expect(second).toEqual(first);
+        expect(fetchMock).toHaveBeenCalledTimes(2); // one geocoding, one weather request
+    });
+
     it('normalizes current weather and caches it by city', async () => {
         fetchMock
             .mockResolvedValueOnce({

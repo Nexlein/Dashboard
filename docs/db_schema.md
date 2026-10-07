@@ -116,7 +116,10 @@ Schema changes are versioned with Prisma Migrate. Each folder in
 | `npm run db:generate -w backend`                    | Regenerate the Prisma Client after a schema change         |
 
 - Since Prisma 7, migrate commands neither regenerate the client nor seed: run
-  `db:generate` after a schema change, and `npx prisma db seed` (from `backend/`) for test data.
+  `db:generate` after a schema change, and `npx prisma db seed` (from `backend/`) to recreate
+  the demo accounts. With `SEED_DEMO_DATA=true` (set in `docker-compose.yml`) the server
+  creates the missing ones at startup (`src/utils/demoData.ts`), under a database lock so
+  replicas starting together create each account once.
 - Commit the generated migration folder together with the schema change. CI fails
   when `schema.prisma` differs from the migrated database.
 - Never edit a migration that has been merged; add a new one instead.
@@ -127,4 +130,5 @@ Schema changes are versioned with Prisma Migrate. Each folder in
   `npx prisma migrate resolve --applied 20261004000000_init` (from `backend/`).
 - `20261005125900_better_auth` moves authentication to Better Auth's tables. It removes the
   accounts created before it (their passwords and GitHub tokens used other formats) with
-  their widgets and connections; run `npx prisma db seed` for the test accounts again.
+  their widgets and connections; the demo accounts come back at the next startup (or run
+  `npx prisma db seed`).
