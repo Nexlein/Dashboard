@@ -19,7 +19,7 @@ async function mockBackend(page: Page) {
                   }
                 : pathname === '/widgets'
                   ? [widget]
-                  : pathname === '/widgets/1/data'
+                  : /^\/widgets\/\d+\/data$/.test(pathname)
                     ? {
                           location: { name: 'Paris', country: 'FR' },
                           temperature: 19,
@@ -276,3 +276,53 @@ for (const language of ['en', 'fr'] as const) {
         });
     }
 }
+
+test('restores the desktop widget layout after switching to a phone viewport', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await mockBackend(page);
+    await page.route('http://localhost:8080/widgets', (route) =>
+        route.fulfill({
+            json: [
+                {
+                    id: 1,
+                    serviceName: 'weather',
+                    widgetName: 'current_weather',
+                    params: { city: 'Paris' },
+                    refreshRate: 600,
+                    layout: { x: 0, y: 0, w: 4, h: 3 },
+                },
+                {
+                    id: 2,
+                    serviceName: 'weather',
+                    widgetName: 'current_weather',
+                    params: { city: 'Lyon' },
+                    refreshRate: 600,
+                    layout: { x: 4, y: 0, w: 4, h: 3 },
+                },
+            ],
+        }),
+    );
+    const saves: unknown[] = [];
+    page.on('request', (request) => {
+        if (request.method() === 'PUT' && request.url().endsWith('/widgets/layout'))
+            saves.push(request.postDataJSON());
+    });
+    await page.goto('/');
+    const items = page.locator('.react-grid-item');
+    await expect(items).toHaveCount(2);
+    const bounds = () =>
+        items.evaluateAll((elements) =>
+            elements.map((element) => {
+                const { x, y, width, height } = element.getBoundingClientRect();
+                return { x, y, width, height };
+            }),
+        );
+    const desktop = await bounds();
+    await page.setViewportSize({ width: 390, height: 900 });
+    await expect.poll(async () => (await bounds())[0].width).toBeLessThan(desktop[0].width);
+    // Allow the layout persistence debounce to fire, reproducing the original corruption.
+    await page.waitForTimeout(750);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await expect.poll(bounds).toEqual(desktop);
+    expect(saves).toEqual([]);
+});
