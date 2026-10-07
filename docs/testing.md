@@ -105,6 +105,9 @@ The frontend uses **Vitest** and **React Testing Library**.
   profile edits, account deletion (cascades, recent sign-in or password, CSRF).
 - `tests/integration/auth.test.ts` and `github.test.ts`: CGU and age declarations on email and
   GitHub registration, including declarations missing from the OAuth state.
+- `tests/integration/demoData.test.ts`: demo accounts created once when replicas seed
+  together, verified without an email, signing in with their role and widgets, kept on the
+  next startup and recreated by `reset`.
 - `account.test.ts`: failed exports when stored data cannot be decrypted, profile validation.
 - `encryption.test.ts`: key derivation from `ENCRYPTION_KEY` / `BETTER_AUTH_SECRET`, JSON
   round trips, tamper and wrong-key rejection, and ciphertexts written by the previous

@@ -58,6 +58,12 @@ const envSchema = z.object({
     SMTP_PASSWORD: optional(z.string()),
     // Sender; defaults to SMTP_USER (Gmail rewrites any other address to the account's).
     MAIL_FROM: optional(z.string()),
+    // Creates the demo accounts (known passwords, see utils/demoData.ts) at startup when they
+    // are missing. For grading and demos only: keep it off on a real deployment.
+    SEED_DEMO_DATA: z
+        .enum(['true', 'false'])
+        .default('false')
+        .transform((v) => v === 'true'),
 });
 
 const _env = envSchema

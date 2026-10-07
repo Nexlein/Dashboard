@@ -26,6 +26,9 @@ services:
             - PORT=8080
             - DATABASE_URL=postgres://user:password@db:5432/dashboard
             - REDIS_URL=redis://redis:6379
+            # Creates the demo accounts (README) at startup when missing. Remove on a real
+            # deployment: their passwords are public.
+            - SEED_DEMO_DATA=true
             # Emails use the SMTP_* settings of backend/.env (Gmail, see the README).
         restart: unless-stopped
         deploy:

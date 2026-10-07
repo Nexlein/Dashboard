@@ -60,7 +60,7 @@
 ## Bonus Features
 
 - [ ] **PWA (Progressive Web App)**: Dashboard installable as a standalone app.
-- [ ] **Database Seeding**: Automated mock data (users + widgets) generation on startup for instant grading access. (`prisma db seed` exists but must be run manually)
+- [x] **Database Seeding**: Automated mock data (users + widgets) generation on startup for instant grading access. (`SEED_DEMO_DATA=true` in `docker-compose.yml` creates the missing demo accounts at startup; `prisma db seed` recreates them)
 - [ ] **AI Chatbot with RAG**: Optional LLM integration widget. (Ollama chat widget implemented, without RAG)
 
 ## Technical Constraints
