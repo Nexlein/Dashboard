@@ -37,14 +37,15 @@ function setLocal(key: string, data: unknown, ttlMs: number) {
     }
 }
 
-// A failing Redis command (connection lost mid-request) must not fail the widget: the
-// request falls back to the local cache, as when Redis is not configured.
+// A failing Redis command (connection lost mid-request, or writes refused when Redis is
+// full) must not fail the widget: the request falls back to the local cache, as when Redis
+// is not configured. A value Redis does not have may sit locally after a refused write.
 async function getCache<T = unknown>(key: string): Promise<T | null> {
     const client = sharedClient();
     if (client) {
         try {
             const val = await client.get(key);
-            return val ? (JSON.parse(val) as T) : null;
+            if (val) return JSON.parse(val) as T;
         } catch (error) {
             console.warn('Redis read failed, using the local cache:', (error as Error).message);
         }
@@ -57,6 +58,8 @@ async function setCache(key: string, data: unknown, ttlMs: number) {
     if (client) {
         try {
             await client.set(key, JSON.stringify(data), { PX: ttlMs });
+            // Redis now holds the value: a local copy from a refused write is outdated.
+            localCache.delete(key);
             return;
         } catch (error) {
             console.warn('Redis write failed, using the local cache:', (error as Error).message);
