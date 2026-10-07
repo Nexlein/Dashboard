@@ -20,26 +20,36 @@ import {
 
 describe('email sign-up', () => {
     it.each([
-        [{ cguAccepted: false }, 'You must accept the CGU to register.'],
-        [{ is16OrOlder: undefined }, 'You must confirm you are 16 or older to register.'],
-    ])('refuses %o without creating the account', async (body, message) => {
+        [{ cguAccepted: false }, 'You must accept the CGU to register.', 'TERMS_REQUIRED'],
+        [
+            { is16OrOlder: undefined },
+            'You must confirm you are 16 or older to register.',
+            'AGE_REQUIRED',
+        ],
+    ])('refuses %o without creating the account', async (body, message, code) => {
         const email = uniqueEmail();
         const res = await signUp(browser(), { email, ...body });
 
         expect(res.status).toBe(400);
         expect(res.body.message).toBe(message);
+        expect(res.body.code).toBe(code);
         expect(await userByEmail(email)).toBeNull();
     });
 
     it.each([
-        [{ email: 'not-an-email' }, 'Invalid email address'],
-        [{ password: 'short' }, 'Password must be between 8 and 128 characters'],
-        [{ name: 'a'.repeat(51) }, 'Display name must be 50 characters or fewer'],
-    ])('applies the shared registration schema to %o', async (body, message) => {
+        [{ email: 'not-an-email' }, 'Invalid email address', 'INVALID_EMAIL'],
+        [{ password: 'short' }, 'Password must be between 8 and 128 characters', 'PASSWORD_LENGTH'],
+        [
+            { name: 'a'.repeat(51) },
+            'Display name must be 50 characters or fewer',
+            'DISPLAY_NAME_LENGTH',
+        ],
+    ])('applies the shared registration schema to %o', async (body, message, code) => {
         const res = await signUp(browser(), body);
 
         expect(res.status).toBe(400);
         expect(res.body.message).toBe(message);
+        expect(res.body.code).toBe(code);
         // Same verdict as the frontend form, which validates with the same schema.
         expect(
             registerSchema.safeParse({ ...body, cguAccepted: true, is16OrOlder: true }).success,

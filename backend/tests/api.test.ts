@@ -179,6 +179,10 @@ describe('API Endpoints', () => {
             const res = await request(app).get('/widgets');
 
             expect(res.statusCode).toBe(401);
+            expect(res.body).toEqual({
+                error: 'Authentication required',
+                code: 'AUTHENTICATION_REQUIRED',
+            });
         });
 
         it('does not treat a provider rejection during creation as an invalid Dashboard session', async () => {
@@ -378,6 +382,7 @@ describe('API Endpoints', () => {
                 expect(res.statusCode).toBe(429);
                 expect(Number(res.headers['retry-after'])).toBeGreaterThanOrEqual(44);
                 expect(res.body.retryAfter).toBeGreaterThanOrEqual(44);
+                expect(res.body.code).toBe('STOCK_CREDITS_PENDING');
             } finally {
                 execute.mockRestore();
             }
@@ -405,6 +410,73 @@ describe('API Endpoints', () => {
                 execute.mockRestore();
             }
         });
+
+        it.each([
+            [401, 502, 'TWELVE_DATA_KEY_INVALID'],
+            [429, 429, 'TWELVE_DATA_RATE_LIMIT'],
+        ])(
+            'preserves an explicit provider code and retry delay when HTTP %i becomes %i',
+            async (providerStatus, expectedStatus, code) => {
+                prisma.widgetConfig.findUnique.mockResolvedValue({
+                    ...mockWidget,
+                    serviceName: 'stocks',
+                    widgetName: 'stock_market',
+                    params: { symbols: 'AAPL', period: '1M' },
+                });
+                prisma.serviceConnection.findUnique.mockResolvedValue({
+                    id: 9,
+                    encryptedCredentials: encryptJson({ apiKey: 'test-key' }),
+                });
+                const execute = vi
+                    .spyOn(stocks, 'execute')
+                    .mockRejectedValue(
+                        Object.assign(
+                            new HttpError(
+                                'Provider rejected the request',
+                                providerStatus as number,
+                                code as string,
+                            ),
+                            { retryAfter: 37 },
+                        ),
+                    );
+                try {
+                    const res = await request(app).get('/widgets/1/data');
+                    expect(res.status).toBe(expectedStatus);
+                    expect(res.headers['retry-after']).toBe('37');
+                    expect(res.body).toEqual({
+                        error: 'Provider rejected the request',
+                        code,
+                        retryAfter: 37,
+                    });
+                } finally {
+                    execute.mockRestore();
+                }
+            },
+        );
+
+        it.each([
+            ['get', '/widgets/1/data', 'WIDGET_VIEW_FORBIDDEN'],
+            ['put', '/widgets/1', 'WIDGET_UPDATE_FORBIDDEN'],
+            ['delete', '/widgets/1', 'WIDGET_DELETE_FORBIDDEN'],
+            ['post', '/widgets/1/chat', 'UNAUTHORIZED'],
+        ] as const)(
+            'keeps ownership checks and their stable code on %s %s',
+            async (method, url, code) => {
+                prisma.widgetConfig.findUnique.mockResolvedValue({ ...mockWidget, userId: 2 });
+                const res = await request(app)
+                    [method](url)
+                    .set('Origin', FRONTEND)
+                    .send(
+                        method === 'post'
+                            ? { messages: [{ role: 'user', content: 'Hello' }] }
+                            : { refreshRate: 60 },
+                    );
+                expect(res.status).toBe(403);
+                expect(res.body.code).toBe(code);
+                expect(prisma.widgetConfig.update).not.toHaveBeenCalled();
+                expect(prisma.widgetConfig.delete).not.toHaveBeenCalled();
+            },
+        );
 
         it('answers 501 for a widget whose service fetches no data', async () => {
             const service = vi
@@ -455,6 +527,7 @@ describe('API Endpoints', () => {
 
             expect(res.statusCode).toBe(400);
             expect(res.body.error).toBe('Invalid widget id');
+            expect(res.body.code).toBe('WIDGET_ID_INVALID');
             expect(prisma.widgetConfig.findUnique).not.toHaveBeenCalled();
         });
 
@@ -629,6 +702,7 @@ describe('API Endpoints', () => {
                 .get('/services/stocks/search?q=apple')
                 .set('Origin', FRONTEND);
             expect(res.statusCode).toBe(409);
+            expect(res.body.code).toBe('SERVICE_NOT_CONNECTED');
         });
 
         it('searches stocks using only the authenticated user connection', async () => {
@@ -668,6 +742,7 @@ describe('API Endpoints', () => {
 
                 expect(res.statusCode).toBe(400);
                 expect(verify).not.toHaveBeenCalled();
+                expect(res.body.code).toBe('API_KEY_REQUIRED');
                 expect(prisma.serviceConnection.upsert).not.toHaveBeenCalled();
             },
         );

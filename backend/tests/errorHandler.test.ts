@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { NextFunction, Request, Response } from 'express';
 import errorHandler from '../src/middleware/errorHandler.ts';
+import { HttpError } from '../src/utils/httpError.ts';
 
 function respond(err: Error & { statusCode?: number; code?: string }) {
     const res = { status: vi.fn(), json: vi.fn() };
@@ -18,6 +19,22 @@ beforeEach(() => {
 });
 
 describe('errorHandler', () => {
+    it('infers a stable code for a known HttpError while preserving its status and message', () => {
+        expect(respond(new HttpError('City not found', 404))).toEqual({
+            status: 404,
+            body: { error: 'City not found', code: 'CITY_NOT_FOUND' },
+        });
+    });
+
+    it('preserves an explicit error code even when its message changes', () => {
+        expect(
+            respond(new HttpError('The provider rejected this key', 409, 'WEATHER_KEY_INVALID')),
+        ).toEqual({
+            status: 409,
+            body: { error: 'The provider rejected this key', code: 'WEATHER_KEY_INVALID' },
+        });
+    });
+
     it('uses the status code an error carries', () => {
         expect(respond(Object.assign(new Error('Nope'), { statusCode: 418 }))).toEqual({
             status: 418,

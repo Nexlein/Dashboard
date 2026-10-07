@@ -37,6 +37,22 @@ describe('i18n foundation', () => {
         expect(localStorage.getItem(LANGUAGE_STORAGE_KEY)).toBe('en');
     });
 
+    it('updates the SEO description together with the selected document language', async () => {
+        const description = document.createElement('meta');
+        description.name = 'description';
+        document.head.append(description);
+        try {
+            await changeLanguage('fr');
+            expect(description.content).toBe(resources.fr.common.metaDescription);
+            expect(document.documentElement.lang).toBe('fr');
+            await changeLanguage('en');
+            expect(description.content).toBe(resources.en.common.metaDescription);
+            expect(document.documentElement.lang).toBe('en');
+        } finally {
+            description.remove();
+        }
+    });
+
     it('falls back to English for a missing French translation', async () => {
         const isolated = createInstance();
         await isolated.init({

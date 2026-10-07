@@ -91,6 +91,16 @@ npm test -w backend      # a single workspace
 npm run test:e2e         # end-to-end (see below)
 ```
 
+Before pushing frontend or backend changes, also run the same coverage checks as CI:
+
+```bash
+npm test -w frontend -- --coverage
+npm test -w backend -- --coverage
+```
+
+Passing `npm test` alone does not check coverage thresholds. Add tests for observable
+behavior (success, errors and regressions), rather than lowering those thresholds.
+
 Unit tests mock Prisma and external providers; they need no database. The root
 `npm test` and `npm run test:e2e` scripts build `shared` and generate the Prisma client
 first; when running a single workspace, run `npm run db:generate -w backend` once.
@@ -147,6 +157,12 @@ The frontend uses **Vitest** and **React Testing Library**.
 - Component tests are located alongside components (e.g. `Navbar.test.tsx`).
   `src/test-utils.tsx` renders components inside the Query client, theme and router providers.
 - `features/widgets/lib/widgets.test.ts` covers the API-to-dashboard widget mapping (titles, sizes, refresh rate).
+- `features/widgets/lib/registry.test.tsx` covers catalog translations, stable API
+  identifiers, legacy aliases and shared lazy imports.
+- `features/widgets/hooks/useWidgets.test.tsx` covers concurrent widget preloading,
+  video thumbnail priority, failed imports and successful/failed layout persistence.
+- `lib/apiClient.test.ts` covers session credentials, API error codes, retry delays,
+  proxy/network failures, empty responses and request cancellation.
 - `WidgetRenderer.test.tsx` covers crypto price rendering, multiple comparison
   curves, curve toggling, logos, and persisted period changes.
 - `WidgetParameterField.test.tsx` covers arbitrary CoinGecko IDs and removing

@@ -21,7 +21,9 @@ beforeEach(() => {
 
 describe('session check on the API routes', () => {
     it('requires a session', async () => {
-        expect((await request(app).get('/account/export')).status).toBe(401);
+        const res = await request(app).get('/account/export');
+        expect(res.status).toBe(401);
+        expect(res.body.code).toBe('AUTHENTICATION_REQUIRED');
     });
 
     it('requires an allowed Origin on writes (CSRF), not on reads', async () => {
@@ -54,13 +56,16 @@ describe('GET /account/export', () => {
         const res = await request(app).get('/account/export');
 
         expect(res.status).toBe(500);
+        expect(res.body.code).toBe('INTERNAL_SERVER_ERROR');
         expect(JSON.stringify(res.body)).not.toContain('_encrypted');
     });
 
     it('returns 404 for a deleted account', async () => {
         prisma.user.findUnique.mockResolvedValue(null);
 
-        expect((await request(app).get('/account/export')).status).toBe(404);
+        const res = await request(app).get('/account/export');
+        expect(res.status).toBe(404);
+        expect(res.body).toEqual({ error: 'User not found', code: 'USER_NOT_FOUND' });
     });
 
     it('selects no password, token or credential', async () => {

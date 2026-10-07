@@ -40,7 +40,11 @@ it('merges and sorts public feeds and keeps other channels when one is unavailab
     );
     const result = await youtubeWatch({ channels: `${channel}\n${other}` }, context);
     expect(result.videos).toHaveLength(1);
-    expect(result.warnings[0]).toMatchObject({ channel: other, message: 'Channel not found' });
+    expect(result.warnings[0]).toMatchObject({
+        channel: other,
+        message: 'Channel not found',
+        code: 'YOUTUBE_CHANNEL_NOT_FOUND',
+    });
     expect(fetch).toHaveBeenCalledWith(
         `https://www.youtube.com/feeds/videos.xml?channel_id=${channel}`,
         expect.objectContaining({ redirect: 'error', signal: expect.any(AbortSignal) }),
@@ -92,6 +96,7 @@ it('refreshes after 10 minutes, allows manual refresh after a minute and falls b
     const result = await youtubeWatch({ channels: channel }, context);
     expect(result.videos).toHaveLength(1);
     expect(result.warnings[0].message).toContain('saved publications');
+    expect(result.warnings[0].code).toBe('YOUTUBE_SAVED_FEED');
     await youtubeWatch({ channels: channel }, { ...context, forceRefresh: true });
     expect(fetch).toHaveBeenCalledTimes(3);
 });
@@ -109,4 +114,5 @@ it('rejects oversized feeds and reports an unavailable channel', async () => {
     const result = await youtubeWatch({ channels: channel }, context);
     expect(result.videos).toEqual([]);
     expect(result.warnings[0].message).toContain('too large');
+    expect(result.warnings[0].code).toBe('YOUTUBE_RESPONSE_TOO_LARGE');
 });
