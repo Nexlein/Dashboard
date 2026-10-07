@@ -26,17 +26,27 @@ function renderSwitcher() {
 
 it('switches languages without reloading, with an accessible name and persisted choice', async () => {
     renderSwitcher();
-    const selector = screen.getByRole('combobox', { name: 'Language' });
-    expect(selector).toHaveValue('en');
-    fireEvent.change(selector, { target: { value: 'fr' } });
+    expect(screen.getByRole('button', { name: 'English' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByRole('button', { name: 'Français' }));
     await waitFor(() => {
-        expect(screen.getByRole('combobox', { name: 'Langue' })).toHaveValue('fr');
+        expect(screen.getByRole('button', { name: 'Français' })).toHaveAttribute(
+            'aria-pressed',
+            'true',
+        );
         expect(document.documentElement.lang).toBe('fr');
         expect(localStorage.getItem(LANGUAGE_STORAGE_KEY)).toBe('fr');
     });
     expect(detectLanguage()).toBe('fr');
-    expect(screen.getByRole('option', { name: 'Français' })).toHaveAttribute('lang', 'fr');
-    expect(screen.getByRole('option', { name: 'English' })).toHaveAttribute('lang', 'en');
+    expect(screen.getByRole('group', { name: 'Langue' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'English' })).toHaveAttribute(
+        'aria-pressed',
+        'false',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'English' }));
+    await waitFor(() => {
+        expect(document.documentElement.lang).toBe('en');
+        expect(localStorage.getItem(LANGUAGE_STORAGE_KEY)).toBe('en');
+    });
 });
 
 it('still changes the interface when saving the preference is unavailable', async () => {
@@ -44,11 +54,12 @@ it('still changes the interface when saving the preference is unavailable', asyn
         throw new DOMException('Blocked', 'SecurityError');
     });
     renderSwitcher();
-    fireEvent.change(screen.getByRole('combobox', { name: 'Language' }), {
-        target: { value: 'fr' },
-    });
+    fireEvent.click(screen.getByRole('button', { name: 'Français' }));
     await waitFor(() => {
-        expect(screen.getByRole('combobox', { name: 'Langue' })).toHaveValue('fr');
+        expect(screen.getByRole('button', { name: 'Français' })).toHaveAttribute(
+            'aria-pressed',
+            'true',
+        );
         expect(document.documentElement.lang).toBe('fr');
     });
 });

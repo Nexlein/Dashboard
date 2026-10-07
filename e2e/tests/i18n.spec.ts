@@ -93,14 +93,14 @@ test('switches language, preserves a registration draft and remembers the choice
     await page.getByLabel('Email address').fill('ada@example.com');
     await page.getByLabel('Password', { exact: true }).fill('Secret123');
     await page.getByLabel(/Terms of Service/).check();
-    await page.getByRole('combobox', { name: 'Language', exact: true }).selectOption('fr');
+    await page.getByRole('button', { name: 'Français', exact: true }).click();
     await expect(page.locator('html')).toHaveAttribute('lang', 'fr');
     await expect(page.getByLabel('Adresse e-mail')).toHaveValue('ada@example.com');
     await expect(page.getByLabel('Mot de passe', { exact: true })).toHaveValue('Secret123');
     await expect(page.getByLabel(/conditions générales/)).toBeChecked();
     await page.reload();
     await expect(page.getByRole('button', { name: 'Créer mon compte' })).toBeVisible();
-    await page.getByRole('combobox', { name: 'Langue', exact: true }).selectOption('en');
+    await page.getByRole('button', { name: 'English', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Create my account' })).toBeVisible();
 });
 
@@ -142,7 +142,7 @@ for (const language of ['en', 'fr'] as const) {
                 await expect(page.getByRole('heading', { name: title })).toBeAttached();
                 await expect(page.locator('html')).toHaveAttribute('lang', language);
                 await expect(
-                    page.getByRole('combobox', {
+                    page.getByRole('group', {
                         name: language === 'fr' ? 'Langue' : 'Language',
                         exact: true,
                     }),
