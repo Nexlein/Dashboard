@@ -1,19 +1,69 @@
 import i18n from '@/i18n';
-import { CurrentWeather, Forecast } from '@/features/widgets/catalog/WeatherWidgets';
-import {
-    GithubRepoWidget,
-    GithubProfileWidget,
-    GithubCommitsWidget,
-} from '@/features/widgets/catalog/GithubWidgets';
-import { YouTubeVideoWidget } from '@/features/widgets/catalog/YouTubeVideoWidget';
-import { YouTubeWatchWidget } from '@/features/widgets/catalog/YouTubeWatchWidget';
-import { CryptoPrice } from '@/features/widgets/catalog/CryptoPrice';
-import { CryptoChartWidget } from '@/features/widgets/catalog/CryptoChartWidget';
-import { StockProfileWidget } from '@/features/widgets/catalog/StockProfileWidget';
-import { StockMarketWidget } from '@/features/widgets/catalog/StockMarketWidget';
-import { ChatbotWidget } from '@/features/widgets/catalog/ChatbotWidget';
-import { OllamaModelManager } from '@/features/widgets/catalog/OllamaModelManager';
+import { lazy } from 'react';
 import type { ServiceDefinition, WidgetDefinition } from './types';
+
+/** Share an in-flight import between preloading and the first render. */
+type LazyFactory = Parameters<typeof lazy>[0];
+
+function lazyComponent<Component extends Awaited<ReturnType<LazyFactory>>['default']>(
+    factory: () => Promise<{ default: Component }>,
+) {
+    let promise: ReturnType<typeof factory> | undefined;
+    const load = () => (promise ??= factory());
+    return Object.assign(lazy(load), { preload: load });
+}
+
+const CurrentWeather = lazyComponent(() =>
+    import('../catalog/WeatherWidgets').then((module) => ({ default: module.CurrentWeather })),
+);
+const Forecast = lazyComponent(() =>
+    import('../catalog/WeatherWidgets').then((module) => ({ default: module.Forecast })),
+);
+const GithubRepoWidget = lazyComponent(() =>
+    import('../catalog/GithubWidgets').then((module) => ({ default: module.GithubRepoWidget })),
+);
+const GithubProfileWidget = lazyComponent(() =>
+    import('../catalog/GithubWidgets').then((module) => ({ default: module.GithubProfileWidget })),
+);
+const GithubCommitsWidget = lazyComponent(() =>
+    import('../catalog/GithubWidgets').then((module) => ({ default: module.GithubCommitsWidget })),
+);
+const YouTubeVideoWidget = lazyComponent(() =>
+    import('../catalog/YouTubeVideoWidget').then((module) => ({
+        default: module.YouTubeVideoWidget,
+    })),
+);
+const YouTubeWatchWidget = lazyComponent(() =>
+    import('../catalog/YouTubeWatchWidget').then((module) => ({
+        default: module.YouTubeWatchWidget,
+    })),
+);
+const CryptoPrice = lazyComponent(() =>
+    import('../catalog/CryptoPrice').then((module) => ({ default: module.CryptoPrice })),
+);
+const CryptoChartWidget = lazyComponent(() =>
+    import('../catalog/CryptoChartWidget').then((module) => ({
+        default: module.CryptoChartWidget,
+    })),
+);
+const StockProfileWidget = lazyComponent(() =>
+    import('../catalog/StockProfileWidget').then((module) => ({
+        default: module.StockProfileWidget,
+    })),
+);
+const StockMarketWidget = lazyComponent(() =>
+    import('../catalog/StockMarketWidget').then((module) => ({
+        default: module.StockMarketWidget,
+    })),
+);
+const ChatbotWidget = lazyComponent(() =>
+    import('../catalog/ChatbotWidget').then((module) => ({ default: module.ChatbotWidget })),
+);
+const OllamaModelManager = lazyComponent(() =>
+    import('../catalog/OllamaModelManager').then((module) => ({
+        default: module.OllamaModelManager,
+    })),
+);
 
 export const REGISTRY: Record<string, ServiceDefinition> = {
     weather: {

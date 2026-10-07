@@ -1,6 +1,6 @@
 import i18n from '@/i18n';
 import { useTranslation } from 'react-i18next';
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import {
     BrowserRouter as Router,
@@ -18,7 +18,8 @@ import { CookieBanner } from '@/components/CookieBanner';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { Loader2 } from 'lucide-react';
 
-const DashboardGrid = lazy(() => import('@/features/widgets/components/DashboardGrid'));
+const loadDashboardGrid = () => import('@/features/widgets/components/DashboardGrid');
+const DashboardGrid = lazy(loadDashboardGrid);
 const AuthPage = lazy(() => import('@/pages/AuthPage'));
 const ForgotPasswordPage = lazy(() => import('@/pages/ForgotPasswordPage'));
 const TermsPage = lazy(() => import('@/pages/TermsPage'));
@@ -106,6 +107,10 @@ function PageFallback() {
 export function AppRoutes() {
     useTranslation();
     const { pathname } = useLocation();
+    // Fetch the dashboard code while the session check is in flight, rather than after it.
+    useEffect(() => {
+        if (pathname === '/') void loadDashboardGrid().catch(() => {});
+    }, [pathname]);
     const publicPage = !['/', '/services', '/admin'].includes(pathname);
     return (
         <>

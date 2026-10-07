@@ -57,6 +57,16 @@ describe('Navbar Component', () => {
         await waitFor(() => expect(document.documentElement.lang).toBe('en'));
     });
 
+    it('opens the widget configurator on the first click and can reopen it', async () => {
+        renderNavbar();
+        fireEvent.click(screen.getByRole('button', { name: 'Add Widget' }));
+        expect(await screen.findByRole('dialog')).toBeVisible();
+        fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+        await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+        fireEvent.click(screen.getByRole('button', { name: 'Add Widget' }));
+        expect(await screen.findByRole('dialog')).toBeVisible();
+    });
+
     it('calls the logout handler', () => {
         const onLogout = vi.fn();
         renderNavbar({ onLogout });

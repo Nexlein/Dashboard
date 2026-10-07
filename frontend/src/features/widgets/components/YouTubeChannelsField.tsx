@@ -2,7 +2,7 @@ import i18n from '@/i18n';
 import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { Plus, X } from 'lucide-react';
-import { youtubeChannels } from 'shared';
+import { youtubeChannels } from 'shared/youtube';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';

@@ -2,8 +2,8 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
     testDir: './tests',
-    // Strict production CSP checks run against the compiled preview via i18n.config.ts.
-    testIgnore: 'best-practices.spec.ts',
+    // Production bundle checks run against the compiled preview via i18n.config.ts.
+    testIgnore: ['best-practices.spec.ts', 'performance.spec.ts'],
     retries: 0,
     workers: 1,
     reporter: 'html',

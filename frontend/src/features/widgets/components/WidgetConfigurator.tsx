@@ -48,12 +48,12 @@ function areParamsComplete(widgetDef: WidgetDefinition | undefined, params: Widg
     });
 }
 
-export function WidgetConfigurator() {
+export function WidgetConfigurator({ initialOpen = false }: { initialOpen?: boolean }) {
     useTranslation();
     const navigate = useNavigate();
     const addWidgetMutation = useAddWidget();
 
-    const [open, setOpen] = useState(false);
+    const [open, setOpen] = useState(initialOpen);
     const [service, setService] = useState('');
     const [widgetType, setWidgetType] = useState('');
     const [params, setParams] = useState<WidgetParams>({});

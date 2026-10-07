@@ -2,7 +2,8 @@ import i18n from '@/i18n';
 import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { ArrowUpRight, Play, Square } from 'lucide-react';
-import { youtubeVideoId } from 'shared';
+import { youtubeVideoId } from 'shared/youtube';
+import { youtubeThumbnailUrl } from '@/features/widgets/lib/youtube';
 import type { WidgetViewProps } from '@/features/widgets/lib/types';
 
 export function YouTubeVideoWidget({ widget }: WidgetViewProps<unknown>) {
@@ -45,9 +46,10 @@ function YouTubePlayer({ videoId }: { videoId: string }) {
                     >
                         {!thumbnailFailed && (
                             <img
-                                src={`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`}
+                                src={youtubeThumbnailUrl(videoId)}
                                 alt=""
-                                loading="lazy"
+                                loading="eager"
+                                fetchPriority="high"
                                 draggable={false}
                                 onError={() => setThumbnailFailed(true)}
                                 className="absolute inset-0 h-full w-full object-cover opacity-80 transition duration-300 group-hover:scale-105 group-hover:opacity-100 motion-reduce:transform-none motion-reduce:transition-none"

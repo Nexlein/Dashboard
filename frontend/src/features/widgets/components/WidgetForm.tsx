@@ -1,5 +1,7 @@
 import i18n from '@/i18n';
 import { useTranslation } from 'react-i18next';
+import { Suspense } from 'react';
+import { Loader2 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { WidgetParameterField } from './WidgetParameterField';
@@ -41,10 +43,14 @@ export function WidgetForm({
             {/* Custom UI for specific widgets (e.g. Chatbot Model Manager) */}
             {CustomConfigUi && (
                 <div className="animate-in fade-in slide-in-from-top-2">
-                    <CustomConfigUi
-                        selectedModel={String(params.model ?? '')}
-                        onSelectModel={(model) => setParams({ ...params, model })}
-                    />
+                    <Suspense
+                        fallback={<Loader2 className="size-5 animate-spin text-muted-foreground" />}
+                    >
+                        <CustomConfigUi
+                            selectedModel={String(params.model ?? '')}
+                            onSelectModel={(model) => setParams({ ...params, model })}
+                        />
+                    </Suspense>
                 </div>
             )}
 

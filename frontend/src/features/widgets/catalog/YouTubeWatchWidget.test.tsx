@@ -3,6 +3,7 @@ import { act, fireEvent, queryClient, render, screen, waitFor } from '@/test-uti
 import { makeWidget, mockApi } from '@/test/fixtures';
 import WidgetRenderer from '@/features/widgets/components/WidgetRenderer';
 import type { YouTubeWatchData } from './YouTubeWatchWidget';
+import { findWidgetDefinition } from '../lib/registry';
 
 const widget = makeWidget({
     id: 9,
@@ -40,6 +41,8 @@ const data: YouTubeWatchData = {
 beforeEach(() => localStorage.clear());
 
 it('refreshes on the configured timer and follows a changed refresh rate', async () => {
+    // Resolve the component import before replacing the refresh clock with fake timers.
+    await findWidgetDefinition('youtube', 'channel_watch')?.component.preload?.();
     vi.useFakeTimers();
     const fetch = mockApi({ 'GET /widgets/9/data': { body: data } });
     const view = render(<WidgetRenderer widget={{ ...widget, refreshRate: 120 }} />);

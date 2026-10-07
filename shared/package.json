@@ -4,6 +4,16 @@
     "private": true,
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "default": "./dist/index.js"
+        },
+        "./youtube": {
+            "types": "./dist/youtube.d.ts",
+            "default": "./dist/youtube.js"
+        }
+    },
     "scripts": {
         "build": "tsc",
         "test": "vitest run"

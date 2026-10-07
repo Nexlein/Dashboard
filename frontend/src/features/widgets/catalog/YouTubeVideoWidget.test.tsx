@@ -25,11 +25,11 @@ it('offers a player and watch feed without connection parameters', () => {
     expect(widget.title).toBe('YouTube Video');
 });
 
-it('loads the player only on play and stops it when returning to the preview', () => {
+it('loads the player only on play and stops it when returning to the preview', async () => {
     const fetch = mockApi({});
     render(<WidgetRenderer widget={widget} />);
     expect(screen.queryByTitle('YouTube video player')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Play YouTube video' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Play YouTube video' }));
     const iframe = screen.getByTitle('YouTube video player');
     expect(iframe).toHaveAttribute(
         'src',
@@ -47,10 +47,10 @@ it('loads the player only on play and stops it when returning to the preview', (
     expect(fetch).not.toHaveBeenCalled();
 });
 
-it('returns to the preview when editing the video instead of autoplaying the replacement', () => {
+it('returns to the preview when editing the video instead of autoplaying the replacement', async () => {
     mockApi({});
     const { rerender } = render(<WidgetRenderer widget={widget} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Play YouTube video' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Play YouTube video' }));
     rerender(
         <WidgetRenderer
             widget={{ ...widget, params: { video_url: 'https://youtube.com/watch?v=dQw4w9WgXcQ' } }}
@@ -64,22 +64,22 @@ it('returns to the preview when editing the video instead of autoplaying the rep
     );
 });
 
-it('keeps play available if the thumbnail cannot load', () => {
+it('keeps play available if the thumbnail cannot load', async () => {
     mockApi({});
     render(<WidgetRenderer widget={widget} />);
-    const play = screen.getByRole('button', { name: 'Play YouTube video' });
+    const play = await screen.findByRole('button', { name: 'Play YouTube video' });
     fireEvent.error(play.querySelector('img')!);
     expect(play.querySelector('img')).toBeNull();
     fireEvent.click(play);
     expect(screen.getByTitle('YouTube video player')).toBeInTheDocument();
 });
 
-it('does not embed arbitrary saved URLs', () => {
+it('does not embed arbitrary saved URLs', async () => {
     render(
         <WidgetRenderer
             widget={{ ...widget, params: { video_url: 'https://evil.example/embed' } }}
         />,
     );
     expect(screen.queryByTitle('YouTube video player')).toBeNull();
-    expect(screen.getByText(/enter a valid YouTube video link/)).toBeInTheDocument();
+    expect(await screen.findByText(/enter a valid YouTube video link/)).toBeInTheDocument();
 });

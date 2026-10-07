@@ -2,7 +2,7 @@ import { getErrorMessage } from '@/i18n/errors';
 import { formatNumber, formatPeriod } from '@/i18n/format';
 import i18n from '@/i18n';
 import { useTranslation } from 'react-i18next';
-import { useCallback } from 'react';
+import { Suspense, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError } from '@/lib/apiClient';
 import { Loader2 } from 'lucide-react';
@@ -13,6 +13,14 @@ import {
 } from '@/features/widgets/lib/widgets';
 import { useUpdateWidget } from '@/features/widgets/hooks/useWidgets';
 import { findWidgetDefinition, getServiceDefinition } from '@/features/widgets/lib/registry';
+
+function WidgetLoading() {
+    return (
+        <div className="flex h-full min-h-0 w-full items-center justify-center">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+    );
+}
 
 export default function WidgetRenderer({ widget }: { widget: DashboardWidget }) {
     useTranslation();
@@ -109,7 +117,12 @@ export default function WidgetRenderer({ widget }: { widget: DashboardWidget }) 
 
     // The response shape depends on the widget; each catalog component declares its own
     // data type, so this is the one place where the untyped API response is handed over.
-    if (!isDataFetchingWidget) return <Component {...viewProps} data={undefined as never} />;
+    if (!isDataFetchingWidget)
+        return (
+            <Suspense fallback={<WidgetLoading />}>
+                <Component {...viewProps} data={undefined as never} />
+            </Suspense>
+        );
 
     if (retryAfter && !displayData) {
         return (
@@ -157,11 +170,7 @@ export default function WidgetRenderer({ widget }: { widget: DashboardWidget }) 
     }
 
     if (!displayData) {
-        return (
-            <div className="flex items-center justify-center h-full">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-        );
+        return <WidgetLoading />;
     }
 
     return (
@@ -189,7 +198,9 @@ export default function WidgetRenderer({ widget }: { widget: DashboardWidget }) 
                 </p>
             )}
             <div className="min-h-0 flex-1">
-                <Component {...viewProps} data={displayData as never} />
+                <Suspense fallback={<WidgetLoading />}>
+                    <Component {...viewProps} data={displayData as never} />
+                </Suspense>
             </div>
         </div>
     );

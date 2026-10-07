@@ -3,7 +3,7 @@ import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { notice, getErrorMessage } from '@/i18n/errors';
 import i18n from '@/i18n';
 import { useTranslation } from 'react-i18next';
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useTheme } from '@/lib/theme';
 import type { User } from 'shared';
@@ -20,8 +20,6 @@ import {
     Shield,
     ShieldCheck,
 } from 'lucide-react';
-import { WidgetConfigurator } from '@/features/widgets/components/WidgetConfigurator';
-import { ProfileSettingsModal } from '@/components/ProfileSettingsModal';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -31,6 +29,17 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+
+const WidgetConfigurator = lazy(() =>
+    import('@/features/widgets/components/WidgetConfigurator').then((module) => ({
+        default: module.WidgetConfigurator,
+    })),
+);
+const ProfileSettingsModal = lazy(() =>
+    import('@/components/ProfileSettingsModal').then((module) => ({
+        default: module.ProfileSettingsModal,
+    })),
+);
 
 export default function Navbar({
     user,
@@ -44,6 +53,7 @@ export default function Navbar({
     useTranslation();
     const { theme } = useTheme();
     const [profileOpen, setProfileOpen] = useState(false);
+    const [configuratorLoaded, setConfiguratorLoaded] = useState(false);
     const [privacyError, setPrivacyError] = useState<unknown>('');
     const [privacyBusy, setPrivacyBusy] = useState(false);
     const accountLabel = user?.name || user?.email || i18n.t('common:account');
@@ -151,7 +161,26 @@ export default function Navbar({
                 )}
             </div>
             <div className="flex min-w-0 flex-wrap items-center gap-3">
-                {showWidgetConfigurator && <WidgetConfigurator />}
+                {showWidgetConfigurator && (
+                    <Suspense
+                        fallback={
+                            <Button disabled aria-busy="true" className="h-11 rounded-xl px-3">
+                                {i18n.t('widgets:add')}
+                            </Button>
+                        }
+                    >
+                        {configuratorLoaded ? (
+                            <WidgetConfigurator initialOpen />
+                        ) : (
+                            <Button
+                                className="h-11 rounded-xl px-3"
+                                onClick={() => setConfiguratorLoaded(true)}
+                            >
+                                {i18n.t('widgets:add')}
+                            </Button>
+                        )}
+                    </Suspense>
+                )}
                 <ThemeSwitcher />
 
                 <DropdownMenu>
@@ -247,12 +276,16 @@ export default function Navbar({
                     {getErrorMessage(privacyError)}
                 </p>
             )}
-            <ProfileSettingsModal
-                open={profileOpen}
-                onOpenChange={setProfileOpen}
-                user={user}
-                onUserUpdated={() => window.location.reload()}
-            />
+            {profileOpen && (
+                <Suspense fallback={null}>
+                    <ProfileSettingsModal
+                        open={profileOpen}
+                        onOpenChange={setProfileOpen}
+                        user={user}
+                        onUserUpdated={() => window.location.reload()}
+                    />
+                </Suspense>
+            )}
         </nav>
     );
 }
