@@ -146,7 +146,7 @@ export function WidgetConfigurator() {
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
-                <Button>{i18n.t('widgets:add')}</Button>
+                <Button className="h-11 rounded-xl px-3">{i18n.t('widgets:add')}</Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-106.25">
                 <DialogHeader>

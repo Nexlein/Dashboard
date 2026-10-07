@@ -141,12 +141,94 @@ for (const language of ['en', 'fr'] as const) {
                 await page.goto(path);
                 await expect(page.getByRole('heading', { name: title })).toBeAttached();
                 await expect(page.locator('html')).toHaveAttribute('lang', language);
+                const authenticated = ['/', '/services', '/admin'].includes(path);
+                if (authenticated) {
+                    await expect(
+                        page.getByRole('button', { name: 'Français', exact: true }),
+                    ).toHaveCount(0);
+                    await expect(
+                        page.getByRole('group', {
+                            name: language === 'fr' ? 'Thème' : 'Theme',
+                            exact: true,
+                        }),
+                    ).toBeVisible();
+                    await page
+                        .getByRole('button', { name: /(?:menu du compte|account menu)/ })
+                        .click();
+                }
                 await expect(
                     page.getByRole('group', {
                         name: language === 'fr' ? 'Langue' : 'Language',
                         exact: true,
                     }),
                 ).toBeVisible();
+                if (authenticated) {
+                    const choice = page.getByRole('menuitemradio', {
+                        name: language === 'fr' ? 'Français' : 'English',
+                        exact: true,
+                    });
+                    await expect(choice).toHaveAttribute('aria-checked', 'true');
+                    if (path === '/') {
+                        const otherChoice = page.getByRole('menuitemradio', {
+                            name: language === 'fr' ? 'English' : 'Français',
+                            exact: true,
+                        });
+                        await otherChoice.focus();
+                        await otherChoice.press('Enter');
+                        await expect(page.locator('html')).toHaveAttribute(
+                            'lang',
+                            language === 'fr' ? 'en' : 'fr',
+                        );
+                        await expect(otherChoice).toHaveAttribute('aria-checked', 'true');
+                        await choice.focus();
+                        await choice.press('Enter');
+                        await expect(page.locator('html')).toHaveAttribute('lang', language);
+                    }
+                    if (path === '/' && language === 'fr' && width === 390) {
+                        await page.screenshot({
+                            path: test.info().outputPath('account-menu-fr-mobile.png'),
+                            animations: 'disabled',
+                        });
+                    }
+                    await page.keyboard.press('Escape');
+                    await expect(page.getByRole('menu')).toBeHidden();
+                }
+                if (path === '/') {
+                    const addWidget = page.getByRole('button', {
+                        name: language === 'fr' ? 'Ajouter un widget' : 'Add Widget',
+                        exact: true,
+                    });
+                    const account = page.getByRole('button', {
+                        name: /(?:menu du compte|account menu)/,
+                    });
+                    const themeSwitch = page.getByRole('group', {
+                        name: language === 'fr' ? 'Thème' : 'Theme',
+                        exact: true,
+                    });
+                    const heights = await Promise.all(
+                        [addWidget, account, themeSwitch].map((control) =>
+                            control.evaluate((element) => element.getBoundingClientRect().height),
+                        ),
+                    );
+                    expect(heights[0]).toBe(heights[1]);
+                    expect(heights[0]).toBe(heights[2]);
+                    await page
+                        .getByRole('button', {
+                            name: language === 'fr' ? 'Thème sombre' : 'Dark theme',
+                            exact: true,
+                        })
+                        .click();
+                    await expect(page.locator('html')).toHaveClass(/dark/);
+                    await page.reload();
+                    await expect(page.locator('html')).toHaveClass(/dark/);
+                    await page
+                        .getByRole('button', {
+                            name: language === 'fr' ? 'Thème clair' : 'Light theme',
+                            exact: true,
+                        })
+                        .click();
+                    await expect(page.locator('html')).not.toHaveClass(/dark/);
+                }
                 const overflow = await page.evaluate(
                     () => document.documentElement.scrollWidth > window.innerWidth,
                 );

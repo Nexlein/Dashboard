@@ -1,3 +1,4 @@
+import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { notice, getErrorMessage } from '@/i18n/errors';
 import i18n from '@/i18n';
@@ -9,13 +10,10 @@ import type { User } from 'shared';
 import { deleteMyAccount, exportMyData } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import {
-    Check,
     ChevronDown,
     LayoutDashboard,
     LogOut,
-    Moon,
     Plug,
-    Sun,
     UserRound,
     Download,
     Trash2,
@@ -44,7 +42,7 @@ export default function Navbar({
     showWidgetConfigurator?: boolean;
 }) {
     useTranslation();
-    const { theme, setTheme } = useTheme();
+    const { theme } = useTheme();
     const [profileOpen, setProfileOpen] = useState(false);
     const [privacyError, setPrivacyError] = useState<unknown>('');
     const [privacyBusy, setPrivacyBusy] = useState(false);
@@ -154,7 +152,7 @@ export default function Navbar({
             </div>
             <div className="flex min-w-0 flex-wrap items-center gap-3">
                 {showWidgetConfigurator && <WidgetConfigurator />}
-                <LanguageSwitcher />
+                <ThemeSwitcher />
 
                 <DropdownMenu>
                     <DropdownMenuTrigger
@@ -189,25 +187,9 @@ export default function Navbar({
 
                         <DropdownMenuSeparator />
                         <DropdownMenuGroup>
-                            <DropdownMenuLabel className="px-2 pt-2">
-                                {i18n.t('common:theme')}
-                            </DropdownMenuLabel>
-                            <DropdownMenuItem
-                                className="min-h-9 px-2"
-                                onClick={() => setTheme('light')}
-                            >
-                                <Sun />
-                                {i18n.t('common:lightTheme')}
-                                {theme === 'light' && <Check className="ml-auto" />}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                                className="min-h-9 px-2"
-                                onClick={() => setTheme('dark')}
-                            >
-                                <Moon />
-                                {i18n.t('common:darkTheme')}
-                                {theme === 'dark' && <Check className="ml-auto" />}
-                            </DropdownMenuItem>
+                            <div className="flex justify-start px-2 py-1.5">
+                                <LanguageSwitcher inMenu />
+                            </div>
                         </DropdownMenuGroup>
 
                         <DropdownMenuItem

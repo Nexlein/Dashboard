@@ -1,4 +1,5 @@
-import { screen, fireEvent } from '@testing-library/react';
+import i18n from '@/i18n';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render } from '../test-utils';
 import Navbar from './Navbar';
@@ -8,7 +9,8 @@ const renderNavbar = (props: Partial<React.ComponentProps<typeof Navbar>> = {}) 
     render(<Navbar user={makeUser()} onLogout={vi.fn()} {...props} />);
 
 describe('Navbar Component', () => {
-    beforeEach(() => {
+    beforeEach(async () => {
+        await i18n.changeLanguage('en');
         document.documentElement.className = '';
         localStorage.clear();
     });
@@ -28,13 +30,31 @@ describe('Navbar Component', () => {
 
         expect(document.documentElement).not.toHaveClass('dark');
 
-        fireEvent.click(screen.getByRole('button', { name: /open the account menu/i }));
-        fireEvent.click(screen.getByRole('menuitem', { name: /dark theme/i }));
+        fireEvent.click(screen.getByRole('button', { name: /dark theme/i }));
+        expect(localStorage.getItem('test-theme')).toBe('dark');
         expect(document.documentElement).toHaveClass('dark');
 
-        fireEvent.click(screen.getByRole('button', { name: /open the account menu/i }));
-        fireEvent.click(screen.getByRole('menuitem', { name: /light theme/i }));
+        fireEvent.click(screen.getByRole('button', { name: /light theme/i }));
+        expect(localStorage.getItem('test-theme')).toBe('light');
         expect(document.documentElement).not.toHaveClass('dark');
+    });
+
+    it('offers the language switch only inside the account menu', async () => {
+        renderNavbar();
+        expect(screen.queryByRole('menuitemradio', { name: 'Français' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Français' })).not.toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: /open the account menu/i }));
+        fireEvent.click(screen.getByRole('menuitemradio', { name: 'Français' }));
+        await waitFor(() => {
+            expect(screen.getByRole('menuitemradio', { name: 'Français' })).toHaveAttribute(
+                'aria-checked',
+                'true',
+            );
+            expect(document.documentElement.lang).toBe('fr');
+            expect(localStorage.getItem('dashboard-language')).toBe('fr');
+        });
+        fireEvent.click(screen.getByRole('menuitemradio', { name: 'English' }));
+        await waitFor(() => expect(document.documentElement.lang).toBe('en'));
     });
 
     it('calls the logout handler', () => {
