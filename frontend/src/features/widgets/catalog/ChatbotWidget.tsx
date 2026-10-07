@@ -2,7 +2,7 @@ import { getErrorMessage } from '@/i18n/errors';
 import i18n from '@/i18n';
 import { resources } from '@/i18n/resources';
 import { useTranslation } from 'react-i18next';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useId } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { Send, User, Loader2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -24,6 +24,7 @@ const greeting = (): DisplayMessage => ({
 
 export function ChatbotWidget({ widget }: { widget: DashboardWidget }) {
     useTranslation();
+    const inputId = useId();
     const { id } = widget;
     const storageKey = `${CHAT_HISTORY_PREFIX}${id}`;
 
@@ -174,7 +175,12 @@ export function ChatbotWidget({ widget }: { widget: DashboardWidget }) {
                     <Trash2 className="size-4 text-muted-foreground" />
                     <span className="sr-only">{i18n.t('chatbot:clear')}</span>
                 </Button>
+                <label htmlFor={inputId} className="sr-only">
+                    {i18n.t('chatbot:message')}
+                </label>
                 <Input
+                    id={inputId}
+                    name="message"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     placeholder={i18n.t('chatbot:placeholder')}

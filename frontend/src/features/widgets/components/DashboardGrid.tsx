@@ -63,7 +63,7 @@ export default function DashboardGrid() {
                     <div key={widget.i} data-grid={widget}>
                         <Card className="flex h-full w-full cursor-move flex-col overflow-hidden">
                             <CardHeader className="flex shrink-0 flex-row items-center justify-between border-b border-border bg-muted/50 p-4">
-                                <CardTitle className="flex items-center gap-2 text-sm">
+                                <CardTitle as="h2" className="flex items-center gap-2 text-sm">
                                     <ServiceLogo name={widget.serviceName} size="sm" decorative />
                                     <span>{getWidgetTitle(widget)}</span>
                                 </CardTitle>

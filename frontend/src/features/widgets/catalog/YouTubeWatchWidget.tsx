@@ -120,7 +120,7 @@ export function YouTubeWatchWidget({ data, widget }: WidgetViewProps<YouTubeWatc
                             type="button"
                             aria-pressed={activeFilter === channel.id}
                             onClick={() => setFilter(channel.id)}
-                            className={`shrink-0 cursor-pointer rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${activeFilter === channel.id ? 'bg-red-500/10 text-red-600 dark:text-red-400' : 'bg-muted text-muted-foreground hover:text-foreground'}`}
+                            className={`shrink-0 cursor-pointer rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${activeFilter === channel.id ? 'bg-red-500/10 text-red-700 dark:text-red-400' : 'bg-muted text-muted-foreground hover:text-foreground'}`}
                         >
                             {channel.title}
                         </button>

@@ -74,8 +74,8 @@ function StockLogo({
     return (
         <span
             data-testid={`stock-logo-${symbol}`}
-            className="flex size-6 shrink-0 items-center justify-center rounded-md text-[9px] font-bold text-white"
-            style={{ backgroundColor: color }}
+            className="flex size-6 shrink-0 items-center justify-center rounded-md border-2 bg-muted text-[9px] font-bold text-foreground"
+            style={{ borderColor: color }}
             aria-hidden="true"
         >
             {symbol.slice(0, 2)}
@@ -221,7 +221,9 @@ export function StockMarketWidget({
                             </p>
                             <p
                                 className={`mt-0.5 text-xs font-medium ${
-                                    positive ? 'text-emerald-500' : 'text-red-500'
+                                    positive
+                                        ? 'text-emerald-700 dark:text-emerald-400'
+                                        : 'text-red-700 dark:text-red-400'
                                 }`}
                             >
                                 {positive ? '↑' : '↓'}{' '}

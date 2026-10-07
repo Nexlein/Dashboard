@@ -47,8 +47,8 @@ export function CryptoPrice({ data }: WidgetViewProps<CryptoPriceData>) {
                         <span
                             className={`rounded-full px-2 py-1 text-xs font-semibold ${
                                 isPositive
-                                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                                    : 'bg-red-500/10 text-red-600 dark:text-red-400'
+                                    ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                                    : 'bg-red-500/10 text-red-700 dark:text-red-400'
                             }`}
                         >
                             {isPositive ? '+' : ''}

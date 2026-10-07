@@ -113,7 +113,7 @@ export function StockProfileWidget({
                 </p>
                 <div className="mt-1 flex items-center gap-2 text-xs">
                     <span
-                        className={`rounded-md px-1.5 py-0.5 font-semibold tabular-nums ${stock.change === null ? 'bg-muted text-muted-foreground' : dailyPositive ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-red-500/10 text-red-600 dark:text-red-400'}`}
+                        className={`rounded-md px-1.5 py-0.5 font-semibold tabular-nums ${stock.change === null ? 'bg-muted text-muted-foreground' : dailyPositive ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' : 'bg-red-500/10 text-red-700 dark:text-red-400'}`}
                     >
                         {percent(stock.change)}
                     </span>
@@ -288,8 +288,7 @@ export function StockProfileWidget({
                         {i18n.t('markets:periodChange')}
                     </p>
                     <p
-                        className="mt-0.5 font-semibold tabular-nums"
-                        style={{ color: change === null ? undefined : color }}
+                        className={`mt-0.5 font-semibold tabular-nums ${change === null ? '' : change < 0 ? 'text-red-700 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-400'}`}
                     >
                         {percent(change)}
                     </p>

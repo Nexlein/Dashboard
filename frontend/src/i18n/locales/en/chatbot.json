@@ -2,6 +2,7 @@
     "greeting": "Hello! How can I help you today?",
     "responseError": "Error: Could not get a response.",
     "clear": "Clear Chat",
+    "message": "Message",
     "placeholder": "Type a message...",
     "send": "Send",
     "fastModel": "Llama 3.2 (1B) - Very Fast",

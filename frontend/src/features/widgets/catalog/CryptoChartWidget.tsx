@@ -234,7 +234,9 @@ export function CryptoChartWidget({
                             </p>
                             <p
                                 className={`mt-0.5 text-xs font-medium ${
-                                    positive ? 'text-emerald-500' : 'text-red-500'
+                                    positive
+                                        ? 'text-emerald-700 dark:text-emerald-400'
+                                        : 'text-red-700 dark:text-red-400'
                                 }`}
                             >
                                 {positive ? '↑' : '↓'}{' '}
