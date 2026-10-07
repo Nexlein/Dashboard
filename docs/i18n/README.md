@@ -1,9 +1,5 @@
 # Internationalisation FR / EN
 
-## Inventaire initial
-
-L’état initial mélangeait le français et l’anglais, parfois dans une même phrase. [inventory.md](inventory.md) et [inventory.json](inventory.json) conservent la photographie du commit initial : 105 fichiers de production, 810 occurrences textuelles candidates, 343 expressions affichées et 39 sites de formatage. Les doublons, marques, unités et constantes techniques sont inclus pour examen : ce ne sont pas 810 traductions distinctes. Les lignes de cette photographie restent celles du code avant migration.
-
 ## Interface migrée
 
 Les ressources de `frontend/src/i18n/locales/en` et `fr` couvrent les routes publiques et authentifiées, les dialogues, le catalogue, les widgets et leurs attributs accessibles.
@@ -35,7 +31,7 @@ Le sélecteur est présent dans la navigation authentifiée et sur les pages pub
 
 ## Messages API et contenus externes
 
-Les erreurs des routes API ajoutent `code` tout en conservant `error` pour les consommateurs existants. `shared/src/apiErrors.ts` associe les messages existants à des codes stables à la frontière du serveur. Les nouveaux cas devraient fournir leur code explicitement ; `HttpError` et `apiError` permettent de le transmettre. Les erreurs Better Auth sont lues par leur code, avec quelques alias documentés dans `i18n/errors.ts`.
+Les erreurs des routes API ajoutent `code` tout en conservant `error` pour les consommateurs existants. `shared/src/apiErrors.ts` définit une union de codes partagée entre le backend et le frontend. `HttpError` et `apiError` exigent un code explicite à la création de chaque erreur : modifier le texte anglais ne change pas la traduction. Les validations Zod portent leur code dans les paramètres de leur vérification personnalisée ; les erreurs de structure utilisent `VALIDATION_ERROR`. Les catalogues de traduction doivent couvrir tous les codes, ce que TypeScript vérifie. Les erreurs Better Auth sont lues par leur code, avec quelques alias documentés dans `i18n/errors.ts`.
 
 Le frontend garde l’objet d’erreur ou la clé de notification jusqu’au rendu. Ainsi, un message d’erreur ou de succès déjà affiché suit le changement de langue. Les codes inconnus et diagnostics de fournisseurs utilisent un message générique traduit ; l’interface ne compare pas des phrases anglaises pour décider d’une action. Les métadonnées de rechargement (`Retry-After`, statut) sont préservées.
 
@@ -48,10 +44,20 @@ La localisation des emails envoyés par le backend et des contrôles internes du
 ## Conventions
 
 1. Ajouter les traductions dans les deux fichiers JSON du domaine et enregistrer tout nouveau domaine dans `resources.ts`.
-2. Utiliser des clés sémantiques (`auth:login`), typées à partir des ressources anglaises. Un composant qui affiche une traduction doit s’abonner avec `useTranslation`, même si un helper partagé résout la traduction via l’instance `i18n`.
+2. Utiliser des clés sémantiques (`auth:login`), typées à partir des ressources anglaises. Utiliser `const { t } = useTranslation('widgets')` dans les composants et `t('configure', { name })` pour leurs textes. Les helpers hors composant utilisent l’instance `i18n` ; leur composant appelant doit rester abonné aux changements de langue.
 3. Écrire les phrases entières avec interpolation (`{{name}}`, `{{count}}`). Utiliser les pluriels i18next et `Trans` avec un namespace explicite pour les phrases contenant des liens.
 4. Employer `changeLanguage` exporté par `@/i18n` pour mémoriser une sélection explicite. Ne pas stocker une traduction résolue dans une constante de module ou dans l’état d’un formulaire.
 5. Préférer « tableau de bord », « widget », « compte », « service », « adresse e-mail », « bannissement » et « actualiser » en français ; conserver les marques et noms personnels.
+
+## Ajouter une langue
+
+Les fichiers JSON actuels sont le catalogue à traduire. Un inventaire de l’ancien code avec des numéros de ligne devient obsolète et n’est pas nécessaire pour cette extension.
+
+1. Copier tous les domaines de `frontend/src/i18n/locales/en/` vers un nouveau dossier, par exemple `es/`, et traduire les valeurs en conservant les clés, interpolations et balises. Adapter les formes plurielles aux règles de la langue.
+2. Importer les domaines dans `resources.ts` et ajouter la langue à `resources`, puis à `SUPPORTED_LANGUAGES` dans `language.ts`. Conserver l’anglais comme langue de repli.
+3. Ajouter le nom natif et les libellés accessibles dans les traductions `common`, puis étendre le sélecteur de langue et son indicateur, actuellement prévus pour deux choix. Ajouter l’icône correspondante dans `frontend/public/flags/` si le sélecteur conserve des drapeaux.
+4. Vérifier les formats de dates/nombres dans `format.ts`, ainsi que les libellés météo, la description SEO et les pluriels. Étendre les tests de ressources à la nouvelle langue : mêmes domaines, clés sémantiques et interpolations, avec les formes plurielles propres à cette langue.
+5. Étendre les tests de détection, de sélecteur et les scénarios e2e : navigation au clavier, persistance après rechargement, changement pendant un formulaire et affichage mobile. Une langue de droite à gauche nécessite aussi la direction du document et une vérification des dispositions.
 
 ## Vérification
 

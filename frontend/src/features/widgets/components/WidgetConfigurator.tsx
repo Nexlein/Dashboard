@@ -1,5 +1,4 @@
 import { getErrorMessage } from '@/i18n/errors';
-import i18n from '@/i18n';
 import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -49,7 +48,7 @@ function areParamsComplete(widgetDef: WidgetDefinition | undefined, params: Widg
 }
 
 export function WidgetConfigurator({ initialOpen = false }: { initialOpen?: boolean }) {
-    useTranslation();
+    const { t } = useTranslation('widgets');
     const navigate = useNavigate();
     const addWidgetMutation = useAddWidget();
 
@@ -146,16 +145,16 @@ export function WidgetConfigurator({ initialOpen = false }: { initialOpen?: bool
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
-                <Button className="h-11 rounded-xl px-3">{i18n.t('widgets:add')}</Button>
+                <Button className="h-11 rounded-xl px-3">{t('add')}</Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-106.25">
                 <DialogHeader>
-                    <DialogTitle>{i18n.t('widgets:addTitle')}</DialogTitle>
-                    <DialogDescription>{i18n.t('widgets:addSubtitle')}</DialogDescription>
+                    <DialogTitle>{t('addTitle')}</DialogTitle>
+                    <DialogDescription>{t('addSubtitle')}</DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                     <div className="grid gap-2">
-                        <Label htmlFor="service">{i18n.t('widgets:service')}</Label>
+                        <Label htmlFor="service">{t('service')}</Label>
                         <Select
                             value={service}
                             onValueChange={handleServiceChange}
@@ -165,8 +164,8 @@ export function WidgetConfigurator({ initialOpen = false }: { initialOpen?: bool
                                 <SelectValue
                                     placeholder={
                                         catalog.isPending
-                                            ? i18n.t('widgets:loadingServices')
-                                            : i18n.t('widgets:selectService')
+                                            ? t('loadingServices')
+                                            : t('selectService')
                                     }
                                 />
                             </SelectTrigger>
@@ -188,7 +187,7 @@ export function WidgetConfigurator({ initialOpen = false }: { initialOpen?: bool
                         </Select>
                         {catalog.isError && (
                             <p className="text-sm text-destructive" role="alert">
-                                {i18n.t('widgets:servicesError', {
+                                {t('servicesError', {
                                     error: getErrorMessage(catalog.error),
                                 })}
                             </p>
@@ -196,14 +195,14 @@ export function WidgetConfigurator({ initialOpen = false }: { initialOpen?: bool
                     </div>
 
                     <div className="grid gap-2">
-                        <Label htmlFor="widgetType">{i18n.t('widgets:widgetType')}</Label>
+                        <Label htmlFor="widgetType">{t('widgetType')}</Label>
                         <Select
                             value={widgetType}
                             onValueChange={(type) => handleWidgetTypeChange(type)}
                             disabled={!serviceDef || connectionsLoading || !serviceConnected}
                         >
                             <SelectTrigger id="widgetType">
-                                <SelectValue placeholder={i18n.t('widgets:selectType')} />
+                                <SelectValue placeholder={t('selectType')} />
                             </SelectTrigger>
                             <SelectContent>
                                 {serviceDef?.widgets.map((w) => (
@@ -221,17 +220,17 @@ export function WidgetConfigurator({ initialOpen = false }: { initialOpen?: bool
                                 <KeyRound className="mt-0.5 size-4 shrink-0 text-sky-500" />
                                 <div>
                                     <p className="font-medium">
-                                        {i18n.t('widgets:notConnected', {
+                                        {t('notConnected', {
                                             service: selectedConnection?.displayName || service,
                                         })}
                                     </p>
                                     <p className="mt-1 text-muted-foreground">
                                         {selectedConnection?.connectionType === 'oauth'
-                                            ? i18n.t('widgets:linkAccountHint', {
+                                            ? t('linkAccountHint', {
                                                   service:
                                                       selectedConnection?.displayName || service,
                                               })
-                                            : i18n.t('widgets:addKeyHint', {
+                                            : t('addKeyHint', {
                                                   service: serviceDef?.name || service,
                                               })}
                                     </p>
@@ -244,7 +243,7 @@ export function WidgetConfigurator({ initialOpen = false }: { initialOpen?: bool
                                             navigate('/services');
                                         }}
                                     >
-                                        {i18n.t('widgets:openServices')}
+                                        {t('openServices')}
                                     </Button>
                                 </div>
                             </div>
@@ -254,7 +253,7 @@ export function WidgetConfigurator({ initialOpen = false }: { initialOpen?: bool
                     {connectionsLoading && service && (
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <Loader2 className="size-4 animate-spin" />
-                            {i18n.t('widgets:checkingConnection')}
+                            {t('checkingConnection')}
                         </div>
                     )}
 
@@ -286,9 +285,7 @@ export function WidgetConfigurator({ initialOpen = false }: { initialOpen?: bool
                         }
                         onClick={handleSave}
                     >
-                        {addWidgetMutation.isPending
-                            ? i18n.t('widgets:adding')
-                            : i18n.t('widgets:addDashboard')}
+                        {addWidgetMutation.isPending ? t('adding') : t('addDashboard')}
                     </Button>
                 </DialogFooter>
             </DialogContent>

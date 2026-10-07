@@ -1,4 +1,3 @@
-import i18n from '@/i18n';
 import { useTranslation } from 'react-i18next';
 import { getErrorMessage } from '@/i18n/errors';
 import { Component, type ErrorInfo, type ReactNode } from 'react';
@@ -15,17 +14,17 @@ interface State {
 }
 
 function ErrorFallback({ error, onRetry }: { error: Error | null; onRetry: () => void }) {
-    useTranslation();
+    const { t } = useTranslation('common');
     return (
         <div className="flex flex-col items-center justify-center p-4 text-center h-full w-full bg-destructive/10 text-destructive rounded-lg">
             <AlertCircle className="size-8 mb-2" />
-            <h2 className="font-semibold text-lg">{i18n.t('common:errorTitle')}</h2>
+            <h2 className="font-semibold text-lg">{t('errorTitle')}</h2>
             <p className="text-sm opacity-80 mt-1">{getErrorMessage(error)}</p>
             <button
                 className="mt-4 text-xs underline underline-offset-4 hover:opacity-80"
                 onClick={onRetry}
             >
-                {i18n.t('common:retry')}
+                {t('retry')}
             </button>
         </div>
     );

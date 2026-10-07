@@ -44,7 +44,7 @@ Only the four category scores are asserted; an individual audit (such as console
 errors) is reported and contributes to its category, without a separate gate.
 
 Reports stay local: HTML and JSON files are written to `lighthouse-reports/`,
-and the raw runs/assertions to `.lighthouseci/`. On GitHub, open the workflow run
+and the raw runs/assertions to `e2e/.lighthouseci/`. On GitHub, open the workflow run
 in **Actions**, then download the **lighthouse-reports** artifact at the bottom
 of the run page. It is retained for seven days, including when the audit fails.
 No public report upload, Lighthouse server, GitHub token or real account is needed.

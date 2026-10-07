@@ -1,5 +1,4 @@
 import { getErrorMessage } from '@/i18n/errors';
-import i18n from '@/i18n';
 import { useTranslation } from 'react-i18next';
 import { KeyRound } from 'lucide-react';
 import { useState, type SubmitEvent } from 'react';
@@ -13,7 +12,7 @@ import { requestPasswordReset, resetPassword } from '@/lib/auth';
 
 /** Forgotten password: a code by email, then a new password (every session is signed out). */
 export default function ForgotPasswordPage() {
-    useTranslation();
+    const { t } = useTranslation('auth');
     const navigate = useNavigate();
     // Set once the code has been requested: the second step asks for it.
     const [email, setEmail] = useState<string | null>(null);
@@ -60,19 +59,19 @@ export default function ForgotPasswordPage() {
                     <div className="mb-2 flex size-11 items-center justify-center rounded-xl bg-primary text-primary-foreground">
                         <KeyRound className="size-5" />
                     </div>
-                    <CardTitle>{i18n.t('auth:forgotTitle')}</CardTitle>
+                    <CardTitle>{t('forgotTitle')}</CardTitle>
                     <CardDescription>
-                        {email ? i18n.t('auth:resetSubtitle') : i18n.t('auth:forgotSubtitle')}
+                        {email ? t('resetSubtitle') : t('forgotSubtitle')}
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
                     {email ? (
                         <form className="space-y-4" onSubmit={handleReset}>
                             <p className="text-sm text-muted-foreground" role="status">
-                                {i18n.t('auth:resetSent', { email })}
+                                {t('resetSent', { email })}
                             </p>
                             <div className="space-y-2">
-                                <Label htmlFor="reset-code">{i18n.t('auth:emailCode')}</Label>
+                                <Label htmlFor="reset-code">{t('emailCode')}</Label>
                                 <Input
                                     id="reset-code"
                                     name="code"
@@ -84,7 +83,7 @@ export default function ForgotPasswordPage() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="new-password">{i18n.t('auth:newPassword')}</Label>
+                                <Label htmlFor="new-password">{t('newPassword')}</Label>
                                 <Input
                                     id="new-password"
                                     name="password"
@@ -96,7 +95,7 @@ export default function ForgotPasswordPage() {
                                     required
                                 />
                                 <p id="new-password-help" className="text-xs text-muted-foreground">
-                                    {i18n.t('auth:newPasswordHint')}
+                                    {t('newPasswordHint')}
                                 </p>
                             </div>
                             {Boolean(error) && (
@@ -105,19 +104,19 @@ export default function ForgotPasswordPage() {
                                 </p>
                             )}
                             <Button className="h-10 w-full" type="submit" disabled={busy}>
-                                {busy ? i18n.t('auth:loading') : i18n.t('auth:changePassword')}
+                                {busy ? t('loading') : t('changePassword')}
                             </Button>
                         </form>
                     ) : (
                         <form className="space-y-4" onSubmit={handleRequest}>
                             <div className="space-y-2">
-                                <Label htmlFor="email">{i18n.t('auth:email')}</Label>
+                                <Label htmlFor="email">{t('email')}</Label>
                                 <Input
                                     id="email"
                                     name="email"
                                     type="email"
                                     autoComplete="email"
-                                    placeholder={i18n.t('auth:emailPlaceholder')}
+                                    placeholder={t('emailPlaceholder')}
                                     required
                                 />
                             </div>
@@ -127,7 +126,7 @@ export default function ForgotPasswordPage() {
                                 </p>
                             )}
                             <Button className="h-10 w-full" type="submit" disabled={busy}>
-                                {busy ? i18n.t('auth:loading') : i18n.t('auth:receiveCode')}
+                                {busy ? t('loading') : t('receiveCode')}
                             </Button>
                         </form>
                     )}
@@ -136,7 +135,7 @@ export default function ForgotPasswordPage() {
                             to="/login"
                             className="font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
                         >
-                            {i18n.t('auth:backLogin')}
+                            {t('backLogin')}
                         </Link>
                     </p>
                 </CardContent>

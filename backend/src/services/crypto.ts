@@ -1,3 +1,4 @@
+import type { ApiErrorCode } from 'shared';
 import { cached, clearCache, widgetCacheTtl } from '../utils/redisCache.ts';
 import { HttpError } from '../utils/httpError.ts';
 import type {
@@ -22,15 +23,19 @@ class CryptoServiceError extends HttpError {
     /** Status returned by CoinGecko, when the error comes from its answer. */
     providerStatus?: number;
 
-    constructor(message: string, statusCode = 502) {
-        super(message, statusCode);
+    constructor(message: string, statusCode: number, code: ApiErrorCode) {
+        super(message, statusCode, code);
     }
 }
 
 function getApiKey(options: Pick<ServiceContext, 'credentials'>): string {
     const apiKey = options?.credentials?.apiKey;
     if (typeof apiKey !== 'string' || !apiKey.trim()) {
-        throw new CryptoServiceError('CoinGecko is not connected. Configure it in Services.', 409);
+        throw new CryptoServiceError(
+            'CoinGecko is not connected. Configure it in Services.',
+            409,
+            'COINGECKO_NOT_CONNECTED',
+        );
     }
     return apiKey.trim();
 }
@@ -49,19 +54,35 @@ async function fetchCoinGecko<T>(
             headers: { 'x-cg-demo-api-key': apiKey },
         });
     } catch {
-        throw new CryptoServiceError('CoinGecko provider is unavailable');
+        throw new CryptoServiceError(
+            'CoinGecko provider is unavailable',
+            502,
+            'COINGECKO_UNAVAILABLE',
+        );
     }
 
     if (response.status === 401 || response.status === 403) {
-        const error = new CryptoServiceError('CoinGecko API key is invalid', 400);
+        const error = new CryptoServiceError(
+            'CoinGecko API key is invalid',
+            400,
+            'COINGECKO_KEY_INVALID',
+        );
         error.providerStatus = response.status;
         throw error;
     }
     if (response.status === 429) {
-        throw new CryptoServiceError('CoinGecko API rate limit reached', 503);
+        throw new CryptoServiceError(
+            'CoinGecko API rate limit reached',
+            503,
+            'COINGECKO_RATE_LIMIT',
+        );
     }
     if (!response.ok) {
-        const error = new CryptoServiceError('CoinGecko provider request failed');
+        const error = new CryptoServiceError(
+            'CoinGecko provider request failed',
+            502,
+            'COINGECKO_REQUEST_FAILED',
+        );
         error.providerStatus = response.status;
         throw error;
     }
@@ -78,14 +99,18 @@ async function verifyCredentials(credentials: ServiceCredentials) {
     );
 
     if (typeof payload?.bitcoin?.usd !== 'number') {
-        throw new CryptoServiceError('CoinGecko API key could not be verified', 400);
+        throw new CryptoServiceError(
+            'CoinGecko API key could not be verified',
+            400,
+            'COINGECKO_KEY_UNVERIFIED',
+        );
     }
 }
 
 function normalizedParam(value: unknown, field: string, maxLength: number): string {
     const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
     if (!normalized || normalized.length > maxLength || !/^[a-z0-9-]+$/.test(normalized)) {
-        throw new CryptoServiceError(`${field} is invalid`, 400);
+        throw new CryptoServiceError(`${field} is invalid`, 400, 'CRYPTO_PARAM_INVALID');
     }
     return normalized;
 }
@@ -102,6 +127,7 @@ function normalizedCoins(value: unknown): string[] {
         throw new CryptoServiceError(
             `Select between 1 and ${MAX_CHART_COINS} cryptocurrencies`,
             400,
+            'CRYPTO_COINS_INVALID',
         );
     }
     return coins;
@@ -205,7 +231,7 @@ function normalizedDays(value: unknown): ChartDays {
 
     const days = Number(value);
     if (![1, 7, 30, 90, 365].includes(days)) {
-        throw new CryptoServiceError('Chart period is invalid', 400);
+        throw new CryptoServiceError('Chart period is invalid', 400, 'CHART_PERIOD_INVALID');
     }
     return days;
 }
@@ -216,7 +242,7 @@ async function execute(
     options: Partial<ServiceContext> = {},
 ): Promise<unknown> {
     if (!['crypto_price', 'crypto_chart'].includes(widgetName)) {
-        throw new CryptoServiceError('Unsupported crypto widget', 400);
+        throw new CryptoServiceError('Unsupported crypto widget', 400, 'CRYPTO_WIDGET_UNSUPPORTED');
     }
 
     const currency = normalizedParam(params.currency, 'Currency', 20);
@@ -247,7 +273,11 @@ async function execute(
                         .map(([timestamp, price]) => ({ timestamp, price }));
 
                     if (!prices.length) {
-                        throw new CryptoServiceError(`No chart data found for ${coin}`, 404);
+                        throw new CryptoServiceError(
+                            `No chart data found for ${coin}`,
+                            404,
+                            'MARKET_DATA_UNAVAILABLE',
+                        );
                     }
 
                     const firstPrice = prices[0].price;
@@ -296,7 +326,11 @@ async function execute(
         const market = payload?.[coin];
 
         if (!market || typeof market[currency] !== 'number') {
-            throw new CryptoServiceError('Cryptocurrency or currency not found', 404);
+            throw new CryptoServiceError(
+                'Cryptocurrency or currency not found',
+                404,
+                'CRYPTO_NOT_FOUND',
+            );
         }
 
         const data = {

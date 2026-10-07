@@ -1,4 +1,3 @@
-import i18n from '@/i18n';
 import { useTranslation } from 'react-i18next';
 import * as React from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
@@ -30,7 +29,7 @@ const DialogContent = React.forwardRef<
     React.ComponentRef<typeof DialogPrimitive.Content>,
     React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
 >(({ className, children, ...props }, ref) => {
-    useTranslation();
+    const { t } = useTranslation('common');
     return (
         <DialogPortal>
             <DialogOverlay />
@@ -45,7 +44,7 @@ const DialogContent = React.forwardRef<
                 {children}
                 <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
                     <X className="h-4 w-4" />
-                    <span className="sr-only">{i18n.t('common:close')}</span>
+                    <span className="sr-only">{t('close')}</span>
                 </DialogPrimitive.Close>
             </DialogPrimitive.Content>
         </DialogPortal>

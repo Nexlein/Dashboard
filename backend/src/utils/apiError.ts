@@ -1,6 +1,12 @@
-import { apiErrorCode } from 'shared';
+import { isApiErrorCode, type ApiErrorCode } from 'shared';
 
-/** Add a language-independent code while preserving the existing API message. */
-export function apiError(message: string, code = apiErrorCode(message)) {
+/** Preserve the API diagnostic while requiring a language-independent code. */
+export function apiError(message: string, code: ApiErrorCode) {
     return { error: message, code };
+}
+
+/** Provider diagnostics without a recognised code keep the caller's fixed fallback. */
+export function errorCode(error: unknown, fallback: ApiErrorCode): ApiErrorCode {
+    const code = error && typeof error === 'object' && 'code' in error ? error.code : undefined;
+    return isApiErrorCode(code) ? code : fallback;
 }

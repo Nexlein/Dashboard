@@ -161,7 +161,7 @@ jobs:
                   name: lighthouse-reports
                   path: |
                       lighthouse-reports/
-                      .lighthouseci/
+                      e2e/.lighthouseci/
                   include-hidden-files: true
                   retention-days: 7
 

@@ -74,7 +74,7 @@ const sections = [
 ];
 
 export default function TermsPage() {
-    useTranslation();
+    const { t } = useTranslation('legal');
     return (
         <main className="min-h-screen bg-muted/40 text-foreground">
             <header className="sticky top-0 z-10 border-b bg-background/90 backdrop-blur-xl">
@@ -87,7 +87,7 @@ export default function TermsPage() {
                     </Link>
                     <Link to="/register" className={buttonVariants({ variant: 'ghost' })}>
                         <ArrowLeft />
-                        {i18n.t('legal:backRegistration')}
+                        {t('backRegistration')}
                     </Link>
                 </div>
             </header>
@@ -96,16 +96,16 @@ export default function TermsPage() {
                 <section className="mb-8 max-w-3xl sm:mb-10">
                     <div className="mb-4 inline-flex items-center gap-2 rounded-full border bg-background px-3 py-1 text-sm text-muted-foreground">
                         <ShieldCheck className="size-4" />
-                        {i18n.t('legal:termsBadge')}
+                        {t('termsBadge')}
                     </div>
                     <h1 className="text-3xl font-bold tracking-tight sm:text-5xl">
-                        {i18n.t('legal:termsTitle')}
+                        {t('termsTitle')}
                     </h1>
                     <p className="mt-4 text-base leading-7 text-muted-foreground sm:text-lg">
-                        {i18n.t('legal:termsIntro')}
+                        {t('termsIntro')}
                     </p>
                     <p className="mt-3 text-sm text-muted-foreground">
-                        {i18n.t('legal:lastUpdated', {
+                        {t('lastUpdated', {
                             date: formatDate(new Date('2026-09-17T12:00:00'), {
                                 dateStyle: 'long',
                             }),
@@ -116,9 +116,9 @@ export default function TermsPage() {
                 <Card className="shadow-xs">
                     <CardContent className="divide-y p-5 sm:p-8">
                         <section className="pb-7">
-                            <h2 className="text-xl font-semibold">{i18n.t('legal:acceptance')}</h2>
+                            <h2 className="text-xl font-semibold">{t('acceptance')}</h2>
                             <p className="mt-3 leading-7 text-muted-foreground">
-                                {i18n.t('legal:acceptanceDetails')}
+                                {t('acceptanceDetails')}
                             </p>
                         </section>
 
@@ -137,13 +137,13 @@ export default function TermsPage() {
 
                 <div className="mt-8 flex flex-col items-start justify-between gap-4 rounded-xl border bg-background p-5 sm:flex-row sm:items-center">
                     <div>
-                        <p className="font-medium">{i18n.t('legal:finished')}</p>
+                        <p className="font-medium">{t('finished')}</p>
                         <p className="mt-1 text-sm text-muted-foreground">
-                            {i18n.t('legal:returnRegistration')}
+                            {t('returnRegistration')}
                         </p>
                     </div>
                     <Link to="/register" className={buttonVariants()}>
-                        {i18n.t('legal:backRegistration')}
+                        {t('backRegistration')}
                     </Link>
                 </div>
             </div>

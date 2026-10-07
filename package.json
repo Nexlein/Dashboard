@@ -18,7 +18,7 @@
     "scripts": {
         "build": "npm run build -w shared && npm run build -w frontend",
         "build:lighthouse": "npm run build -w shared && VITE_API_URL=http://127.0.0.1:4174 npm run build -w frontend -- --outDir dist-lighthouse",
-        "lighthouse": "npm run build:lighthouse && lhci autorun --failOnUploadFailure=true",
+        "lighthouse": "npm run build:lighthouse && npm run lighthouse -w e2e",
         "test": "npm run build -w shared && npm run db:generate -w backend && npm test -w shared -w backend -w frontend",
         "test:e2e": "npm run build -w shared && npm run db:generate -w backend && npm test -w e2e",
         "prepare": "husky",
@@ -38,12 +38,10 @@
     "devDependencies": {
         "@commitlint/cli": "^21.2.3",
         "@commitlint/config-conventional": "^21.2.3",
-        "@lhci/cli": "0.15.1",
         "husky": "^9.1.7",
         "lint-staged": "^17.6.0",
         "oxlint": "^1.86.0",
-        "prettier": "^3.9.9",
-        "puppeteer-core": "25.12.0"
+        "prettier": "^3.9.9"
     },
     "allowScripts": {
         "prisma": true,

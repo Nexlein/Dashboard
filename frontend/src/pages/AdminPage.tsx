@@ -65,16 +65,14 @@ function confirmation(action: UserAction, label: string): string | null {
 }
 
 function StatusBadges({ user, isSelf }: { user: AdminUser; isSelf: boolean }) {
-    useTranslation();
+    const { t } = useTranslation('admin');
     const badge = 'rounded-full px-2 py-0.5 text-xs font-medium';
     return (
         <div className="flex flex-wrap gap-1">
-            {isSelf && (
-                <span className={`${badge} bg-primary/10 text-primary`}>{i18n.t('admin:you')}</span>
-            )}
+            {isSelf && <span className={`${badge} bg-primary/10 text-primary`}>{t('you')}</span>}
             {user.role === 'admin' && (
                 <span className={`${badge} bg-sky-500/10 text-sky-600 dark:text-sky-400`}>
-                    {i18n.t('admin:admin')}
+                    {t('admin')}
                 </span>
             )}
             {user.banned && (
@@ -83,13 +81,13 @@ function StatusBadges({ user, isSelf }: { user: AdminUser; isSelf: boolean }) {
                     title={user.banReason ?? undefined}
                 >
                     {user.banExpires
-                        ? i18n.t('admin:bannedUntil', { date: dateFormat.format(user.banExpires) })
-                        : i18n.t('admin:banned')}
+                        ? t('bannedUntil', { date: dateFormat.format(user.banExpires) })
+                        : t('banned')}
                 </span>
             )}
             {!user.emailVerified && (
                 <span className={`${badge} bg-muted text-muted-foreground`}>
-                    {i18n.t('admin:emailUnverified')}
+                    {t('emailUnverified')}
                 </span>
             )}
         </div>
@@ -98,7 +96,7 @@ function StatusBadges({ user, isSelf }: { user: AdminUser; isSelf: boolean }) {
 
 /** Administration: every account, with role, ban, sign-out and deletion actions. */
 export default function AdminPage({ currentUser }: { currentUser: User }) {
-    useTranslation();
+    const { t } = useTranslation(['common', 'admin']);
     const [searchInput, setSearchInput] = useState('');
     const [search, setSearch] = useState('');
     const [filter, setFilter] = useState<UserFilter>('all');
@@ -150,9 +148,9 @@ export default function AdminPage({ currentUser }: { currentUser: User }) {
         <main className="mx-auto w-full max-w-6xl p-4 sm:p-8">
             <div className="mb-8">
                 <h1 className="text-3xl font-semibold tracking-tight">
-                    {i18n.t('common:administration')}
+                    {t('common:administration')}
                 </h1>
-                <p className="mt-2 text-muted-foreground">{i18n.t('admin:subtitle')}</p>
+                <p className="mt-2 text-muted-foreground">{t('admin:subtitle')}</p>
             </div>
 
             <div className="mb-6 grid grid-cols-3 gap-2 sm:gap-3">
@@ -188,8 +186,8 @@ export default function AdminPage({ currentUser }: { currentUser: User }) {
                 <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                     type="search"
-                    aria-label={i18n.t('admin:searchLabel')}
-                    placeholder={i18n.t('admin:searchPlaceholder')}
+                    aria-label={t('admin:searchLabel')}
+                    placeholder={t('admin:searchPlaceholder')}
                     className="pl-9"
                     value={searchInput}
                     onChange={(event) => setSearchInput(event.target.value)}
@@ -210,16 +208,16 @@ export default function AdminPage({ currentUser }: { currentUser: User }) {
                     <thead className="border-b bg-muted/50 text-left text-muted-foreground">
                         <tr>
                             <th scope="col" className="px-4 py-3 font-medium">
-                                {i18n.t('admin:user')}
+                                {t('admin:user')}
                             </th>
                             <th scope="col" className="hidden px-4 py-3 font-medium sm:table-cell">
-                                {i18n.t('admin:status')}
+                                {t('admin:status')}
                             </th>
                             <th scope="col" className="hidden px-4 py-3 font-medium md:table-cell">
-                                {i18n.t('admin:registration')}
+                                {t('admin:registration')}
                             </th>
                             <th scope="col" className="px-4 py-3">
-                                <span className="sr-only">{i18n.t('admin:actions')}</span>
+                                <span className="sr-only">{t('admin:actions')}</span>
                             </th>
                         </tr>
                     </thead>
@@ -263,26 +261,24 @@ export default function AdminPage({ currentUser }: { currentUser: User }) {
                     </div>
                 )}
                 {users.data && users.data.users.length === 0 && (
-                    <p className="p-8 text-center text-muted-foreground">
-                        {i18n.t('admin:noUsers')}
-                    </p>
+                    <p className="p-8 text-center text-muted-foreground">{t('admin:noUsers')}</p>
                 )}
             </div>
 
             <div className="mt-4 flex items-center justify-between gap-4 text-sm text-muted-foreground">
-                <span>{i18n.t('admin:accountCount', { count: total })}</span>
+                <span>{t('admin:accountCount', { count: total })}</span>
                 <div className="flex items-center gap-2">
                     <Button
                         variant="outline"
                         size="icon"
-                        aria-label={i18n.t('admin:previousPage')}
+                        aria-label={t('admin:previousPage')}
                         disabled={page === 0}
                         onClick={() => setPage(page - 1)}
                     >
                         <ChevronLeft />
                     </Button>
                     <span>
-                        {i18n.t('admin:page', {
+                        {t('admin:page', {
                             page: formatNumber(page + 1),
                             total: formatNumber(pageCount),
                         })}
@@ -290,7 +286,7 @@ export default function AdminPage({ currentUser }: { currentUser: User }) {
                     <Button
                         variant="outline"
                         size="icon"
-                        aria-label={i18n.t('admin:nextPage')}
+                        aria-label={t('admin:nextPage')}
                         disabled={page + 1 >= pageCount}
                         onClick={() => setPage(page + 1)}
                     >

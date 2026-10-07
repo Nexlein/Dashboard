@@ -1,4 +1,3 @@
-import i18n from '@/i18n';
 import { useTranslation } from 'react-i18next';
 import { Suspense, lazy, useEffect } from 'react';
 import type { ReactNode } from 'react';
@@ -58,11 +57,11 @@ function AuthenticatedShell({
 }
 
 function Dashboard() {
-    useTranslation();
+    const { t } = useTranslation('common');
     return (
         <AuthenticatedShell showWidgetConfigurator>
             <main>
-                <h1 className="sr-only">{i18n.t('common:dashboard')}</h1>
+                <h1 className="sr-only">{t('dashboard')}</h1>
                 <DashboardGrid />
             </main>
         </AuthenticatedShell>
@@ -105,7 +104,7 @@ function PageFallback() {
 
 /** All routes; wrapped in a router by App (BrowserRouter) or by tests (MemoryRouter). */
 export function AppRoutes() {
-    useTranslation();
+    const { t } = useTranslation('common');
     const { pathname } = useLocation();
     // Fetch the dashboard code while the session check is in flight, rather than after it.
     useEffect(() => {
@@ -116,7 +115,7 @@ export function AppRoutes() {
         <>
             {publicPage && (
                 <nav
-                    aria-label={i18n.t('language.label')}
+                    aria-label={t('language.label')}
                     className="flex justify-end border-b border-border bg-card px-4 py-2"
                 >
                     <LanguageSwitcher />

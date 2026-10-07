@@ -1,7 +1,12 @@
+import type { ApiErrorCode } from 'shared';
 import i18n from './index';
 import { resources } from './resources';
 
 type CodedError = { code?: string; status?: number };
+
+function isTranslatedErrorCode(code: unknown): code is ApiErrorCode {
+    return typeof code === 'string' && Object.hasOwn(resources.en.errors, code);
+}
 
 type NoticeKey =
     | 'auth:githubConsent'
@@ -38,8 +43,8 @@ export function getErrorMessage(error: unknown): string {
         FAILED_TO_GET_SESSION: 'AUTHENTICATION_REQUIRED',
     };
     if (code && Object.hasOwn(aliases, code)) return i18n.t(`errors:${aliases[code]}`);
-    if (code && Object.hasOwn(resources.en.errors, code)) {
-        return i18n.t(`errors:${code as keyof typeof resources.en.errors}`);
+    if (isTranslatedErrorCode(code)) {
+        return i18n.t(`errors:${code}`);
     }
     if (code?.startsWith('YOU_ARE_NOT_ALLOWED_')) return i18n.t('errors:FORBIDDEN');
     const status = error && typeof error === 'object' ? (error as CodedError).status : undefined;

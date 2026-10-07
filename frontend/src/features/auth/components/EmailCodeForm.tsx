@@ -1,5 +1,4 @@
 import { getErrorMessage, notice, translateNotice, type LocalizedNotice } from '@/i18n/errors';
-import i18n from '@/i18n';
 import { useTranslation } from 'react-i18next';
 import { useState, type SubmitEvent } from 'react';
 import { Button } from '@/components/ui/button';
@@ -15,7 +14,7 @@ type EmailCodeFormProps = {
 
 /** Asks for the 6-digit code emailed to `email` after sign-up or an unverified sign-in. */
 export function EmailCodeForm({ email, onVerified }: EmailCodeFormProps) {
-    useTranslation();
+    const { t } = useTranslation('auth');
     const [code, setCode] = useState('');
     const [error, setError] = useState<unknown>('');
     const [info, setInfo] = useState<LocalizedNotice | null>(null);
@@ -49,11 +48,9 @@ export function EmailCodeForm({ email, onVerified }: EmailCodeFormProps) {
 
     return (
         <form className="space-y-4" onSubmit={handleSubmit}>
-            <p className="text-sm text-muted-foreground">
-                {i18n.t('auth:verificationSent', { email })}
-            </p>
+            <p className="text-sm text-muted-foreground">{t('verificationSent', { email })}</p>
             <div className="space-y-2">
-                <Label htmlFor="verification-code">{i18n.t('auth:verificationCode')}</Label>
+                <Label htmlFor="verification-code">{t('verificationCode')}</Label>
                 <Input
                     id="verification-code"
                     name="code"
@@ -77,10 +74,10 @@ export function EmailCodeForm({ email, onVerified }: EmailCodeFormProps) {
                 </p>
             )}
             <Button className="h-10 w-full" type="submit" disabled={busy || code.length !== 6}>
-                {busy ? i18n.t('auth:checking') : i18n.t('auth:verify')}
+                {busy ? t('checking') : t('verify')}
             </Button>
             <Button type="button" variant="ghost" className="w-full" onClick={resend}>
-                {i18n.t('auth:resendCode')}
+                {t('resendCode')}
             </Button>
         </form>
     );

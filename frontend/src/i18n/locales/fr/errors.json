@@ -98,5 +98,9 @@
     "BANNED_USER": "Ce compte est banni.",
     "INVALID_ROLE": "Le rôle doit être « user » ou « admin ».",
     "YOU_CANNOT_CHANGE_YOUR_OWN_ROLE": "Vous ne pouvez pas modifier votre propre rôle.",
-    "REGISTRATION_REQUIREMENTS": "Vous devez accepter les conditions et confirmer avoir au moins 16 ans pour vous inscrire."
+    "REGISTRATION_REQUIREMENTS": "Vous devez accepter les conditions et confirmer avoir au moins 16 ans pour vous inscrire.",
+    "GITHUB_REQUEST_FAILED": "La requête GitHub a échoué",
+    "CRYPTO_PARAM_INVALID": "Cryptomonnaie ou devise invalide",
+    "CRYPTO_COINS_INVALID": "Sélectionnez entre 1 et 8 cryptomonnaies",
+    "STOCK_SYMBOLS_INVALID": "Sélectionnez entre 1 et 8 symboles boursiers valides"
 }

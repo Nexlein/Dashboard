@@ -1,5 +1,4 @@
 import { getErrorMessage } from '@/i18n/errors';
-import i18n from '@/i18n';
 import { resources } from '@/i18n/resources';
 import { useTranslation } from 'react-i18next';
 import { useState, useEffect, useRef, useId } from 'react';
@@ -23,7 +22,7 @@ const greeting = (): DisplayMessage => ({
 });
 
 export function ChatbotWidget({ widget }: { widget: DashboardWidget }) {
-    useTranslation();
+    const { t } = useTranslation('chatbot');
     const inputId = useId();
     const { id } = widget;
     const storageKey = `${CHAT_HISTORY_PREFIX}${id}`;
@@ -91,9 +90,7 @@ export function ChatbotWidget({ widget }: { widget: DashboardWidget }) {
         const payloadMessages: ChatMessage[] = [];
         for (let i = newMessages.length - 1; i >= 0; i--) {
             const message = newMessages[i];
-            const content = message.uiMessage
-                ? i18n.t(`chatbot:${message.uiMessage}`)
-                : message.content;
+            const content = message.uiMessage ? t(`${message.uiMessage}`) : message.content;
             charCount += content.length;
             if (charCount > MAX_CHARS && payloadMessages.length > 0) break;
             payloadMessages.unshift({
@@ -129,9 +126,7 @@ export function ChatbotWidget({ widget }: { widget: DashboardWidget }) {
                                 className={`rounded-xl px-3 py-2 ${msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}
                             >
                                 <p className="whitespace-pre-wrap wrap-break-word">
-                                    {msg.uiMessage
-                                        ? i18n.t(`chatbot:${msg.uiMessage}`)
-                                        : msg.content}
+                                    {msg.uiMessage ? t(`${msg.uiMessage}`) : msg.content}
                                 </p>
                             </div>
                         </div>
@@ -170,20 +165,20 @@ export function ChatbotWidget({ widget }: { widget: DashboardWidget }) {
                         setMessages([greeting()]);
                         setError(null);
                     }}
-                    title={i18n.t('chatbot:clear')}
+                    title={t('clear')}
                 >
                     <Trash2 className="size-4 text-muted-foreground" />
-                    <span className="sr-only">{i18n.t('chatbot:clear')}</span>
+                    <span className="sr-only">{t('clear')}</span>
                 </Button>
                 <label htmlFor={inputId} className="sr-only">
-                    {i18n.t('chatbot:message')}
+                    {t('message')}
                 </label>
                 <Input
                     id={inputId}
                     name="message"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    placeholder={i18n.t('chatbot:placeholder')}
+                    placeholder={t('placeholder')}
                     disabled={loading}
                     className="flex-1 h-10"
                 />
@@ -193,7 +188,7 @@ export function ChatbotWidget({ widget }: { widget: DashboardWidget }) {
                     disabled={!input.trim() || loading}
                 >
                     <Send className="size-4" />
-                    <span className="sr-only">{i18n.t('chatbot:send')}</span>
+                    <span className="sr-only">{t('send')}</span>
                 </Button>
             </form>
         </div>

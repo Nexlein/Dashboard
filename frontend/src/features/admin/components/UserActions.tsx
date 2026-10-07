@@ -1,4 +1,3 @@
-import i18n from '@/i18n';
 import { useTranslation } from 'react-i18next';
 import { Ban, EllipsisVertical, LogOut, ShieldCheck, ShieldOff, Trash2, Undo2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -23,7 +22,7 @@ export function UserActions({
     disabled: boolean;
     onAction: (action: UserAction) => void;
 }) {
-    useTranslation();
+    const { t } = useTranslation('admin');
     const label = user.name || user.email;
     return (
         <DropdownMenu>
@@ -32,7 +31,7 @@ export function UserActions({
                     <Button
                         variant="ghost"
                         size="icon"
-                        aria-label={i18n.t('admin:actionsFor', { name: label })}
+                        aria-label={t('actionsFor', { name: label })}
                         disabled={disabled}
                     />
                 }
@@ -43,33 +42,33 @@ export function UserActions({
                 {user.role === 'admin' ? (
                     <DropdownMenuItem onClick={() => onAction('demote')}>
                         <ShieldOff />
-                        {i18n.t('admin:demote')}
+                        {t('demote')}
                     </DropdownMenuItem>
                 ) : (
                     <DropdownMenuItem onClick={() => onAction('promote')}>
                         <ShieldCheck />
-                        {i18n.t('admin:promote')}
+                        {t('promote')}
                     </DropdownMenuItem>
                 )}
                 <DropdownMenuItem onClick={() => onAction('signOut')}>
                     <LogOut />
-                    {i18n.t('admin:signOutEverywhere')}
+                    {t('signOutEverywhere')}
                 </DropdownMenuItem>
                 {user.banned ? (
                     <DropdownMenuItem onClick={() => onAction('unban')}>
                         <Undo2 />
-                        {i18n.t('admin:unban')}
+                        {t('unban')}
                     </DropdownMenuItem>
                 ) : (
                     <DropdownMenuItem onClick={() => onAction('ban')}>
                         <Ban />
-                        {i18n.t('admin:banAction')}
+                        {t('banAction')}
                     </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem variant="destructive" onClick={() => onAction('remove')}>
                     <Trash2 />
-                    {i18n.t('admin:remove')}
+                    {t('remove')}
                 </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>

@@ -1,3 +1,4 @@
+import type { ApiErrorCode } from 'shared';
 import { createHash, randomUUID } from 'node:crypto';
 import { HttpError } from '../utils/httpError.ts';
 import { getCache, setCache, redisClient } from '../utils/redisCache.ts';
@@ -12,8 +13,9 @@ export class StockPendingError extends HttpError {
     constructor(
         retryAt: number,
         message = 'Stock data is waiting for available Twelve Data credits',
+        code: ApiErrorCode = 'STOCK_CREDITS_PENDING',
     ) {
-        super(message, 429);
+        super(message, 429, code);
         this.retryAfter = Math.max(1, Math.ceil((retryAt - Date.now()) / 1000));
     }
 }
@@ -32,6 +34,7 @@ export async function withStockProvider<T>(apiKey: string, work: () => Promise<T
             throw new StockPendingError(
                 Date.now() + 2000,
                 'Another stock widget is loading; your data will follow automatically',
+                'STOCK_QUEUE_PENDING',
             );
         }
     } else {
@@ -123,5 +126,6 @@ export async function stockRateLimit(
         daily
             ? 'The daily Twelve Data limit is reached; loading will resume after its reset'
             : undefined,
+        daily ? 'STOCK_DAILY_LIMIT' : 'STOCK_CREDITS_PENDING',
     );
 }

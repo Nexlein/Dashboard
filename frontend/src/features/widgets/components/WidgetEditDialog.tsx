@@ -1,5 +1,4 @@
 import { getErrorMessage } from '@/i18n/errors';
-import i18n from '@/i18n';
 import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { useUpdateWidget } from '@/features/widgets/hooks/useWidgets';
@@ -33,7 +32,7 @@ export function WidgetEditDialog({
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }) {
-    useTranslation();
+    const { t } = useTranslation(['widgets', 'common']);
     const updateWidgetMutation = useUpdateWidget();
     const [params, setParams] = useState(widget.params || {});
     const [refreshTimer, setRefreshTimer] = useState(widget.refreshRate?.toString() || '60');
@@ -75,9 +74,9 @@ export function WidgetEditDialog({
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-106.25">
                 <DialogHeader>
-                    <DialogTitle>{i18n.t('widgets:editTitle')}</DialogTitle>
+                    <DialogTitle>{t('widgets:editTitle')}</DialogTitle>
                     <DialogDescription>
-                        {i18n.t('widgets:editSubtitle', {
+                        {t('widgets:editSubtitle', {
                             name: widgetDef?.name || widget.widgetName,
                         })}
                     </DialogDescription>
@@ -108,7 +107,7 @@ export function WidgetEditDialog({
                         onClick={() => onOpenChange(false)}
                         disabled={isSaving}
                     >
-                        {i18n.t('common:cancel')}
+                        {t('common:cancel')}
                     </Button>
                     <Button
                         onClick={handleSave}
@@ -116,7 +115,7 @@ export function WidgetEditDialog({
                             isSaving || !isRefreshRateValid(refreshTimer, serviceDef, widgetDef)
                         }
                     >
-                        {isSaving ? i18n.t('common:saving') : i18n.t('common:saveChanges')}
+                        {isSaving ? t('common:saving') : t('common:saveChanges')}
                     </Button>
                 </DialogFooter>
             </DialogContent>

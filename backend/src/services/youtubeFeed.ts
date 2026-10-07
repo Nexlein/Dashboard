@@ -1,6 +1,5 @@
-import { apiErrorCode } from 'shared';
 import { XMLParser, XMLValidator } from 'fast-xml-parser';
-import { youtubeChannels } from 'shared';
+import { youtubeChannels, type ApiErrorCode } from 'shared';
 import { getCache, setCache } from '../utils/redisCache.ts';
 import { HttpError } from '../utils/httpError.ts';
 import type { ServiceContext, WidgetParams } from './types.ts';
@@ -20,7 +19,7 @@ type Video = {
 type ChannelFeed = { id: string; title: string; videos: Video[]; checkedAt: string };
 type FeedResult = {
     channel: ChannelFeed | null;
-    warning?: { channel: string; message: string; code: string };
+    warning?: { channel: string; message: string; code: ApiErrorCode };
 };
 
 // Only our fixed YouTube origin is fetched. Redirects, oversized responses and slow reads
@@ -39,8 +38,10 @@ async function fetchYouTubeText(path: string, limit: number): Promise<string> {
         throw new HttpError(
             response.status === 404 ? 'Channel not found' : 'YouTube is temporarily unavailable',
             response.status === 404 ? 404 : 502,
+            response.status === 404 ? 'YOUTUBE_CHANNEL_NOT_FOUND' : 'YOUTUBE_UNAVAILABLE',
         );
-    if (!response.body) throw new HttpError('YouTube returned an empty response', 502);
+    if (!response.body)
+        throw new HttpError('YouTube returned an empty response', 502, 'YOUTUBE_EMPTY_RESPONSE');
     const reader = response.body.getReader();
     const chunks: Uint8Array[] = [];
     let size = 0;
@@ -49,7 +50,12 @@ async function fetchYouTubeText(path: string, limit: number): Promise<string> {
             const { done, value } = await reader.read();
             if (done) break;
             size += value.byteLength;
-            if (size > limit) throw new HttpError('YouTube response is too large', 502);
+            if (size > limit)
+                throw new HttpError(
+                    'YouTube response is too large',
+                    502,
+                    'YOUTUBE_RESPONSE_TOO_LARGE',
+                );
             chunks.push(value);
         }
     } finally {
@@ -59,17 +65,23 @@ async function fetchYouTubeText(path: string, limit: number): Promise<string> {
 }
 
 async function youtubeText(path: string, limit: number): Promise<string> {
-    const key = `youtube:failure:v1:${path}`;
-    const failure = await getCache<{ message: string; statusCode: number }>(key);
-    if (failure) throw new HttpError(failure.message, failure.statusCode);
+    const key = `youtube:failure:v2:${path}`;
+    const failure = await getCache<{ message: string; statusCode: number; code: ApiErrorCode }>(
+        key,
+    );
+    if (failure) throw new HttpError(failure.message, failure.statusCode, failure.code);
     try {
         return await fetchYouTubeText(path, limit);
     } catch (error) {
         const details =
             error instanceof HttpError
                 ? error
-                : new HttpError('YouTube is temporarily unavailable.', 502);
-        await setCache(key, { message: details.message, statusCode: details.statusCode }, 60_000);
+                : new HttpError('YouTube is temporarily unavailable.', 502, 'YOUTUBE_UNAVAILABLE');
+        await setCache(
+            key,
+            { message: details.message, statusCode: details.statusCode, code: details.code },
+            60_000,
+        );
         throw details;
     }
 }
@@ -91,6 +103,7 @@ async function resolveChannel(input: string): Promise<string> {
         throw new HttpError(
             'Cannot resolve this handle. Try its youtube.com/channel/UC… link.',
             404,
+            'YOUTUBE_HANDLE_UNRESOLVED',
         );
     await setCache(key, id, DAY);
     return id;
@@ -106,7 +119,7 @@ const parser = new XMLParser({
 
 export function parseYouTubeFeed(xml: string, channelId: string): ChannelFeed {
     if (/<!DOCTYPE|<!ENTITY/i.test(xml) || XMLValidator.validate(xml) !== true)
-        throw new HttpError('Invalid YouTube feed', 502);
+        throw new HttpError('Invalid YouTube feed', 502, 'YOUTUBE_FEED_INVALID');
     const feed = (parser.parse(xml) as { feed?: AtomFeed }).feed;
     // YouTube's Atom channelId omits UC on current feeds; older feeds include it.
     if (
@@ -114,7 +127,7 @@ export function parseYouTubeFeed(xml: string, channelId: string): ChannelFeed {
         ![channelId, channelId.slice(2)].includes(String(feed['yt:channelId'])) ||
         typeof feed.title !== 'string'
     )
-        throw new HttpError('Invalid YouTube channel feed', 502);
+        throw new HttpError('Invalid YouTube channel feed', 502, 'YOUTUBE_CHANNEL_FEED_INVALID');
     const title = feed.title.slice(0, 200);
     const videos = (feed.entry ?? [])
         .flatMap((entry) => {
@@ -176,13 +189,11 @@ async function channelResult(input: string, force: boolean): Promise<FeedResult>
             channel: cached,
             warning: {
                 channel: cached?.title ?? input,
-                code: apiErrorCode(
-                    cached
-                        ? 'Refresh unavailable; showing saved publications.'
-                        : error instanceof HttpError
-                          ? error.message
-                          : 'YouTube is temporarily unavailable',
-                ),
+                code: cached
+                    ? 'YOUTUBE_SAVED_FEED'
+                    : error instanceof HttpError
+                      ? error.code
+                      : 'YOUTUBE_UNAVAILABLE',
                 message: cached
                     ? 'Refresh unavailable; showing saved publications.'
                     : error instanceof HttpError
@@ -195,7 +206,12 @@ async function channelResult(input: string, force: boolean): Promise<FeedResult>
 
 export async function youtubeWatch(params: WidgetParams, context: ServiceContext) {
     const inputs = youtubeChannels(params.channels);
-    if (!inputs) throw new HttpError('Add between 1 and 5 valid YouTube channels', 400);
+    if (!inputs)
+        throw new HttpError(
+            'Add between 1 and 5 valid YouTube channels',
+            400,
+            'YOUTUBE_CHANNELS_INVALID',
+        );
     const results = await Promise.all(
         inputs.map((input) => channelResult(input, context.forceRefresh === true)),
     );

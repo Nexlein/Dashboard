@@ -47,7 +47,7 @@ export const downloadData = asyncHandler(async (req, res) => {
             },
         },
     });
-    if (!user) return res.status(404).json({ ...apiError('User not found') });
+    if (!user) return res.status(404).json({ ...apiError('User not found', 'USER_NOT_FOUND') });
     res.set('Cache-Control', 'no-store');
     try {
         res.json({
@@ -58,6 +58,8 @@ export const downloadData = asyncHandler(async (req, res) => {
             })),
         });
     } catch {
-        return res.status(500).json({ ...apiError('Internal server error') });
+        return res
+            .status(500)
+            .json({ ...apiError('Internal server error', 'INTERNAL_SERVER_ERROR') });
     }
 });

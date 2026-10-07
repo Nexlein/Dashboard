@@ -1,4 +1,3 @@
-import i18n from '@/i18n';
 import { useTranslation } from 'react-i18next';
 import { ExternalLink, Loader2, Trash2, UserRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -15,7 +14,7 @@ type ConnectedAccountsProps = {
  * removed, and another one connected. Separate from signing in with that provider.
  */
 export function ConnectedAccounts({ service, setError }: ConnectedAccountsProps) {
-    useTranslation();
+    const { t } = useTranslation('services');
     const accounts = service.accounts ?? [];
     const connect = useOAuthUrl();
     const remove = useDisconnectAccount();
@@ -36,7 +35,7 @@ export function ConnectedAccounts({ service, setError }: ConnectedAccountsProps)
     function removeAccount(accountId: number, label: string) {
         if (
             !window.confirm(
-                i18n.t('services:disconnectAccountConfirm', {
+                t('disconnectAccountConfirm', {
                     name: label,
                     service: service.displayName,
                 }),
@@ -54,10 +53,10 @@ export function ConnectedAccounts({ service, setError }: ConnectedAccountsProps)
             {accounts.length > 0 && (
                 <ul
                     className="space-y-2"
-                    aria-label={i18n.t('services:accounts', { service: service.displayName })}
+                    aria-label={t('accounts', { service: service.displayName })}
                 >
                     {accounts.map((account) => {
-                        const label = account.login ?? i18n.t('services:unavailableAccount');
+                        const label = account.login ?? t('unavailableAccount');
                         return (
                             <li
                                 key={account.id}
@@ -76,7 +75,7 @@ export function ConnectedAccounts({ service, setError }: ConnectedAccountsProps)
                                     <p className="truncate text-sm font-medium">{label}</p>
                                     {!account.login && (
                                         <p className="text-xs text-muted-foreground">
-                                            {i18n.t('services:reconnectHint')}
+                                            {t('reconnectHint')}
                                         </p>
                                     )}
                                 </div>
@@ -84,7 +83,7 @@ export function ConnectedAccounts({ service, setError }: ConnectedAccountsProps)
                                     variant="ghost"
                                     size="icon"
                                     className="text-destructive hover:text-destructive"
-                                    aria-label={i18n.t('services:disconnectAccount', {
+                                    aria-label={t('disconnectAccount', {
                                         name: label,
                                     })}
                                     disabled={remove.isPending}
@@ -109,11 +108,11 @@ export function ConnectedAccounts({ service, setError }: ConnectedAccountsProps)
                     <ExternalLink className="mr-2 size-4" />
                 )}
                 {accounts.length
-                    ? i18n.t('services:connectAnother', { service: service.displayName })
-                    : i18n.t('services:connectAccount', { service: service.displayName })}
+                    ? t('connectAnother', { service: service.displayName })
+                    : t('connectAccount', { service: service.displayName })}
             </Button>
             <p className="text-xs text-muted-foreground">
-                {i18n.t('services:accountsHint', { service: service.displayName })}
+                {t('accountsHint', { service: service.displayName })}
             </p>
         </div>
     );

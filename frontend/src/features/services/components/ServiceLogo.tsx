@@ -1,4 +1,3 @@
-import i18n from '@/i18n';
 import { useTranslation } from 'react-i18next';
 import { useState, type ComponentType, type SVGProps } from 'react';
 import { Github } from '@/components/ui/Github';
@@ -28,7 +27,7 @@ export function ServiceLogo({
     size?: 'sm' | 'md';
     decorative?: boolean;
 }) {
-    useTranslation();
+    const { t } = useTranslation('services');
     const [failed, setFailed] = useState(false);
     const brand = SERVICE_BRANDS[name];
     const label = displayName || brand?.name || name;
@@ -45,7 +44,7 @@ export function ServiceLogo({
             {logo && !failed ? (
                 <img
                     src={logo}
-                    alt={decorative ? '' : i18n.t('services:logo', { name: label })}
+                    alt={decorative ? '' : t('logo', { name: label })}
                     className="size-full object-contain"
                     draggable={false}
                     onError={() => setFailed(true)}
@@ -54,7 +53,7 @@ export function ServiceLogo({
                 <Icon
                     className="size-full"
                     role={decorative ? undefined : 'img'}
-                    aria-label={decorative ? undefined : i18n.t('services:logo', { name: label })}
+                    aria-label={decorative ? undefined : t('logo', { name: label })}
                     aria-hidden={decorative || undefined}
                 />
             ) : (

@@ -1,5 +1,4 @@
 import { locale, formatNumber, formatPeriod } from '@/i18n/format';
-import i18n from '@/i18n';
 import { useTranslation } from 'react-i18next';
 import { useMemo, useState } from 'react';
 import type { WidgetViewProps } from '@/features/widgets/lib/types';
@@ -129,7 +128,7 @@ export function StockMarketWidget({
     onPeriodChange,
     periodUpdating,
 }: WidgetViewProps<StockMarketData>) {
-    useTranslation();
+    const { t } = useTranslation('markets');
     const [hiddenSymbols, setHiddenSymbols] = useState(() => new Set<string>());
     const activePeriod = String(selectedPeriod ?? data.period).toUpperCase();
     const normalizedSeries = useMemo(
@@ -269,7 +268,7 @@ export function StockMarketWidget({
                 </div>
                 <div
                     className="flex items-center rounded-md bg-muted p-0.5"
-                    aria-label={i18n.t('markets:stockPeriod')}
+                    aria-label={t('stockPeriod')}
                 >
                     {PERIODS.map((period) => (
                         <button
@@ -295,7 +294,7 @@ export function StockMarketWidget({
                     viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
                     className="h-full min-h-32 w-full"
                     role="img"
-                    aria-label={i18n.t('markets:stockChart')}
+                    aria-label={t('stockChart')}
                 >
                     {yTicks.map((tick) => {
                         const y =
@@ -360,7 +359,7 @@ export function StockMarketWidget({
                             textAnchor="middle"
                             className="fill-muted-foreground text-sm"
                         >
-                            {i18n.t('markets:selectStock')}
+                            {t('selectStock')}
                         </text>
                     )}
                 </svg>

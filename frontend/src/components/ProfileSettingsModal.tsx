@@ -1,5 +1,4 @@
 import { getErrorMessage, notice, translateNotice, type LocalizedNotice } from '@/i18n/errors';
-import i18n from '@/i18n';
 import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -23,12 +22,12 @@ export function ProfileSettingsModal({
     user,
     onUserUpdated,
 }: ProfileProps & { open: boolean }) {
-    useTranslation();
+    const { t } = useTranslation('account');
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                    <DialogTitle>{i18n.t('account:title')}</DialogTitle>
+                    <DialogTitle>{t('title')}</DialogTitle>
                 </DialogHeader>
                 {/* DialogContent unmounts when closed: the form starts fresh on each open. */}
                 <ProfileForm
@@ -42,7 +41,7 @@ export function ProfileSettingsModal({
 }
 
 function ProfileForm({ user, onUserUpdated, onOpenChange }: ProfileProps) {
-    useTranslation();
+    const { t } = useTranslation(['account', 'common']);
     const [name, setName] = useState(user?.name || '');
     const [email, setEmail] = useState(user?.email || '');
     // The new address waiting for its emailed code.
@@ -102,10 +101,10 @@ function ProfileForm({ user, onUserUpdated, onOpenChange }: ProfileProps) {
                 className="space-y-4"
             >
                 <p className="text-sm text-muted-foreground" role="status">
-                    {i18n.t('account:emailCodeSent', { email: pendingEmail })}
+                    {t('account:emailCodeSent', { email: pendingEmail })}
                 </p>
                 <div className="space-y-2">
-                    <Label htmlFor="email-code">{i18n.t('account:code')}</Label>
+                    <Label htmlFor="email-code">{t('account:code')}</Label>
                     <Input
                         id="email-code"
                         inputMode="numeric"
@@ -127,8 +126,8 @@ function ProfileForm({ user, onUserUpdated, onOpenChange }: ProfileProps) {
                 <div className="flex justify-end pt-4">
                     <Button type="submit" disabled={confirmMutation.isPending || code.length !== 6}>
                         {confirmMutation.isPending
-                            ? i18n.t('account:checking')
-                            : i18n.t('account:confirmEmail')}
+                            ? t('account:checking')
+                            : t('account:confirmEmail')}
                     </Button>
                 </div>
             </form>
@@ -145,7 +144,7 @@ function ProfileForm({ user, onUserUpdated, onOpenChange }: ProfileProps) {
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-                <Label htmlFor="displayName">{i18n.t('account:displayName')}</Label>
+                <Label htmlFor="displayName">{t('account:displayName')}</Label>
                 <Input
                     id="displayName"
                     maxLength={50}
@@ -154,7 +153,7 @@ function ProfileForm({ user, onUserUpdated, onOpenChange }: ProfileProps) {
                 />
             </div>
             <div className="space-y-2">
-                <Label htmlFor="email">{i18n.t('account:emailAddress')}</Label>
+                <Label htmlFor="email">{t('account:emailAddress')}</Label>
                 <Input
                     id="email"
                     type="email"
@@ -164,7 +163,7 @@ function ProfileForm({ user, onUserUpdated, onOpenChange }: ProfileProps) {
                     required
                 />
                 <p id="email-help" className="text-xs text-muted-foreground">
-                    {i18n.t('account:emailHint')}
+                    {t('account:emailHint')}
                 </p>
             </div>
             {Boolean(error) && <p className="text-sm text-destructive">{getErrorMessage(error)}</p>}
@@ -175,7 +174,7 @@ function ProfileForm({ user, onUserUpdated, onOpenChange }: ProfileProps) {
             )}
             <div className="flex justify-end pt-4">
                 <Button type="submit" disabled={loading}>
-                    {loading ? i18n.t('common:saving') : i18n.t('common:saveChanges')}
+                    {loading ? t('common:saving') : t('common:saveChanges')}
                 </Button>
             </div>
         </form>

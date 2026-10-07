@@ -1,5 +1,4 @@
 import { formatDate, formatNumber } from '@/i18n/format';
-import i18n from '@/i18n';
 import { useTranslation } from 'react-i18next';
 import { GitFork, Star, CircleDot, User, Users, BookOpen } from 'lucide-react';
 import type { WidgetViewProps } from '@/features/widgets/lib/types';
@@ -32,7 +31,7 @@ export type GithubCommitData = {
 };
 
 export function GithubRepoWidget({ data }: WidgetViewProps<GithubRepoData>) {
-    useTranslation();
+    const { t } = useTranslation('github');
     if (!data) return null;
     return (
         <div className="flex h-full w-full flex-col gap-3 p-1" data-testid="github-repo-stats">
@@ -41,9 +40,7 @@ export function GithubRepoWidget({ data }: WidgetViewProps<GithubRepoData>) {
                 <p className="text-base font-bold tracking-tight truncate">{data.name}</p>
             </div>
             <p className="text-sm text-muted-foreground line-clamp-2">
-                {data.description || (
-                    <span className="italic">{i18n.t('github:noDescription')}</span>
-                )}
+                {data.description || <span className="italic">{t('noDescription')}</span>}
             </p>
             <div className="grid grid-cols-3 gap-3 mt-auto">
                 <div className="flex flex-col items-center justify-center rounded-xl border bg-linear-to-b from-amber-500/10 to-transparent p-3 text-amber-600 dark:text-amber-400">
@@ -64,7 +61,7 @@ export function GithubRepoWidget({ data }: WidgetViewProps<GithubRepoData>) {
 }
 
 export function GithubProfileWidget({ data }: WidgetViewProps<GithubProfileData>) {
-    useTranslation();
+    const { t } = useTranslation('github');
     if (!data) return null;
     return (
         <div className="flex h-full w-full flex-col gap-4 p-1" data-testid="github-profile">
@@ -92,7 +89,7 @@ export function GithubProfileWidget({ data }: WidgetViewProps<GithubProfileData>
             </div>
 
             <p className="text-sm text-muted-foreground line-clamp-3">
-                {data.bio || <span className="italic">{i18n.t('github:noBio')}</span>}
+                {data.bio || <span className="italic">{t('noBio')}</span>}
             </p>
 
             <div className="grid w-full grid-cols-3 gap-2 mt-auto pt-3 border-t">
@@ -100,20 +97,20 @@ export function GithubProfileWidget({ data }: WidgetViewProps<GithubProfileData>
                     <span className="text-lg font-bold">{formatNumber(data.followers)}</span>
                     <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1 mt-0.5">
                         <Users className="size-3" />
-                        {i18n.t('github:followers')}
+                        {t('followers')}
                     </span>
                 </div>
                 <div className="flex flex-col items-center justify-center border-l border-r">
                     <span className="text-lg font-bold">{formatNumber(data.following)}</span>
                     <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mt-0.5">
-                        {i18n.t('github:following')}
+                        {t('following')}
                     </span>
                 </div>
                 <div className="flex flex-col items-center justify-center">
                     <span className="text-lg font-bold">{formatNumber(data.public_repos)}</span>
                     <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1 mt-0.5">
                         <BookOpen className="size-3" />
-                        {i18n.t('github:repos')}
+                        {t('repos')}
                     </span>
                 </div>
             </div>
@@ -122,15 +119,13 @@ export function GithubProfileWidget({ data }: WidgetViewProps<GithubProfileData>
 }
 
 export function GithubCommitsWidget({ data }: WidgetViewProps<GithubCommitData[]>) {
-    useTranslation();
+    const { t } = useTranslation('github');
     if (!data || !Array.isArray(data)) return null;
     return (
         <div className="flex h-full w-full flex-col p-1" data-testid="github-commits">
             <div className="flex items-center gap-2 mb-4">
                 <GitFork className="size-5 text-primary" />
-                <p className="text-sm font-bold uppercase tracking-wider">
-                    {i18n.t('github:commits')}
-                </p>
+                <p className="text-sm font-bold uppercase tracking-wider">{t('commits')}</p>
             </div>
             <div className="flex-1 overflow-y-auto space-y-4 pr-2 scrollbar-thin">
                 {data.map((commit) => (

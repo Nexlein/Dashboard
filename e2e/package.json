@@ -3,10 +3,13 @@
     "version": "1.0.0",
     "private": true,
     "scripts": {
-        "test": "playwright test"
+        "test": "playwright test",
+        "lighthouse": "lhci autorun --config=../lighthouserc.cjs --failOnUploadFailure=true"
     },
     "devDependencies": {
         "@playwright/test": "^1.40.0",
-        "@axe-core/playwright": "^4.8.2"
+        "@axe-core/playwright": "^4.8.2",
+        "@lhci/cli": "0.15.1",
+        "puppeteer-core": "25.12.0"
     }
 }

@@ -7,7 +7,7 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
     plugins: [react(), tailwindcss()],
     // The linked workspace is CommonJS; convert it before serving named imports in dev.
-    optimizeDeps: { include: ['shared', 'shared/youtube'] },
+    optimizeDeps: { include: ['shared'] },
     resolve: {
         alias: {
             '@': path.resolve(import.meta.dirname, './src'),

@@ -1,4 +1,3 @@
-import i18n from '@/i18n';
 import { useTranslation } from 'react-i18next';
 import { Suspense } from 'react';
 import { Loader2 } from 'lucide-react';
@@ -23,7 +22,7 @@ export function WidgetForm({
     refreshTimer: string;
     setRefreshTimer: (value: string) => void;
 }) {
-    useTranslation();
+    const { t } = useTranslation('widgets');
     const CustomConfigUi = widgetDef.customConfigUi;
     const hasRefresh = widgetDef.hasRefresh ?? serviceDef.hasRefresh;
 
@@ -57,7 +56,7 @@ export function WidgetForm({
             {/* Refresh Rate Timer */}
             {hasRefresh && (
                 <div className="grid gap-2 animate-in fade-in slide-in-from-top-2">
-                    <Label htmlFor="refreshTimer">{i18n.t('widgets:refreshRate')}</Label>
+                    <Label htmlFor="refreshTimer">{t('refreshRate')}</Label>
                     <Input
                         id="refreshTimer"
                         type="number"
@@ -66,7 +65,7 @@ export function WidgetForm({
                         onChange={(e) => setRefreshTimer(e.target.value)}
                     />
                     <p className="text-[0.8rem] text-muted-foreground">
-                        {i18n.t('widgets:minimumRefresh', { seconds: MIN_REFRESH_RATE_SECONDS })}
+                        {t('minimumRefresh', { seconds: MIN_REFRESH_RATE_SECONDS })}
                     </p>
                 </div>
             )}

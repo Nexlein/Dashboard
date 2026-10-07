@@ -1,4 +1,4 @@
-import { youtubeVideoId } from 'shared/youtube';
+import { youtubeVideoId } from 'shared';
 
 export function youtubeThumbnailUrl(videoUrl: unknown): string | undefined {
     const id = youtubeVideoId(videoUrl);

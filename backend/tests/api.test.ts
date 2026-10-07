@@ -1,3 +1,4 @@
+import type { ApiErrorCode } from 'shared';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { FRONTEND, signedInAs } from './helpers.ts';
 import request from 'supertest';
@@ -192,7 +193,9 @@ describe('API Endpoints', () => {
             });
             const execute = vi
                 .spyOn(weatherService, 'execute')
-                .mockRejectedValue(new HttpError('Provider credential rejected', 401));
+                .mockRejectedValue(
+                    new HttpError('Provider credential rejected', 401, 'WEATHER_KEY_INVALID'),
+                );
             try {
                 const res = await request(app)
                     .post('/widgets')
@@ -401,7 +404,9 @@ describe('API Endpoints', () => {
             });
             const execute = vi
                 .spyOn(stocks, 'execute')
-                .mockRejectedValue(new HttpError('Provider token revoked', 401));
+                .mockRejectedValue(
+                    new HttpError('Provider token revoked', 401, 'GITHUB_REQUEST_FAILED'),
+                );
             try {
                 const res = await request(app).get('/widgets/1/data').set('Origin', FRONTEND);
                 expect(res.statusCode).toBe(502);
@@ -434,7 +439,7 @@ describe('API Endpoints', () => {
                             new HttpError(
                                 'Provider rejected the request',
                                 providerStatus as number,
-                                code as string,
+                                code as ApiErrorCode,
                             ),
                             { retryAfter: 37 },
                         ),

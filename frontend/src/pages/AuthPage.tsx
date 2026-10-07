@@ -34,7 +34,7 @@ const GITHUB_ERRORS: Record<string, string> = {
 };
 
 export default function AuthPage() {
-    useTranslation();
+    const { t } = useTranslation('auth');
     const location = useLocation();
     const navigate = useNavigate();
     const queryClient = useQueryClient();
@@ -101,17 +101,17 @@ export default function AuthPage() {
                     </div>
                     <CardTitle>
                         {verifyingEmail
-                            ? i18n.t('auth:verifyAddress')
+                            ? t('verifyAddress')
                             : isRegister
-                              ? i18n.t('auth:createTitle')
-                              : i18n.t('auth:welcomeTitle')}
+                              ? t('createTitle')
+                              : t('welcomeTitle')}
                     </CardTitle>
                     <CardDescription>
                         {verifyingEmail
-                            ? i18n.t('auth:verifySubtitle')
+                            ? t('verifySubtitle')
                             : isRegister
-                              ? i18n.t('auth:createSubtitle')
-                              : i18n.t('auth:loginSubtitle')}
+                              ? t('createSubtitle')
+                              : t('loginSubtitle')}
                     </CardDescription>
                 </CardHeader>
 
@@ -130,7 +130,7 @@ export default function AuthPage() {
                                             : 'text-muted-foreground hover:text-foreground',
                                     )}
                                 >
-                                    {i18n.t('auth:loginTab')}
+                                    {t('loginTab')}
                                 </Link>
                                 <Link
                                     to="/register"
@@ -141,7 +141,7 @@ export default function AuthPage() {
                                             : 'text-muted-foreground hover:text-foreground',
                                     )}
                                 >
-                                    {i18n.t('auth:registerTab')}
+                                    {t('registerTab')}
                                 </Link>
                             </div>
 
@@ -150,14 +150,14 @@ export default function AuthPage() {
                                     className="mb-4 rounded-md bg-muted px-3 py-2 text-sm"
                                     role="status"
                                 >
-                                    {i18n.t('auth:passwordChanged')}
+                                    {t('passwordChanged')}
                                 </p>
                             )}
                             {githubError && (
                                 <p className="mb-4 text-sm text-destructive" role="alert">
                                     {Object.hasOwn(GITHUB_ERRORS, githubError)
                                         ? GITHUB_ERRORS[githubError]
-                                        : i18n.t('auth:githubError')}
+                                        : t('githubError')}
                                 </p>
                             )}
 
@@ -179,7 +179,7 @@ export default function AuthPage() {
                                 }}
                             >
                                 <Github className="mr-2 size-4" />
-                                {i18n.t('auth:continueGithub')}
+                                {t('continueGithub')}
                             </Button>
 
                             <div className="relative mb-6">
@@ -188,7 +188,7 @@ export default function AuthPage() {
                                 </div>
                                 <div className="relative flex justify-center text-xs uppercase">
                                     <span className="bg-white/88 px-2 text-muted-foreground">
-                                        {i18n.t('auth:or')}
+                                        {t('or')}
                                     </span>
                                 </div>
                             </div>
@@ -197,11 +197,9 @@ export default function AuthPage() {
                                 {isRegister && (
                                     <div className="space-y-2">
                                         <div className="flex items-center justify-between gap-3">
-                                            <Label htmlFor="displayName">
-                                                {i18n.t('auth:displayName')}
-                                            </Label>
+                                            <Label htmlFor="displayName">{t('displayName')}</Label>
                                             <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                                                {i18n.t('auth:optional')}
+                                                {t('optional')}
                                             </span>
                                         </div>
                                         <Input
@@ -210,26 +208,26 @@ export default function AuthPage() {
                                             type="text"
                                             autoComplete="name"
                                             maxLength={50}
-                                            placeholder={i18n.t('auth:namePlaceholder')}
+                                            placeholder={t('namePlaceholder')}
                                             aria-describedby="displayName-help"
                                         />
                                         <p
                                             id="displayName-help"
                                             className="text-xs text-muted-foreground"
                                         >
-                                            {i18n.t('auth:nameHint')}
+                                            {t('nameHint')}
                                         </p>
                                     </div>
                                 )}
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="email">{i18n.t('auth:email')}</Label>
+                                    <Label htmlFor="email">{t('email')}</Label>
                                     <Input
                                         id="email"
                                         name="email"
                                         type="email"
                                         autoComplete="email"
-                                        placeholder={i18n.t('auth:emailPlaceholder')}
+                                        placeholder={t('emailPlaceholder')}
                                         defaultValue={location.state?.email ?? ''}
                                         required
                                     />
@@ -237,13 +235,13 @@ export default function AuthPage() {
 
                                 <div className="space-y-2">
                                     <div className="flex items-center justify-between gap-3">
-                                        <Label htmlFor="password">{i18n.t('auth:password')}</Label>
+                                        <Label htmlFor="password">{t('password')}</Label>
                                         {!isRegister && (
                                             <Link
                                                 to="/forgot-password"
                                                 className="text-xs font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
                                             >
-                                                {i18n.t('auth:forgotLink')}
+                                                {t('forgotLink')}
                                             </Link>
                                         )}
                                     </div>
@@ -264,7 +262,7 @@ export default function AuthPage() {
                                             id="password-help"
                                             className="text-xs text-muted-foreground"
                                         >
-                                            {i18n.t('auth:passwordHint')}
+                                            {t('passwordHint')}
                                         </p>
                                     )}
                                 </div>
@@ -310,7 +308,7 @@ export default function AuthPage() {
                                                 required
                                                 className="mt-0.5 size-4 rounded border-input accent-foreground"
                                             />
-                                            <span>{i18n.t('auth:ageConfirmation')}</span>
+                                            <span>{t('ageConfirmation')}</span>
                                         </label>
                                     </div>
                                 )}
@@ -327,10 +325,10 @@ export default function AuthPage() {
                                     disabled={isSubmitting}
                                 >
                                     {isSubmitting
-                                        ? i18n.t('auth:loading')
+                                        ? t('loading')
                                         : isRegister
-                                          ? i18n.t('auth:createAccount')
-                                          : i18n.t('auth:login')}
+                                          ? t('createAccount')
+                                          : t('login')}
                                 </Button>
                             </form>
                         </>

@@ -48,7 +48,11 @@ async function fetchGitHub(url: string, credentials: GitHubCredentials): Promise
         },
     });
     if (!res.ok) {
-        throw new HttpError(`GitHub API error: ${res.statusText}`, res.status);
+        throw new HttpError(
+            `GitHub API error: ${res.statusText}`,
+            res.status,
+            'GITHUB_REQUEST_FAILED',
+        );
     }
     return res;
 }
@@ -114,7 +118,7 @@ async function loadWidget(
         return result;
     }
 
-    throw new HttpError('Unknown widget name', 400);
+    throw new HttpError('Unknown widget name', 400, 'WIDGET_UNKNOWN');
 }
 
 export default {
@@ -166,7 +170,7 @@ export default {
     execute: async (widgetName: string, params: WidgetParams, context: ServiceContext) => {
         const credentials = context.credentials as GitHubCredentials | null | undefined;
         if (!credentials || typeof credentials.accessToken !== 'string') {
-            throw new HttpError('GitHub account is not connected', 401);
+            throw new HttpError('GitHub account is not connected', 401, 'GITHUB_NOT_CONNECTED');
         }
 
         const cacheScope = context.cacheScope || 'unscoped';

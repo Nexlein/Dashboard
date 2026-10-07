@@ -30,7 +30,7 @@ const RECOMMENDED_MODELS = [
 ];
 
 export function OllamaModelManager({ selectedModel, onSelectModel }: CustomConfigProps) {
-    useTranslation();
+    const { t } = useTranslation('chatbot');
     const [customModel, setCustomModel] = useState('');
     const queryClient = useQueryClient();
 
@@ -61,11 +61,11 @@ export function OllamaModelManager({ selectedModel, onSelectModel }: CustomConfi
     return (
         <div className="space-y-3 mt-4 border rounded-md p-3 bg-muted/20">
             <div className="flex justify-between items-center">
-                <h4 className="text-sm font-semibold">{i18n.t('chatbot:recommended')}</h4>
+                <h4 className="text-sm font-semibold">{t('recommended')}</h4>
                 <Button
                     variant="ghost"
                     size="icon"
-                    aria-label={i18n.t('chatbot:refreshModels')}
+                    aria-label={t('refreshModels')}
                     onClick={() => {
                         void fetchModels();
                     }}
@@ -102,10 +102,10 @@ export function OllamaModelManager({ selectedModel, onSelectModel }: CustomConfi
                                         {isSelected ? (
                                             <>
                                                 <Check className="mr-1 size-3" />
-                                                {i18n.t('chatbot:selected')}
+                                                {t('selected')}
                                             </>
                                         ) : (
-                                            i18n.t('chatbot:select')
+                                            t('select')
                                         )}
                                     </Button>
                                 ) : (
@@ -120,12 +120,12 @@ export function OllamaModelManager({ selectedModel, onSelectModel }: CustomConfi
                                         {isPulling ? (
                                             <>
                                                 <Loader2 className="mr-1 size-3 animate-spin" />{' '}
-                                                {i18n.t('chatbot:pulling')}
+                                                {t('pulling')}
                                             </>
                                         ) : (
                                             <>
                                                 <Download className="mr-1 size-3" />
-                                                {i18n.t('chatbot:install')}
+                                                {t('install')}
                                             </>
                                         )}
                                     </Button>
@@ -161,10 +161,10 @@ export function OllamaModelManager({ selectedModel, onSelectModel }: CustomConfi
                                     {isSelected ? (
                                         <>
                                             <Check className="mr-1 size-3" />
-                                            {i18n.t('chatbot:selected')}
+                                            {t('selected')}
                                         </>
                                     ) : (
-                                        i18n.t('chatbot:select')
+                                        t('select')
                                     )}
                                 </Button>
                             </div>
@@ -175,8 +175,8 @@ export function OllamaModelManager({ selectedModel, onSelectModel }: CustomConfi
             <div className="pt-3 mt-3 border-t flex items-center gap-2">
                 <input
                     type="text"
-                    aria-label={i18n.t('chatbot:customTag')}
-                    placeholder={i18n.t('chatbot:customTagPlaceholder')}
+                    aria-label={t('customTag')}
+                    placeholder={t('customTagPlaceholder')}
                     className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-xs shadow-xs transition-colors focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
                     value={customModel}
                     onChange={(event) => setCustomModel(event.target.value)}
@@ -192,7 +192,7 @@ export function OllamaModelManager({ selectedModel, onSelectModel }: CustomConfi
                         if (tag) pullModel(tag);
                     }}
                 >
-                    {pulling ? <Loader2 className="size-3 animate-spin" /> : i18n.t('chatbot:pull')}
+                    {pulling ? <Loader2 className="size-3 animate-spin" /> : t('pull')}
                 </Button>
             </div>
         </div>

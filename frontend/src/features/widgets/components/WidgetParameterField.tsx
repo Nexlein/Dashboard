@@ -1,5 +1,4 @@
 import { getErrorMessage } from '@/i18n/errors';
-import i18n from '@/i18n';
 import { Trans, useTranslation } from 'react-i18next';
 import { useEffect, useId, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -41,7 +40,7 @@ function normalizeCoinId(value: string) {
 }
 
 function CoinMultiSelectField({ param, value, onChange }: FieldProps) {
-    useTranslation();
+    const { t } = useTranslation('widgets');
     const selected = selectedValues(value);
     const [draft, setDraft] = useState('');
 
@@ -59,17 +58,14 @@ function CoinMultiSelectField({ param, value, onChange }: FieldProps) {
             <div className="flex items-center justify-between gap-3">
                 <Label>{param.label}</Label>
                 <span className="text-xs text-muted-foreground">
-                    {i18n.t('widgets:selectedCount', {
+                    {t('selectedCount', {
                         count: selected.length,
                         max: MAX_SELECTED_ITEMS,
                     })}
                 </span>
             </div>
             {selected.length > 0 && (
-                <div
-                    className="flex flex-wrap gap-1.5"
-                    aria-label={i18n.t('widgets:selectedCoins')}
-                >
+                <div className="flex flex-wrap gap-1.5" aria-label={t('selectedCoins')}>
                     {selected.map((coin) => (
                         <span
                             key={coin}
@@ -79,7 +75,7 @@ function CoinMultiSelectField({ param, value, onChange }: FieldProps) {
                             <button
                                 type="button"
                                 className="rounded-full p-0.5 hover:bg-primary/15"
-                                aria-label={i18n.t('widgets:removeCoin', { name: coin })}
+                                aria-label={t('removeCoin', { name: coin })}
                                 onClick={() =>
                                     onChange(selected.filter((item) => item !== coin).join(','))
                                 }
@@ -98,7 +94,7 @@ function CoinMultiSelectField({ param, value, onChange }: FieldProps) {
                 }}
             >
                 <Input
-                    aria-label={i18n.t('widgets:coinId')}
+                    aria-label={t('coinId')}
                     placeholder={param.placeholder}
                     value={draft}
                     disabled={selected.length >= MAX_SELECTED_ITEMS}
@@ -114,13 +110,13 @@ function CoinMultiSelectField({ param, value, onChange }: FieldProps) {
                     type="submit"
                     size="icon"
                     variant="outline"
-                    aria-label={i18n.t('widgets:addCoin')}
+                    aria-label={t('addCoin')}
                     disabled={!draft.trim() || selected.length >= MAX_SELECTED_ITEMS}
                 >
                     <Plus className="size-4" />
                 </Button>
             </form>
-            <div className="flex flex-wrap gap-1.5" aria-label={i18n.t('widgets:popularCoins')}>
+            <div className="flex flex-wrap gap-1.5" aria-label={t('popularCoins')}>
                 {(param.options ?? [])
                     .filter((option) => !selected.includes(option.value))
                     .slice(0, 6)
@@ -136,13 +132,13 @@ function CoinMultiSelectField({ param, value, onChange }: FieldProps) {
                         </button>
                     ))}
             </div>
-            <p className="text-xs text-muted-foreground">{i18n.t('widgets:coinHint')}</p>
+            <p className="text-xs text-muted-foreground">{t('coinHint')}</p>
         </div>
     );
 }
 
 function StockMultiSelectField({ param, value, onChange }: FieldProps) {
-    useTranslation();
+    const { t } = useTranslation('widgets');
     const maxSelected = param.type === 'stock-select' ? 1 : MAX_SELECTED_ITEMS;
     const selected = selectedValues(value).map((symbol) => symbol.toUpperCase());
     const [query, setQuery] = useState('');
@@ -194,14 +190,11 @@ function StockMultiSelectField({ param, value, onChange }: FieldProps) {
             <div className="flex items-center justify-between gap-3">
                 <Label>{param.label}</Label>
                 <span className="text-xs text-muted-foreground">
-                    {i18n.t('widgets:selectedCount', { count: selected.length, max: maxSelected })}
+                    {t('selectedCount', { count: selected.length, max: maxSelected })}
                 </span>
             </div>
             {selected.length > 0 && (
-                <div
-                    className="flex flex-wrap gap-1.5"
-                    aria-label={i18n.t('widgets:selectedStocks')}
-                >
+                <div className="flex flex-wrap gap-1.5" aria-label={t('selectedStocks')}>
                     {selected.map((symbol) => (
                         <span
                             key={symbol}
@@ -211,7 +204,7 @@ function StockMultiSelectField({ param, value, onChange }: FieldProps) {
                             <button
                                 type="button"
                                 className="rounded-full p-0.5 hover:bg-primary/15"
-                                aria-label={i18n.t('widgets:removeCoin', { name: symbol })}
+                                aria-label={t('removeCoin', { name: symbol })}
                                 onClick={() =>
                                     onChange(selected.filter((item) => item !== symbol).join(','))
                                 }
@@ -232,7 +225,7 @@ function StockMultiSelectField({ param, value, onChange }: FieldProps) {
                 <div className="relative min-w-0 flex-1">
                     <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
-                        aria-label={i18n.t('widgets:searchStocks')}
+                        aria-label={t('searchStocks')}
                         className="pl-9 pr-9"
                         placeholder={param.placeholder}
                         value={query}
@@ -255,7 +248,7 @@ function StockMultiSelectField({ param, value, onChange }: FieldProps) {
                     type="submit"
                     size="icon"
                     variant="outline"
-                    aria-label={i18n.t('widgets:addStock')}
+                    aria-label={t('addStock')}
                     disabled={!query.trim() || selected.length >= maxSelected}
                 >
                     <Plus className="size-4" />
@@ -265,7 +258,7 @@ function StockMultiSelectField({ param, value, onChange }: FieldProps) {
                 <div
                     className="max-h-44 overflow-y-auto rounded-md border bg-popover p-1"
                     role="listbox"
-                    aria-label={i18n.t('widgets:stockResults')}
+                    aria-label={t('stockResults')}
                 >
                     {results
                         .filter((result) => !selected.includes(result.symbol))
@@ -292,7 +285,7 @@ function StockMultiSelectField({ param, value, onChange }: FieldProps) {
             {Boolean(searchError) && (
                 <p className="text-xs text-destructive">{getErrorMessage(searchError)}</p>
             )}
-            <div className="flex flex-wrap gap-1.5" aria-label={i18n.t('widgets:popularStocks')}>
+            <div className="flex flex-wrap gap-1.5" aria-label={t('popularStocks')}>
                 {(param.options ?? [])
                     .filter((option) => !selected.includes(option.value))
                     .map((option) => (
@@ -313,7 +306,7 @@ function StockMultiSelectField({ param, value, onChange }: FieldProps) {
 
 /** Which connected account (e.g. which GitHub account) the widget reads from. */
 function AccountField({ param, value, onChange }: FieldProps) {
-    useTranslation();
+    const { t } = useTranslation('widgets');
     const { data: services } = useServices();
     const service = services?.find((item) => item.name === param.service);
     const accounts = service?.accounts ?? [];
@@ -349,12 +342,12 @@ function AccountField({ param, value, onChange }: FieldProps) {
             <Label htmlFor={param.id}>{param.label}</Label>
             <Select value={value || ''} onValueChange={(next) => onChange(String(next ?? ''))}>
                 <SelectTrigger id={param.id}>
-                    <SelectValue placeholder={i18n.t('widgets:chooseAccount')} />
+                    <SelectValue placeholder={t('chooseAccount')} />
                 </SelectTrigger>
                 <SelectContent>
                     {accounts.map((account) => (
                         <SelectItem key={account.id} value={String(account.id)}>
-                            {account.login ?? i18n.t('widgets:missingAccount', { id: account.id })}
+                            {account.login ?? t('missingAccount', { id: account.id })}
                         </SelectItem>
                     ))}
                 </SelectContent>
@@ -364,7 +357,7 @@ function AccountField({ param, value, onChange }: FieldProps) {
 }
 
 export function WidgetParameterField({ param, value, onChange }: FieldProps) {
-    useTranslation();
+    const { t } = useTranslation('widgets');
     const groupName = useId();
     if (param.type === 'youtube-channels')
         return (
@@ -421,9 +414,7 @@ export function WidgetParameterField({ param, value, onChange }: FieldProps) {
                 <Label htmlFor={param.id}>{param.label}</Label>
                 <Select value={value || ''} onValueChange={onChange}>
                     <SelectTrigger id={param.id}>
-                        <SelectValue
-                            placeholder={param.placeholder || i18n.t('widgets:selectOption')}
-                        />
+                        <SelectValue placeholder={param.placeholder || t('selectOption')} />
                     </SelectTrigger>
                     <SelectContent>
                         {(param.options ?? []).map((option) => (

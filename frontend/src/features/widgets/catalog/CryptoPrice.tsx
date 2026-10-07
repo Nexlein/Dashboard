@@ -1,5 +1,4 @@
 import { locale, formatNumber } from '@/i18n/format';
-import i18n from '@/i18n';
 import { useTranslation } from 'react-i18next';
 import type { WidgetViewProps } from '@/features/widgets/lib/types';
 
@@ -29,7 +28,7 @@ function formatCurrency(value: number | null, currency: string, compact = false)
 }
 
 export function CryptoPrice({ data }: WidgetViewProps<CryptoPriceData>) {
-    useTranslation();
+    const { t } = useTranslation('markets');
     const change = typeof data.change24h === 'number' ? data.change24h : null;
     const isPositive = change !== null && change >= 0;
 
@@ -63,17 +62,17 @@ export function CryptoPrice({ data }: WidgetViewProps<CryptoPriceData>) {
                 <p className="mt-2 text-3xl font-semibold tracking-tight">
                     {formatCurrency(data.price, data.currency)}
                 </p>
-                <p className="mt-1 text-xs text-muted-foreground">{i18n.t('markets:change24h')}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{t('change24h')}</p>
             </div>
             <div className="grid grid-cols-2 gap-3 border-t pt-3 text-sm">
                 <div>
-                    <p className="text-xs text-muted-foreground">{i18n.t('markets:marketCap')}</p>
+                    <p className="text-xs text-muted-foreground">{t('marketCap')}</p>
                     <p className="font-medium">
                         {formatCurrency(data.marketCap, data.currency, true)}
                     </p>
                 </div>
                 <div>
-                    <p className="text-xs text-muted-foreground">{i18n.t('markets:volume24h')}</p>
+                    <p className="text-xs text-muted-foreground">{t('volume24h')}</p>
                     <p className="font-medium">
                         {formatCurrency(data.volume24h, data.currency, true)}
                     </p>

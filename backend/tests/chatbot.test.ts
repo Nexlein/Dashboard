@@ -46,7 +46,7 @@ describe('Ollama model API', () => {
         expect(res.body).toEqual({ error: 'Failed to pull model', code: 'MODEL_PULL_FAILED' });
     });
 
-    it('keeps an unknown provider diagnostic compatible while exposing the generic code', async () => {
+    it('preserves a provider diagnostic with the explicit model-pull code', async () => {
         stubFetch().mockResolvedValue(
             Response.json({ error: 'Model not available at provider' }, { status: 404 }),
         );
@@ -57,7 +57,7 @@ describe('Ollama model API', () => {
         expect(res.status).toBe(404);
         expect(res.body).toEqual({
             error: 'Model not available at provider',
-            code: 'REQUEST_FAILED',
+            code: 'MODEL_PULL_FAILED',
         });
     });
 

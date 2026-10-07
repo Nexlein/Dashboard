@@ -1,3 +1,4 @@
+import { HttpError } from '../utils/httpError.ts';
 import { apiError } from '../utils/apiError.ts';
 import type { NextFunction, Request, Response } from 'express';
 import { fromNodeHeaders } from 'better-auth/node';
@@ -19,11 +20,14 @@ const API_ORIGIN = new URL(env.BETTER_AUTH_URL).origin;
  */
 async function requireAuth(req: Request, res: Response, next: NextFunction) {
     const session = await auth.api.getSession({ headers: fromNodeHeaders(req.headers) });
-    if (!session) return res.status(401).json({ ...apiError('Authentication required') });
+    if (!session)
+        return res
+            .status(401)
+            .json({ ...apiError('Authentication required', 'AUTHENTICATION_REQUIRED') });
 
     const origin = req.get('Origin');
     if (!SAFE_METHODS.has(req.method) && !isAllowedOrigin(origin) && origin !== API_ORIGIN) {
-        return res.status(403).json({ ...apiError('Request origin not allowed') });
+        return res.status(403).json({ ...apiError('Request origin not allowed', 'FORBIDDEN') });
     }
 
     req.user = { userId: Number(session.user.id) };
@@ -35,7 +39,7 @@ async function requireAuth(req: Request, res: Response, next: NextFunction) {
  * reads it without being behind requireAuth, instead of crashing on `undefined`.
  */
 export function authUser(req: Request): AuthPayload {
-    if (!req.user) throw Object.assign(new Error('Authentication required'), { statusCode: 401 });
+    if (!req.user) throw new HttpError('Authentication required', 401, 'AUTHENTICATION_REQUIRED');
     return req.user;
 }
 

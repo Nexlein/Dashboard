@@ -1,4 +1,3 @@
-import i18n from '@/i18n';
 import { useTranslation } from 'react-i18next';
 import { Responsive } from 'react-grid-layout/legacy';
 import { useContainerWidth } from 'react-grid-layout';
@@ -28,7 +27,7 @@ const WidgetEditDialog = lazy(() =>
 );
 
 export default function DashboardGrid() {
-    useTranslation();
+    const { t } = useTranslation(['widgets', 'common']);
     const { width, containerRef, mounted } = useContainerWidth({ measureBeforeMount: true });
     const { data: widgets = [], isLoading } = useWidgets();
     const removeMutation = useRemoveWidget();
@@ -37,8 +36,7 @@ export default function DashboardGrid() {
     const [editingWidget, setEditingWidget] = useState<DashboardWidget | null>(null);
 
     const handleDelete = (widget: DashboardWidget) => {
-        if (!window.confirm(i18n.t('widgets:deleteConfirm', { name: getWidgetTitle(widget) })))
-            return;
+        if (!window.confirm(t('widgets:deleteConfirm', { name: getWidgetTitle(widget) }))) return;
         removeMutation.mutate(widget.id);
     };
 
@@ -77,7 +75,7 @@ export default function DashboardGrid() {
                                             render={
                                                 <Button
                                                     type="button"
-                                                    aria-label={i18n.t('widgets:configure', {
+                                                    aria-label={t('widgets:configure', {
                                                         name: getWidgetTitle(widget),
                                                     })}
                                                     variant="ghost"
@@ -101,7 +99,7 @@ export default function DashboardGrid() {
                                                 onClick={() => setEditingWidget(widget)}
                                             >
                                                 <Edit2 className="mr-2 h-4 w-4" />
-                                                {i18n.t('common:edit')}
+                                                {t('common:edit')}
                                             </DropdownMenuItem>
                                             <DropdownMenuItem
                                                 variant="destructive"
@@ -109,7 +107,7 @@ export default function DashboardGrid() {
                                                 onClick={() => handleDelete(widget)}
                                             >
                                                 <Trash2 className="mr-2 h-4 w-4" />
-                                                {i18n.t('common:delete')}
+                                                {t('common:delete')}
                                             </DropdownMenuItem>
                                         </DropdownMenuContent>
                                     </DropdownMenu>

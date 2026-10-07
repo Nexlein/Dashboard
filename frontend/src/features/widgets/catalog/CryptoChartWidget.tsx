@@ -157,7 +157,7 @@ export function CryptoChartWidget({
     onPeriodChange,
     periodUpdating,
 }: WidgetViewProps<CryptoChartData>) {
-    useTranslation();
+    const { t } = useTranslation('markets');
     const [hiddenCoins, setHiddenCoins] = useState(() => new Set<string>());
     const activePeriod =
         String(selectedPeriod ?? data.days) === 'max' ? '365' : String(selectedPeriod ?? data.days);
@@ -280,7 +280,7 @@ export function CryptoChartWidget({
                 <div className="flex items-center">
                     <div
                         className="flex items-center rounded-md bg-muted p-0.5"
-                        aria-label={i18n.t('markets:chartPeriod')}
+                        aria-label={t('chartPeriod')}
                     >
                         {PERIODS.map((period) => {
                             const active = activePeriod === period.value;
@@ -310,7 +310,7 @@ export function CryptoChartWidget({
                     viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
                     className="h-full min-h-32 w-full"
                     role="img"
-                    aria-label={i18n.t('markets:cryptoChart')}
+                    aria-label={t('cryptoChart')}
                 >
                     {yTicks.map((tick) => {
                         const y =
@@ -375,7 +375,7 @@ export function CryptoChartWidget({
                             textAnchor="middle"
                             className="fill-muted-foreground text-sm"
                         >
-                            {i18n.t('markets:selectMarket')}
+                            {t('selectMarket')}
                         </text>
                     )}
                 </svg>

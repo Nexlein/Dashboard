@@ -1,3 +1,4 @@
+import type { ApiErrorCode } from 'shared';
 import commonEn from './locales/en/common.json';
 import commonFr from './locales/fr/common.json';
 import accountEn from './locales/en/account.json';
@@ -40,7 +41,7 @@ export const resources = {
         youtube: youtubeEn,
         weather: weatherEn,
         legal: legalEn,
-        errors: errorsEn,
+        errors: errorsEn satisfies Record<ApiErrorCode, string>,
     },
     fr: {
         common: commonFr,
@@ -55,6 +56,6 @@ export const resources = {
         youtube: youtubeFr,
         weather: weatherFr,
         legal: legalFr,
-        errors: errorsFr,
+        errors: errorsFr satisfies Record<ApiErrorCode, string>,
     },
 } as const;

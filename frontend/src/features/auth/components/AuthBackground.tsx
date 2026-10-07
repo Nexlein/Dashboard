@@ -1,11 +1,10 @@
 import { formatNumber } from '@/i18n/format';
-import i18n from '@/i18n';
 import { useTranslation } from 'react-i18next';
 import { Activity, BarChart3, CheckCircle2, CloudSun, LayoutDashboard, Plus } from 'lucide-react';
 import { Github } from '@/components/ui/Github';
 
 export function AuthBackground() {
-    useTranslation();
+    const { t } = useTranslation(['widgets', 'auth']);
     return (
         <div
             aria-hidden="true"
@@ -25,13 +24,13 @@ export function AuthBackground() {
                     <div className="ml-auto flex items-center gap-3">
                         <div className="flex h-10 items-center gap-2 rounded-xl bg-slate-900 px-4 text-sm font-medium text-white shadow-lg shadow-slate-900/10">
                             <Plus className="size-4" />
-                            {i18n.t('widgets:add')}
+                            {t('widgets:add')}
                         </div>
                         <div className="flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-600">
                             <span className="flex size-6 items-center justify-center rounded-lg bg-slate-900 text-[10px] font-semibold text-white">
                                 U
                             </span>
-                            {i18n.t('auth:mySpace')}
+                            {t('auth:mySpace')}
                         </div>
                     </div>
                 </div>
@@ -41,7 +40,7 @@ export function AuthBackground() {
                         <div className="flex items-start justify-between">
                             <div>
                                 <p className="text-sm font-medium text-slate-500">
-                                    {i18n.t('auth:overview')}
+                                    {t('auth:overview')}
                                 </p>
                                 <p className="mt-1 text-3xl font-semibold tracking-tight text-slate-900">
                                     {formatNumber(12480)}
@@ -69,10 +68,10 @@ export function AuthBackground() {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-slate-500">
-                                    {i18n.t('auth:weather')}
+                                    {t('auth:weather')}
                                 </p>
                                 <p className="mt-1 text-lg font-semibold text-slate-900">
-                                    {i18n.t('auth:today')}
+                                    {t('auth:today')}
                                 </p>
                             </div>
                             <CloudSun className="size-9 text-amber-500" />
@@ -81,9 +80,7 @@ export function AuthBackground() {
                             <span className="text-6xl font-semibold tracking-tighter text-slate-900">
                                 21°
                             </span>
-                            <span className="mb-2 text-sm text-slate-500">
-                                {i18n.t('auth:sunny')}
-                            </span>
+                            <span className="mb-2 text-sm text-slate-500">{t('auth:sunny')}</span>
                         </div>
                         <div className="mt-7 h-2 overflow-hidden rounded-full bg-slate-100">
                             <div className="auth-shimmer h-full w-3/4 rounded-full bg-linear-to-r from-amber-300 to-orange-400" />
@@ -97,22 +94,18 @@ export function AuthBackground() {
                             </div>
                             <div>
                                 <p className="font-semibold text-slate-900">GitHub</p>
-                                <p className="text-xs text-slate-500">
-                                    {i18n.t('auth:recentActivity')}
-                                </p>
+                                <p className="text-xs text-slate-500">{t('auth:recentActivity')}</p>
                             </div>
                         </div>
                         <div className="mt-6 space-y-4">
                             <div className="flex items-center gap-3">
                                 <CheckCircle2 className="size-4 text-green-500" />
-                                <span className="text-sm text-slate-600">
-                                    {i18n.t('auth:pipeline')}
-                                </span>
+                                <span className="text-sm text-slate-600">{t('auth:pipeline')}</span>
                             </div>
                             <div className="flex items-center gap-3">
                                 <CheckCircle2 className="size-4 text-green-500" />
                                 <span className="text-sm text-slate-600">
-                                    {i18n.t('auth:unitTests')}
+                                    {t('auth:unitTests')}
                                 </span>
                             </div>
                         </div>
@@ -125,11 +118,9 @@ export function AuthBackground() {
                             </div>
                             <div>
                                 <p className="font-semibold text-slate-900">
-                                    {i18n.t('auth:performance')}
+                                    {t('auth:performance')}
                                 </p>
-                                <p className="text-xs text-slate-500">
-                                    {i18n.t('auth:responseTime')}
-                                </p>
+                                <p className="text-xs text-slate-500">{t('auth:responseTime')}</p>
                             </div>
                         </div>
                         <div className="mt-6 flex items-end gap-2">
@@ -137,7 +128,7 @@ export function AuthBackground() {
                             <span className="mb-1 text-sm font-medium text-slate-500">ms</span>
                         </div>
                         <p className="mt-2 text-xs font-medium text-green-600">
-                            {i18n.t('auth:fasterYesterday')}
+                            {t('auth:fasterYesterday')}
                         </p>
                     </div>
 
@@ -149,11 +140,11 @@ export function AuthBackground() {
                                     <span className="relative inline-flex size-3 rounded-full bg-emerald-500"></span>
                                 </span>
                                 <span className="text-sm font-medium text-slate-700">
-                                    {i18n.t('auth:operational')}
+                                    {t('auth:operational')}
                                 </span>
                             </div>
                             <p className="mt-2 text-sm text-slate-500">
-                                {i18n.t('auth:operationalHint')}
+                                {t('auth:operationalHint')}
                             </p>
                         </div>
                     </div>

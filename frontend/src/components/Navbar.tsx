@@ -1,7 +1,6 @@
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { notice, getErrorMessage } from '@/i18n/errors';
-import i18n from '@/i18n';
 import { useTranslation } from 'react-i18next';
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
@@ -50,13 +49,13 @@ export default function Navbar({
     onLogout: () => void;
     showWidgetConfigurator?: boolean;
 }) {
-    useTranslation();
+    const { t } = useTranslation(['common', 'widgets']);
     const { theme } = useTheme();
     const [profileOpen, setProfileOpen] = useState(false);
     const [configuratorLoaded, setConfiguratorLoaded] = useState(false);
     const [privacyError, setPrivacyError] = useState<unknown>('');
     const [privacyBusy, setPrivacyBusy] = useState(false);
-    const accountLabel = user?.name || user?.email || i18n.t('common:account');
+    const accountLabel = user?.name || user?.email || t('common:account');
     const initial = accountLabel.charAt(0).toUpperCase();
 
     useEffect(() => {
@@ -94,7 +93,7 @@ export default function Navbar({
     }
 
     async function deleteAccount() {
-        if (!window.confirm(i18n.t('common:deleteConfirmation'))) return;
+        if (!window.confirm(t('common:deleteConfirmation'))) return;
         setPrivacyError('');
         setPrivacyBusy(true);
         try {
@@ -116,7 +115,7 @@ export default function Navbar({
             <div className="flex items-center gap-1">
                 <NavLink
                     to="/"
-                    aria-label={i18n.t('common:dashboard')}
+                    aria-label={t('common:dashboard')}
                     end
                     className={({ isActive }) =>
                         `flex h-10 items-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors ${
@@ -127,11 +126,11 @@ export default function Navbar({
                     }
                 >
                     <LayoutDashboard className="size-4" />
-                    <span className="hidden sm:inline">{i18n.t('common:dashboard')}</span>
+                    <span className="hidden sm:inline">{t('common:dashboard')}</span>
                 </NavLink>
                 <NavLink
                     to="/services"
-                    aria-label={i18n.t('common:services')}
+                    aria-label={t('common:services')}
                     className={({ isActive }) =>
                         `flex h-10 items-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors ${
                             isActive
@@ -141,12 +140,12 @@ export default function Navbar({
                     }
                 >
                     <Plug className="size-4" />
-                    <span className="hidden sm:inline">{i18n.t('common:services')}</span>
+                    <span className="hidden sm:inline">{t('common:services')}</span>
                 </NavLink>
                 {user?.role === 'admin' && (
                     <NavLink
                         to="/admin"
-                        aria-label={i18n.t('common:administration')}
+                        aria-label={t('common:administration')}
                         className={({ isActive }) =>
                             `flex h-10 items-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors ${
                                 isActive
@@ -156,7 +155,7 @@ export default function Navbar({
                         }
                     >
                         <ShieldCheck className="size-4" />
-                        <span className="hidden sm:inline">{i18n.t('common:administration')}</span>
+                        <span className="hidden sm:inline">{t('common:administration')}</span>
                     </NavLink>
                 )}
             </div>
@@ -165,7 +164,7 @@ export default function Navbar({
                     <Suspense
                         fallback={
                             <Button disabled aria-busy="true" className="h-11 rounded-xl px-3">
-                                {i18n.t('widgets:add')}
+                                {t('widgets:add')}
                             </Button>
                         }
                     >
@@ -176,7 +175,7 @@ export default function Navbar({
                                 className="h-11 rounded-xl px-3"
                                 onClick={() => setConfiguratorLoaded(true)}
                             >
-                                {i18n.t('widgets:add')}
+                                {t('widgets:add')}
                             </Button>
                         )}
                     </Suspense>
@@ -189,7 +188,7 @@ export default function Navbar({
                             <Button
                                 variant="outline"
                                 className="h-11 min-w-0 gap-2 rounded-xl px-2.5 sm:px-3"
-                                aria-label={i18n.t('common:accountMenu', { name: accountLabel })}
+                                aria-label={t('common:accountMenu', { name: accountLabel })}
                             />
                         }
                     >
@@ -226,19 +225,19 @@ export default function Navbar({
                             onClick={() => setProfileOpen(true)}
                         >
                             <UserRound className="mr-2 size-4" />
-                            {i18n.t('common:editProfile')}
+                            {t('common:editProfile')}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuGroup>
                             <DropdownMenuLabel className="px-2 pt-2">
-                                {i18n.t('common:dataPrivacy')}
+                                {t('common:dataPrivacy')}
                             </DropdownMenuLabel>
                             <DropdownMenuItem
                                 className="min-h-9 px-2"
                                 render={<NavLink to="/privacy" />}
                             >
                                 <Shield className="mr-2 size-4" />
-                                {i18n.t('common:privacyPolicy')}
+                                {t('common:privacyPolicy')}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                                 className="min-h-9 px-2 cursor-pointer"
@@ -246,7 +245,7 @@ export default function Navbar({
                                 onClick={downloadData}
                             >
                                 <Download className="mr-2 size-4" />
-                                {i18n.t('common:downloadData')}
+                                {t('common:downloadData')}
                             </DropdownMenuItem>
                         </DropdownMenuGroup>
                         <DropdownMenuSeparator />
@@ -257,7 +256,7 @@ export default function Navbar({
                             onClick={deleteAccount}
                         >
                             <Trash2 className="mr-2 size-4" />
-                            {i18n.t('common:deleteAccount')}
+                            {t('common:deleteAccount')}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                             variant="destructive"
@@ -265,7 +264,7 @@ export default function Navbar({
                             onClick={onLogout}
                         >
                             <LogOut className="mr-2 size-4" />
-                            {i18n.t('common:signOut')}
+                            {t('common:signOut')}
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>

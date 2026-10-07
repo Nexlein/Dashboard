@@ -1,5 +1,4 @@
 import { getErrorMessage, notice } from '@/i18n/errors';
-import i18n from '@/i18n';
 import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
@@ -13,7 +12,7 @@ import type { ServiceConnection } from '@/features/services/lib/services';
 import { ServiceCard } from '@/features/services/components/ServiceCard';
 
 export default function ServicesPage() {
-    useTranslation();
+    const { t } = useTranslation(['common', 'services']);
     const linkError = new URLSearchParams(useLocation().search).get('error');
     const [error, setError] = useState<unknown>(
         linkError
@@ -53,10 +52,8 @@ export default function ServicesPage() {
     return (
         <main className="mx-auto w-full max-w-5xl p-4 sm:p-8">
             <div className="mb-8">
-                <h1 className="text-3xl font-semibold tracking-tight">
-                    {i18n.t('common:services')}
-                </h1>
-                <p className="mt-2 text-muted-foreground">{i18n.t('services:subtitle')}</p>
+                <h1 className="text-3xl font-semibold tracking-tight">{t('common:services')}</h1>
+                <p className="mt-2 text-muted-foreground">{t('services:subtitle')}</p>
             </div>
 
             {(Boolean(error) || isError) && (

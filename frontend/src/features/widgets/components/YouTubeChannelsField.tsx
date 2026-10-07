@@ -1,8 +1,7 @@
-import i18n from '@/i18n';
 import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { Plus, X } from 'lucide-react';
-import { youtubeChannels } from 'shared/youtube';
+import { youtubeChannels } from 'shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,7 +17,7 @@ export function YouTubeChannelsField({
     value: string;
     onChange: (value: string) => void;
 }) {
-    useTranslation();
+    const { t } = useTranslation('widgets');
     const selected = value
         .split(/[\n,]+/)
         .map((item) => item.trim())
@@ -41,7 +40,7 @@ export function YouTubeChannelsField({
                 <Label htmlFor={id}>{label}</Label>
                 <span className="text-xs text-muted-foreground">{selected.length}/5</span>
             </div>
-            <div className="flex flex-wrap gap-1.5" aria-label={i18n.t('widgets:selectedChannels')}>
+            <div className="flex flex-wrap gap-1.5" aria-label={t('selectedChannels')}>
                 {selected.map((channel) => (
                     <span
                         key={channel}
@@ -50,7 +49,7 @@ export function YouTubeChannelsField({
                         <span className="truncate">{channel}</span>
                         <button
                             type="button"
-                            aria-label={i18n.t('widgets:removeCoin', { name: channel })}
+                            aria-label={t('removeCoin', { name: channel })}
                             className="shrink-0 cursor-pointer rounded-full p-1 hover:bg-red-500/20"
                             onClick={() => {
                                 onChange(selected.filter((item) => item !== channel).join('\n'));
@@ -85,7 +84,7 @@ export function YouTubeChannelsField({
                     type="button"
                     variant="outline"
                     size="icon"
-                    aria-label={i18n.t('widgets:addChannel')}
+                    aria-label={t('addChannel')}
                     disabled={!draft.trim() || selected.length >= 5}
                     onClick={add}
                 >
@@ -93,11 +92,11 @@ export function YouTubeChannelsField({
                 </Button>
             </div>
             <p id={`${id}-help`} className="text-xs text-muted-foreground">
-                {i18n.t('widgets:channelHint')}
+                {t('channelHint')}
             </p>
             {error && (
                 <p id={`${id}-error`} role="alert" className="text-xs text-destructive">
-                    {i18n.t('widgets:channelInvalid')}
+                    {t('channelInvalid')}
                 </p>
             )}
         </div>

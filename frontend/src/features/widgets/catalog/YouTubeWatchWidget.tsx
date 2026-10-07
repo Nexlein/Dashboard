@@ -1,6 +1,5 @@
 import { formatDate, formatNumber } from '@/i18n/format';
 import { getErrorMessage } from '@/i18n/errors';
-import i18n from '@/i18n';
 import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { useIsFetching, useQueryClient } from '@tanstack/react-query';
@@ -25,7 +24,7 @@ export type YouTubeWatchData = {
 };
 
 export function YouTubeWatchWidget({ data, widget }: WidgetViewProps<YouTubeWatchData>) {
-    useTranslation();
+    const { t } = useTranslation('youtube');
     const queryClient = useQueryClient();
     const [filter, setFilter] = useState('all');
     const storageKey = `${YOUTUBE_WATCH_HISTORY_PREFIX}${widget.id}`;
@@ -84,13 +83,13 @@ export function YouTubeWatchWidget({ data, widget }: WidgetViewProps<YouTubeWatc
             <div className="flex shrink-0 items-center justify-between gap-2">
                 <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
                     <Radio className="size-4 text-red-500" aria-hidden="true" />
-                    {i18n.t('youtube:channelWatch')}
+                    {t('channelWatch')}
                 </div>
                 <div className="flex items-center gap-2">
                     <button
                         type="button"
-                        aria-label={i18n.t('youtube:markVisible')}
-                        title={i18n.t('youtube:markSeen')}
+                        aria-label={t('markVisible')}
+                        title={t('markSeen')}
                         disabled={!visible.some((video) => !seen.includes(video.id))}
                         onClick={() => markSeen(visible.map((video) => video.id))}
                         className="cursor-pointer rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-40"
@@ -99,8 +98,8 @@ export function YouTubeWatchWidget({ data, widget }: WidgetViewProps<YouTubeWatc
                     </button>
                     <button
                         type="button"
-                        aria-label={i18n.t('youtube:refreshPublications')}
-                        title={i18n.t('youtube:refresh')}
+                        aria-label={t('refreshPublications')}
+                        title={t('refresh')}
                         disabled={busy}
                         onClick={refresh}
                         className="cursor-pointer rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-40"
@@ -111,25 +110,23 @@ export function YouTubeWatchWidget({ data, widget }: WidgetViewProps<YouTubeWatc
             </div>
             <div
                 className="flex shrink-0 gap-1.5 overflow-x-auto pb-1"
-                aria-label={i18n.t('youtube:filterChannels')}
+                aria-label={t('filterChannels')}
             >
-                {[{ id: 'all', title: i18n.t('youtube:allChannels') }, ...data.channels].map(
-                    (channel) => (
-                        <button
-                            key={channel.id}
-                            type="button"
-                            aria-pressed={activeFilter === channel.id}
-                            onClick={() => setFilter(channel.id)}
-                            className={`shrink-0 cursor-pointer rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${activeFilter === channel.id ? 'bg-red-500/10 text-red-700 dark:text-red-400' : 'bg-muted text-muted-foreground hover:text-foreground'}`}
-                        >
-                            {channel.title}
-                        </button>
-                    ),
-                )}
+                {[{ id: 'all', title: t('allChannels') }, ...data.channels].map((channel) => (
+                    <button
+                        key={channel.id}
+                        type="button"
+                        aria-pressed={activeFilter === channel.id}
+                        onClick={() => setFilter(channel.id)}
+                        className={`shrink-0 cursor-pointer rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${activeFilter === channel.id ? 'bg-red-500/10 text-red-700 dark:text-red-400' : 'bg-muted text-muted-foreground hover:text-foreground'}`}
+                    >
+                        {channel.title}
+                    </button>
+                ))}
             </div>
             {Boolean(refreshError) && (
                 <p role="alert" className="shrink-0 text-xs text-destructive">
-                    {getErrorMessage(refreshError)} {i18n.t('youtube:savedPublications')}
+                    {getErrorMessage(refreshError)} {t('savedPublications')}
                 </p>
             )}
             {!!data.warnings.length && (
@@ -147,9 +144,7 @@ export function YouTubeWatchWidget({ data, widget }: WidgetViewProps<YouTubeWatc
             <div className="min-h-0 flex-1 overflow-y-auto pr-1">
                 {!visible.length && (
                     <div className="flex h-full items-center justify-center p-4 text-center text-sm text-muted-foreground">
-                        {data.channels.length
-                            ? i18n.t('youtube:noPublications')
-                            : i18n.t('youtube:channelsUnavailable')}
+                        {data.channels.length ? t('noPublications') : t('channelsUnavailable')}
                     </div>
                 )}
                 <div className="flex flex-col gap-3">
@@ -171,7 +166,7 @@ export function YouTubeWatchWidget({ data, widget }: WidgetViewProps<YouTubeWatc
                                 />
                                 {!seen.includes(video.id) && (
                                     <span className="absolute left-1.5 top-1.5 rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
-                                        {i18n.t('youtube:new')}
+                                        {t('new')}
                                     </span>
                                 )}
                             </div>
@@ -201,13 +196,13 @@ export function YouTubeWatchWidget({ data, widget }: WidgetViewProps<YouTubeWatc
                 </div>
             </div>
             <p className="shrink-0 border-t pt-2 text-[10px] text-muted-foreground">
-                {i18n.t('youtube:updates', {
+                {t('updates', {
                     duration:
                         widget.refreshRate % 60 === 0
                             ? `${formatNumber(widget.refreshRate / 60)} min`
                             : `${formatNumber(widget.refreshRate)} s`,
                 })}{' '}
-                · {i18n.t('youtube:channels', { count: data.channels.length })}
+                · {t('channels', { count: data.channels.length })}
             </p>
         </div>
     );

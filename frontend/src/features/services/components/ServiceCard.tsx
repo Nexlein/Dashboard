@@ -1,5 +1,4 @@
 import { formatDate } from '@/i18n/format';
-import i18n from '@/i18n';
 import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { CheckCircle2, ExternalLink, KeyRound, Loader2, Unplug } from 'lucide-react';
@@ -19,7 +18,7 @@ interface ServiceCardProps {
 }
 
 export function ServiceCard({ service, onConnect, onDisconnect, setError }: ServiceCardProps) {
-    useTranslation();
+    const { t } = useTranslation('services');
     const [apiKey, setApiKey] = useState('');
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -42,8 +41,7 @@ export function ServiceCard({ service, onConnect, onDisconnect, setError }: Serv
     };
 
     const handleDisconnectClick = async () => {
-        if (!window.confirm(i18n.t('services:disconnectConfirm', { service: service.displayName })))
-            return;
+        if (!window.confirm(t('disconnectConfirm', { service: service.displayName }))) return;
         setIsSaving(true);
         try {
             await onDisconnect(service.name);
@@ -65,23 +63,23 @@ export function ServiceCard({ service, onConnect, onDisconnect, setError }: Serv
                         <p className="mt-1 text-sm text-muted-foreground">
                             {isOAuth
                                 ? service.accounts?.length
-                                    ? i18n.t('services:connectedAccounts', {
+                                    ? t('connectedAccounts', {
                                           count: service.accounts.length,
                                       })
-                                    : i18n.t('services:githubDescription')
+                                    : t('githubDescription')
                                 : service.verifiedAt
-                                  ? i18n.t('services:connectedOn', {
+                                  ? t('connectedOn', {
                                         date: formatDate(new Date(service.verifiedAt), {
                                             dateStyle: 'medium',
                                         }),
                                     })
                                   : service.name === 'crypto'
-                                    ? i18n.t('services:cryptoDescription')
+                                    ? t('cryptoDescription')
                                     : service.name === 'stocks'
-                                      ? i18n.t('services:stocksDescription')
+                                      ? t('stocksDescription')
                                       : service.name === 'weather'
-                                        ? i18n.t('services:weatherDescription')
-                                        : i18n.t('services:otherDescription')}
+                                        ? t('weatherDescription')
+                                        : t('otherDescription')}
                         </p>
                     </div>
                 </div>
@@ -92,9 +90,7 @@ export function ServiceCard({ service, onConnect, onDisconnect, setError }: Serv
                             : 'bg-muted text-muted-foreground'
                     }`}
                 >
-                    {service.connected
-                        ? i18n.t('services:connected')
-                        : i18n.t('services:notConnected')}
+                    {service.connected ? t('connected') : t('notConnected')}
                 </span>
             </CardHeader>
             <CardContent className="space-y-4 p-5">
@@ -104,9 +100,9 @@ export function ServiceCard({ service, onConnect, onDisconnect, setError }: Serv
                     <div className="flex items-center gap-3 rounded-lg bg-muted/60 p-3">
                         <CheckCircle2 className="size-5 text-emerald-500" />
                         <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium">{i18n.t('services:keyVerified')}</p>
+                            <p className="text-sm font-medium">{t('keyVerified')}</p>
                             <p className="text-xs text-muted-foreground">
-                                {i18n.t('services:keyHint', { hint: service.keyHint })}
+                                {t('keyHint', { hint: service.keyHint })}
                             </p>
                         </div>
                     </div>
@@ -116,15 +112,15 @@ export function ServiceCard({ service, onConnect, onDisconnect, setError }: Serv
                     <div className="space-y-2">
                         <Label htmlFor={`${service.name}-api-key`}>
                             {service.name === 'crypto'
-                                ? i18n.t('services:cryptoApiKey')
-                                : i18n.t('services:providerKey', { service: service.displayName })}
+                                ? t('cryptoApiKey')
+                                : t('providerKey', { service: service.displayName })}
                         </Label>
                         <div className="flex gap-2">
                             <Input
                                 id={`${service.name}-api-key`}
                                 type="password"
                                 autoComplete="off"
-                                placeholder={i18n.t('services:apiKeyPlaceholder')}
+                                placeholder={t('apiKeyPlaceholder')}
                                 value={apiKey}
                                 onChange={(event) => setApiKey(event.target.value)}
                             />
@@ -133,21 +129,17 @@ export function ServiceCard({ service, onConnect, onDisconnect, setError }: Serv
                                 disabled={isSaving || !apiKey.trim()}
                             >
                                 {isSaving ? <Loader2 className="animate-spin" /> : <KeyRound />}
-                                {service.connected
-                                    ? i18n.t('services:replace')
-                                    : i18n.t('services:connect')}
+                                {service.connected ? t('replace') : t('connect')}
                             </Button>
                         </div>
-                        <p className="text-xs text-muted-foreground">
-                            {i18n.t('services:keySecurity')}
-                        </p>
+                        <p className="text-xs text-muted-foreground">{t('keySecurity')}</p>
                     </div>
                 )}
 
                 <div className="flex flex-wrap items-center gap-2">
                     {service.connected && !showForm && !isOAuth && (
                         <Button variant="outline" onClick={() => setIsEditing(true)}>
-                            {i18n.t('services:replaceKey')}
+                            {t('replaceKey')}
                         </Button>
                     )}
                     {service.connected && !isOAuth && (
@@ -158,7 +150,7 @@ export function ServiceCard({ service, onConnect, onDisconnect, setError }: Serv
                             onClick={handleDisconnectClick}
                         >
                             <Unplug />
-                            {i18n.t('services:disconnect')}
+                            {t('disconnect')}
                         </Button>
                     )}
                     {service.documentationUrl && (
@@ -173,7 +165,7 @@ export function ServiceCard({ service, onConnect, onDisconnect, setError }: Serv
                                 />
                             }
                         >
-                            {i18n.t('services:getKey')}
+                            {t('getKey')}
                             <ExternalLink />
                         </Button>
                     )}

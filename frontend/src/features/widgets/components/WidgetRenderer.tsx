@@ -1,6 +1,5 @@
 import { getErrorMessage } from '@/i18n/errors';
 import { formatNumber, formatPeriod } from '@/i18n/format';
-import i18n from '@/i18n';
 import { useTranslation } from 'react-i18next';
 import { Suspense, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -23,7 +22,7 @@ function WidgetLoading() {
 }
 
 export default function WidgetRenderer({ widget }: { widget: DashboardWidget }) {
-    useTranslation();
+    const { t } = useTranslation('widgets');
     const { id, serviceName, widgetName, refreshRate } = widget;
     const updateWidgetMutation = useUpdateWidget();
     const queryClient = useQueryClient();
@@ -102,7 +101,7 @@ export default function WidgetRenderer({ widget }: { widget: DashboardWidget }) 
     if (!serviceDef || !widgetDef) {
         return (
             <div className="flex h-full items-center justify-center text-center text-sm text-muted-foreground">
-                {i18n.t('widgets:unimplemented')}
+                {t('unimplemented')}
             </div>
         );
     }
@@ -131,10 +130,10 @@ export default function WidgetRenderer({ widget }: { widget: DashboardWidget }) 
                 role="status"
             >
                 <Loader2 className="size-5 animate-spin text-muted-foreground" />
-                <p className="text-sm font-medium">{i18n.t('widgets:loadingProgressively')}</p>
+                <p className="text-sm font-medium">{t('loadingProgressively')}</p>
                 <p className="text-xs text-muted-foreground">{error}</p>
                 <p className="text-xs text-muted-foreground">
-                    {i18n.t('widgets:automaticRetry', { seconds: formatNumber(retryAfter) })}
+                    {t('automaticRetry', { seconds: formatNumber(retryAfter) })}
                 </p>
             </div>
         );
@@ -154,7 +153,7 @@ export default function WidgetRenderer({ widget }: { widget: DashboardWidget }) 
         return (
             <div className="flex flex-col items-center justify-center h-full p-4 text-center">
                 <p className="text-destructive text-sm font-medium">
-                    {i18n.t('widgets:loadingError', { name: widgetDef.name })}
+                    {t('loadingError', { name: widgetDef.name })}
                 </p>
                 <p className="text-muted-foreground text-xs mt-1">{error}</p>
                 {needsServiceConnection && (
@@ -162,7 +161,7 @@ export default function WidgetRenderer({ widget }: { widget: DashboardWidget }) 
                         href="/services"
                         className="mt-3 text-sm font-medium text-primary underline-offset-4 hover:underline"
                     >
-                        {i18n.t('widgets:openServices')}
+                        {t('openServices')}
                     </a>
                 )}
             </div>
@@ -177,7 +176,7 @@ export default function WidgetRenderer({ widget }: { widget: DashboardWidget }) 
         <div className="flex h-full min-h-0 w-full flex-col gap-2">
             {queryError && displayData && !quotaLimited && (
                 <p role="alert" className="shrink-0 text-xs text-destructive">
-                    {i18n.t('widgets:staleData', { error })}
+                    {t('staleData', { error })}
                 </p>
             )}
             {pendingPeriod && (
@@ -186,11 +185,11 @@ export default function WidgetRenderer({ widget }: { widget: DashboardWidget }) 
                     role="status"
                 >
                     {retryAfter
-                        ? i18n.t('widgets:waitingCredits', { seconds: formatNumber(retryAfter) })
+                        ? t('waitingCredits', { seconds: formatNumber(retryAfter) })
                         : queryError
-                          ? i18n.t('widgets:refreshUnavailable', { error })
-                          : i18n.t('widgets:loadingPeriod')}{' '}
-                    {i18n.t('widgets:savedPeriod', {
+                          ? t('refreshUnavailable', { error })
+                          : t('loadingPeriod')}{' '}
+                    {t('savedPeriod', {
                         period: formatPeriod(
                             String((displayData as { period?: string }).period ?? ''),
                         ),

@@ -19,8 +19,8 @@ beforeEach(() => {
 });
 
 describe('errorHandler', () => {
-    it('infers a stable code for a known HttpError while preserving its status and message', () => {
-        expect(respond(new HttpError('City not found', 404))).toEqual({
+    it('returns the explicit HttpError code while preserving its status and message', () => {
+        expect(respond(new HttpError('City not found', 404, 'CITY_NOT_FOUND'))).toEqual({
             status: 404,
             body: { error: 'City not found', code: 'CITY_NOT_FOUND' },
         });

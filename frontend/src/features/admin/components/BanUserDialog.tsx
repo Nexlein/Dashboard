@@ -59,7 +59,7 @@ export function BanUserDialog({
     onCancel: () => void;
     onBan: (reason: string, expiresInDays?: number) => Promise<void>;
 }) {
-    useTranslation();
+    const { t } = useTranslation(['admin', 'common']);
     const [reason, setReason] = useState('');
     const [duration, setDuration] = useState('7');
     const [error, setError] = useState<unknown>('');
@@ -83,22 +83,22 @@ export function BanUserDialog({
                 <form onSubmit={handleSubmit} className="grid gap-4">
                     <DialogHeader>
                         <DialogTitle>
-                            {i18n.t('admin:banTitle', { name: user.name || user.email })}
+                            {t('admin:banTitle', { name: user.name || user.email })}
                         </DialogTitle>
-                        <DialogDescription>{i18n.t('admin:banHint')}</DialogDescription>
+                        <DialogDescription>{t('admin:banHint')}</DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-2">
-                        <Label htmlFor="ban-reason">{i18n.t('admin:reason')}</Label>
+                        <Label htmlFor="ban-reason">{t('admin:reason')}</Label>
                         <Input
                             id="ban-reason"
                             value={reason}
                             maxLength={200}
-                            placeholder={i18n.t('admin:reasonPlaceholder')}
+                            placeholder={t('admin:reasonPlaceholder')}
                             onChange={(event) => setReason(event.target.value)}
                         />
                     </div>
                     <div className="grid gap-2">
-                        <Label htmlFor="ban-duration">{i18n.t('admin:duration')}</Label>
+                        <Label htmlFor="ban-duration">{t('admin:duration')}</Label>
                         <Select value={duration} onValueChange={setDuration}>
                             <SelectTrigger id="ban-duration">
                                 <SelectValue />
@@ -119,10 +119,10 @@ export function BanUserDialog({
                     )}
                     <DialogFooter>
                         <Button type="button" variant="outline" onClick={onCancel}>
-                            {i18n.t('common:cancel')}
+                            {t('common:cancel')}
                         </Button>
                         <Button type="submit" variant="destructive" disabled={busy}>
-                            {busy ? i18n.t('admin:banning') : i18n.t('admin:ban')}
+                            {busy ? t('admin:banning') : t('admin:ban')}
                         </Button>
                     </DialogFooter>
                 </form>

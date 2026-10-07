@@ -1,4 +1,3 @@
-import i18n from '@/i18n';
 import { formatDate, formatNumber } from '@/i18n/format';
 import { weatherDescription } from '@/i18n/weather';
 import { useTranslation } from 'react-i18next';
@@ -42,8 +41,8 @@ function WeatherIcon({ code, description }: { code: string; description: string 
 }
 
 export function CurrentWeather({ data }: WidgetViewProps<CurrentWeatherData>) {
-    useTranslation();
-    const description = weatherDescription(data.conditionCode, data.icon);
+    const { t } = useTranslation('weather');
+    const description = weatherDescription(data.conditionCode, data.icon, t);
     return (
         <div
             className="flex h-full w-full flex-col justify-between gap-3"
@@ -62,9 +61,7 @@ export function CurrentWeather({ data }: WidgetViewProps<CurrentWeatherData>) {
                 <WeatherIcon code={data.icon} description={description} />
             </div>
             <div className="grid grid-cols-3 gap-2 text-xs text-muted-foreground">
-                <span>
-                    {i18n.t('weather:feelsLike', { temperature: formatNumber(data.feelsLike) })}
-                </span>
+                <span>{t('feelsLike', { temperature: formatNumber(data.feelsLike) })}</span>
                 <span className="flex items-center gap-1">
                     <Droplets className="h-3 w-3" />
                     {formatNumber(data.humidity)}%
@@ -79,7 +76,7 @@ export function CurrentWeather({ data }: WidgetViewProps<CurrentWeatherData>) {
 }
 
 export function Forecast({ data }: WidgetViewProps<ForecastData>) {
-    useTranslation();
+    const { t } = useTranslation('weather');
     return (
         <div className="h-full w-full" data-testid="weather-forecast">
             <p className="mb-3 text-sm text-muted-foreground">
@@ -96,7 +93,7 @@ export function Forecast({ data }: WidgetViewProps<ForecastData>) {
                         </span>
                         <WeatherIcon
                             code={day.icon}
-                            description={weatherDescription(day.conditionCode, day.icon)}
+                            description={weatherDescription(day.conditionCode, day.icon, t)}
                         />
                         <span className="text-sm font-semibold">{formatNumber(day.max)}°</span>
                         <span className="text-xs text-muted-foreground">

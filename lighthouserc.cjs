@@ -8,10 +8,10 @@ module.exports = {
         collect: {
             url: ['http://127.0.0.1:4174/'],
             numberOfRuns: 3,
-            startServerCommand: 'node e2e/lighthouse/server.mjs',
+            startServerCommand: 'node lighthouse/server.mjs',
             startServerReadyPattern: 'Lighthouse fixture ready',
             chromePath: process.env.CHROME_PATH || chromium.executablePath(),
-            puppeteerScript: 'e2e/lighthouse/browser.cjs',
+            puppeteerScript: 'lighthouse/browser.cjs',
             puppeteerLaunchOptions: {
                 args: process.env.CI ? ['--no-sandbox'] : [],
             },
@@ -48,7 +48,7 @@ module.exports = {
         },
         upload: {
             target: 'filesystem',
-            outputDir: 'lighthouse-reports',
+            outputDir: path.join(__dirname, 'lighthouse-reports'),
         },
     },
 };
