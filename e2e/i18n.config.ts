@@ -3,7 +3,7 @@ import { defineConfig, devices } from '@playwright/test';
 /** UI translation checks against the production build, with a deterministic API fixture. */
 export default defineConfig({
     testDir: './tests',
-    testMatch: 'i18n.spec.ts',
+    testMatch: ['i18n.spec.ts', 'best-practices.spec.ts'],
     workers: 1,
     reporter: 'list',
     use: { baseURL: 'http://127.0.0.1:4173', locale: 'en-US', ...devices['Desktop Chrome'] },

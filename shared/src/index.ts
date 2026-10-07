@@ -1,5 +1,9 @@
 import { z } from 'zod';
 
+// Configure before creating schemas: Zod's eval capability probe itself violates strict CSPs.
+// Server-side validation can retain its fast path; browsers use the CSP-compatible parser.
+if (typeof window !== 'undefined') z.config({ jitless: true });
+
 /** Shape of GET /auth/me. */
 export interface User {
     id: number;

@@ -95,6 +95,7 @@ function CoinLogo({
     if (series.image && !failed) {
         return (
             <img
+                crossOrigin="anonymous"
                 src={series.image}
                 alt=""
                 data-testid={`crypto-logo-${series.coin}`}
