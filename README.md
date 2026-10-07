@@ -115,20 +115,23 @@ Requirements: Node.js 24 (see `.nvmrc`, `nvm use`) and Docker with Docker Compos
    migrations before accepting requests. Emails use the `SMTP_*` settings of
    `backend/.env`.
 
-3. **Database Seeding (Test Data)**
+3. **Demo accounts (created at startup)**
 
-   To populate the database with mock accounts and widgets for testing, run the Prisma seeder from within the backend container:
+   `docker compose up` creates these accounts the first time the server starts
+   (`SEED_DEMO_DATA=true` in `docker-compose.yml`), already verified:
+   - **Admin:** `admin@dashboard.local` / `admin1234` (opens **Administration**)
+   - **User:** `user@dashboard.local` / `user1234`, with four widgets: YouTube Channel
+     Watch and Video Player (they work at once), Weather and GitHub (they show how to
+     connect a service in **Services**).
+
+   Restarts keep them as they are. To recreate them with their original widgets:
 
    ```bash
    docker compose exec server npx prisma db seed
    ```
 
-   **Available Test Accounts:**
-   - **Admin:** `admin@dashboard.local` / `admin1234`
-   - **User:** `user@dashboard.local` / `user1234` (comes pre-configured with a Weather and GitHub widget)
-
-   Both are already verified. A new account signs in after entering the code emailed at
-   registration.
+   Their passwords are public: remove `SEED_DEMO_DATA` on a real deployment. A new account
+   signs in after entering the code emailed at registration.
 
 4. **Access the Application**
    - Frontend: [http://localhost:8081](http://localhost:8081)

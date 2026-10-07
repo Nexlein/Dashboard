@@ -1,4 +1,4 @@
-import { getCache, setCache, clearCache } from '../utils/redisCache.ts';
+import { cached, clearCache, widgetCacheTtl } from '../utils/redisCache.ts';
 import { HttpError } from '../utils/httpError.ts';
 import type {
     ServiceContext,
@@ -8,8 +8,6 @@ import type {
 } from './types.ts';
 
 const COINGECKO_API_URL = 'https://api.coingecko.com/api/v3';
-const MAX_CACHE_TTL_MS = 5 * 60 * 1000;
-const MIN_REFRESH_RATE_SECONDS = 60;
 const MAX_CHART_COINS = 8;
 const COINGECKO_HISTORY_START = 1230768000; // 2009-01-01, before the first crypto market data.
 
@@ -212,14 +210,6 @@ function normalizedDays(value: unknown): ChartDays {
     return days;
 }
 
-function cacheTtl(options: Partial<ServiceContext>): number {
-    const requestedRefreshRate = Number(options.refreshRate);
-    const refreshRate = Number.isFinite(requestedRefreshRate)
-        ? Math.max(requestedRefreshRate, MIN_REFRESH_RATE_SECONDS)
-        : MIN_REFRESH_RATE_SECONDS;
-    return Math.min(refreshRate * 1000, MAX_CACHE_TTL_MS);
-}
-
 async function execute(
     widgetName: string,
     params: WidgetParams = {},
@@ -232,100 +222,96 @@ async function execute(
     const currency = normalizedParam(params.currency, 'Currency', 20);
     const apiKey = getApiKey(options);
     const cacheScope = options.cacheScope || 'unscoped';
-    const cacheTtlMs = cacheTtl(options);
+    const cacheTtlMs = widgetCacheTtl(options.refreshRate);
 
     if (widgetName === 'crypto_chart') {
         const coins = normalizedCoins(params.coins);
         const days = normalizedDays(params.days);
         const cacheKey = `${cacheScope}:${widgetName}:${coins.join(',')}:${currency}:${days}`;
-        const cached = await getCache(cacheKey);
+        return cached(cacheKey, cacheTtlMs, async () => {
+            const chartResults = await Promise.all(
+                coins.map(async (coin) => {
+                    const { payload, historyLimited } = await fetchChartHistory(
+                        coin,
+                        currency,
+                        days,
+                        apiKey,
+                    );
+                    const prices = (payload?.prices || [])
+                        .filter(
+                            (point): point is [number, number] =>
+                                Array.isArray(point) &&
+                                Number.isFinite(point[0]) &&
+                                Number.isFinite(point[1]),
+                        )
+                        .map(([timestamp, price]) => ({ timestamp, price }));
 
-        if (cached) return cached;
+                    if (!prices.length) {
+                        throw new CryptoServiceError(`No chart data found for ${coin}`, 404);
+                    }
 
-        const chartResults = await Promise.all(
-            coins.map(async (coin) => {
-                const { payload, historyLimited } = await fetchChartHistory(
-                    coin,
-                    currency,
-                    days,
-                    apiKey,
-                );
-                const prices = (payload?.prices || [])
-                    .filter(
-                        (point): point is [number, number] =>
-                            Array.isArray(point) &&
-                            Number.isFinite(point[0]) &&
-                            Number.isFinite(point[1]),
-                    )
-                    .map(([timestamp, price]) => ({ timestamp, price }));
+                    const firstPrice = prices[0].price;
+                    const currentPrice = prices[prices.length - 1].price;
+                    const change = firstPrice
+                        ? ((currentPrice - firstPrice) / firstPrice) * 100
+                        : null;
 
-                if (!prices.length) {
-                    throw new CryptoServiceError(`No chart data found for ${coin}`, 404);
-                }
+                    return { series: { coin, currentPrice, change, prices }, historyLimited };
+                }),
+            );
+            const series = chartResults.map((result) => result.series);
+            const historyLimited = chartResults.some((result) => result.historyLimited);
+            const metadata = await fetchCoinMetadata(coins, currency, apiKey);
+            const enrichedSeries = series.map((item) => ({
+                ...item,
+                ...(metadata.get(item.coin) || {}),
+            }));
+            const data = {
+                type: 'crypto_chart',
+                currency,
+                days,
+                historyLimited,
+                series: enrichedSeries,
+            };
 
-                const firstPrice = prices[0].price;
-                const currentPrice = prices[prices.length - 1].price;
-                const change = firstPrice ? ((currentPrice - firstPrice) / firstPrice) * 100 : null;
-
-                return { series: { coin, currentPrice, change, prices }, historyLimited };
-            }),
-        );
-        const series = chartResults.map((result) => result.series);
-        const historyLimited = chartResults.some((result) => result.historyLimited);
-        const metadata = await fetchCoinMetadata(coins, currency, apiKey);
-        const enrichedSeries = series.map((item) => ({
-            ...item,
-            ...(metadata.get(item.coin) || {}),
-        }));
-        const data = {
-            type: 'crypto_chart',
-            currency,
-            days,
-            historyLimited,
-            series: enrichedSeries,
-        };
-
-        await setCache(cacheKey, data, cacheTtlMs);
-        return data;
+            return data;
+        });
     }
 
     const coin = normalizedParam(params.coin, 'Coin', 100);
     const cacheKey = `${cacheScope}:${widgetName}:${coin}:${currency}`;
-    const cached = await getCache(cacheKey);
+    return cached(cacheKey, cacheTtlMs, async () => {
+        const payload = await fetchCoinGecko<SimplePrice>(
+            '/simple/price',
+            {
+                ids: coin,
+                vs_currencies: currency,
+                include_market_cap: 'true',
+                include_24hr_vol: 'true',
+                include_24hr_change: 'true',
+                include_last_updated_at: 'true',
+            },
+            apiKey,
+        );
+        const market = payload?.[coin];
 
-    if (cached) return cached;
+        if (!market || typeof market[currency] !== 'number') {
+            throw new CryptoServiceError('Cryptocurrency or currency not found', 404);
+        }
 
-    const payload = await fetchCoinGecko<SimplePrice>(
-        '/simple/price',
-        {
-            ids: coin,
-            vs_currencies: currency,
-            include_market_cap: 'true',
-            include_24hr_vol: 'true',
-            include_24hr_change: 'true',
-            include_last_updated_at: 'true',
-        },
-        apiKey,
-    );
-    const market = payload?.[coin];
+        const data = {
+            type: 'crypto_price',
+            coin,
+            currency,
+            price: market[currency],
+            marketCap: market[`${currency}_market_cap`] ?? null,
+            volume24h: market[`${currency}_24h_vol`] ?? null,
+            change24h: market[`${currency}_24h_change`] ?? null,
+            lastUpdatedAt: market.last_updated_at ?? null,
+        };
 
-    if (!market || typeof market[currency] !== 'number') {
-        throw new CryptoServiceError('Cryptocurrency or currency not found', 404);
-    }
-
-    const data = {
-        type: 'crypto_price',
-        coin,
-        currency,
-        price: market[currency],
-        marketCap: market[`${currency}_market_cap`] ?? null,
-        volume24h: market[`${currency}_24h_vol`] ?? null,
-        change24h: market[`${currency}_24h_change`] ?? null,
-        lastUpdatedAt: market.last_updated_at ?? null,
-    };
-
-    await setCache(cacheKey, data, cacheTtlMs);
-    return data;
+        return data;
+    });
 }
 
 export default {
