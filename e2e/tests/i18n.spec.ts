@@ -278,6 +278,8 @@ for (const language of ['en', 'fr'] as const) {
 }
 
 test('restores the desktop widget layout after switching to a phone viewport', async ({ page }) => {
+    const browserErrors: string[] = [];
+    page.on('pageerror', (error) => browserErrors.push(error.message));
     await page.setViewportSize({ width: 1440, height: 900 });
     await mockBackend(page);
     await page.route('http://localhost:8080/widgets', (route) =>
@@ -325,4 +327,5 @@ test('restores the desktop widget layout after switching to a phone viewport', a
     await page.setViewportSize({ width: 1440, height: 900 });
     await expect.poll(bounds).toEqual(desktop);
     expect(saves).toEqual([]);
+    expect(browserErrors).toEqual([]);
 });

@@ -19,7 +19,7 @@ test('registers, signs in and signs out through the UI', async ({ page }) => {
     await page.getByLabel('Email address').fill(email);
     await page.getByLabel('Password').fill(password);
     await page.getByLabel(/Terms of Service/).check();
-    await page.getByLabel(/16 or older/).check();
+    await page.getByLabel('I confirm I am at least 16 years old.').check();
     await page.getByRole('button', { name: 'Create my account' }).click();
 
     // The account signs in once the emailed code is entered.
@@ -91,10 +91,10 @@ test('resets a forgotten password with the emailed code', async ({ page, request
     // The sign-in page also has an "Email address" field: wait for the new page.
     await expect(page.getByRole('heading', { name: 'Forgot password' })).toBeVisible();
     await page.getByLabel('Email address').fill(email);
-    await page.getByRole('button', { name: 'Send a code' }).click();
+    await page.getByRole('button', { name: 'Receive a code' }).click();
 
     const code = await emailedCode(request, email, 'mot de passe');
-    await page.getByLabel('Code from your email').fill(code);
+    await page.getByLabel('Code received by email').fill(code);
     await page.getByLabel('New password').fill('a-new-password-123');
     await page.getByRole('button', { name: 'Change password' }).click();
 
