@@ -138,6 +138,33 @@ jobs:
                   path: e2e/playwright-report/
                   retention-days: 7
 
+    lighthouse:
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
+        permissions:
+            contents: read
+        steps:
+            - uses: actions/checkout@v7
+            - uses: actions/setup-node@v7
+              with:
+                  node-version-file: .nvmrc
+                  cache: 'npm'
+            - run: npm ci
+            - name: Install the Chromium version pinned by Playwright
+              run: npm exec -w e2e -- playwright install --with-deps chromium
+            - name: Audit the production dashboard (3 desktop runs)
+              run: npm run lighthouse
+            - name: Save Lighthouse reports, including failed audits
+              uses: actions/upload-artifact@v7
+              if: always()
+              with:
+                  name: lighthouse-reports
+                  path: |
+                      lighthouse-reports/
+                      .lighthouseci/
+                  include-hidden-files: true
+                  retention-days: 7
+
     docker:
         runs-on: ubuntu-latest
         steps:
