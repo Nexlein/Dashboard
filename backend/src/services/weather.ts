@@ -1,4 +1,4 @@
-import { getCache, setCache, clearCache } from '../utils/redisCache.ts';
+import { cached, clearCache, widgetCacheTtl } from '../utils/redisCache.ts';
 import { HttpError } from '../utils/httpError.ts';
 import type {
     ServiceContext,
@@ -6,9 +6,6 @@ import type {
     ServiceDefinition,
     WidgetParams,
 } from './types.ts';
-
-const MAX_CACHE_TTL_MS = 5 * 60 * 1000;
-const MIN_REFRESH_RATE_SECONDS = 60;
 
 // The parts of the OpenWeather responses this service reads.
 type GeoLocation = { name: string; country: string; state?: string; lat: number; lon: number };
@@ -168,50 +165,43 @@ async function execute(
     const apiKey = getApiKey(options);
     const cacheScope = options.cacheScope || 'unscoped';
     const cacheKey = `${cacheScope}:${normalizedWidgetName}:${city.toLocaleLowerCase()}`;
-    const requestedRefreshRate = Number(options.refreshRate);
-    const refreshRate = Number.isFinite(requestedRefreshRate)
-        ? Math.max(requestedRefreshRate, MIN_REFRESH_RATE_SECONDS)
-        : MIN_REFRESH_RATE_SECONDS;
-    const cacheTtlMs = Math.min(refreshRate * 1000, MAX_CACHE_TTL_MS);
-    const cached = await getCache<unknown>(cacheKey);
-    if (cached) return cached;
-
-    const location = await resolveCity(city, apiKey);
-    const commonParams = {
-        lat: String(location.lat),
-        lon: String(location.lon),
-        units: 'metric',
-    };
-    let data: unknown;
-
-    if (normalizedWidgetName === 'current_weather') {
-        const payload = await fetchOpenWeather<CurrentPayload>(
-            '/data/2.5/weather',
-            commonParams,
-            apiKey,
-        );
-        data = {
-            type: 'current_weather',
-            location: locationPayload(location),
-            observedAt: payload.dt,
-            temperature: Math.round(payload.main.temp),
-            feelsLike: Math.round(payload.main.feels_like),
-            humidity: payload.main.humidity,
-            windSpeed: payload.wind?.speed ?? null,
-            condition: payload.weather?.[0]?.description || '',
-            icon: payload.weather?.[0]?.icon || '',
+    return cached(cacheKey, widgetCacheTtl(options.refreshRate), async () => {
+        const location = await resolveCity(city, apiKey);
+        const commonParams = {
+            lat: String(location.lat),
+            lon: String(location.lon),
+            units: 'metric',
         };
-    } else {
-        const payload = await fetchOpenWeather<ForecastPayload>(
-            '/data/2.5/forecast',
-            commonParams,
-            apiKey,
-        );
-        data = aggregateForecast(payload, location);
-    }
+        let data: unknown;
 
-    await setCache(cacheKey, data, cacheTtlMs);
-    return data;
+        if (normalizedWidgetName === 'current_weather') {
+            const payload = await fetchOpenWeather<CurrentPayload>(
+                '/data/2.5/weather',
+                commonParams,
+                apiKey,
+            );
+            data = {
+                type: 'current_weather',
+                location: locationPayload(location),
+                observedAt: payload.dt,
+                temperature: Math.round(payload.main.temp),
+                feelsLike: Math.round(payload.main.feels_like),
+                humidity: payload.main.humidity,
+                windSpeed: payload.wind?.speed ?? null,
+                condition: payload.weather?.[0]?.description || '',
+                icon: payload.weather?.[0]?.icon || '',
+            };
+        } else {
+            const payload = await fetchOpenWeather<ForecastPayload>(
+                '/data/2.5/forecast',
+                commonParams,
+                apiKey,
+            );
+            data = aggregateForecast(payload, location);
+        }
+
+        return data;
+    });
 }
 
 async function verifyCredentials(credentials: ServiceCredentials) {

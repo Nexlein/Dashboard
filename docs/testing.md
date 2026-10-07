@@ -65,7 +65,7 @@ Unit test files:
 - `crypto.test.ts`: CoinGecko credential verification, normalized price and
   historical responses, caching, multi-asset limits, supported periods, provider
   errors, and legacy full-history fallback. All CoinGecko calls are mocked.
-- `redisCache.test.ts`: Validates graceful fallback to local memory maps when Redis is unavailable.
+- `redisCache.test.ts`: local fallback when Redis is not configured (expiry, at most 1000 entries), `cached()` loading once, sharing one load between concurrent requests and not caching failures, and the widget TTL bounds. `redisCacheFailure.test.ts`: a Redis that fails its commands falls back to the local cache. `weather.test.ts` checks that two widgets for the same city call OpenWeather once.
 - `stocks.test.ts`: Twelve Data histories including ALL and 5Y, company logos, shared provider credit budgets, deferred retries, and partial symbol failures. API tests cover authenticated stock search, local configuration validation, and retry headers; stock component tests cover comparison curves, profiles, period controls, and retention of cached charts during provider cooldowns.
 
 *Note: For tests requiring the database, ensure you mock Prisma or use a separate test database.*

@@ -1,5 +1,5 @@
 import { HttpError } from '../utils/httpError.ts';
-import { getCache, setCache, clearCache } from '../utils/redisCache.ts';
+import { cached, clearCache, widgetCacheTtl } from '../utils/redisCache.ts';
 import { GITHUB_SERVICE_PROVIDER } from '../utils/oauthProviders.ts';
 import type {
     ConnectedAccountInfo,
@@ -8,9 +8,6 @@ import type {
     ServiceDefinition,
     WidgetParams,
 } from './types.ts';
-
-const MAX_CACHE_TTL_MS = 5 * 60 * 1000;
-const MIN_REFRESH_RATE_SECONDS = 60;
 
 // The parts of the GitHub responses this service reads.
 type Repository = {
@@ -54,6 +51,70 @@ async function fetchGitHub(url: string, credentials: GitHubCredentials): Promise
         throw new HttpError(`GitHub API error: ${res.statusText}`, res.status);
     }
     return res;
+}
+
+/** Fetches the data of one GitHub widget (cached by `execute`). */
+async function loadWidget(
+    widgetName: string,
+    params: WidgetParams,
+    credentials: GitHubCredentials,
+): Promise<unknown> {
+    if (widgetName === 'repo_stats' || widgetName === 'github-repo') {
+        const res = await fetchGitHub(
+            `https://api.github.com/repos/${segment(params.owner)}/${segment(params.repo)}`,
+            credentials,
+        );
+        const data = (await res.json()) as Repository;
+        const result = {
+            stars: data.stargazers_count,
+            forks: data.forks_count,
+            open_issues: data.open_issues_count,
+            name: data.full_name,
+            description: data.description,
+        };
+        return result;
+    }
+
+    if (widgetName === 'latest_commits' || widgetName === 'github-commits') {
+        const query = new URLSearchParams({
+            sha: String(params.branch || 'main'),
+            per_page: '5',
+        });
+        const res = await fetchGitHub(
+            `https://api.github.com/repos/${segment(params.owner)}/${segment(params.repo)}/commits?${query}`,
+            credentials,
+        );
+        const data = (await res.json()) as Commit[];
+        const result = data.map((commit) => ({
+            sha: commit.sha,
+            message: commit.commit.message,
+            author: commit.commit.author.name,
+            date: commit.commit.author.date,
+            avatar: commit.author?.avatar_url,
+            url: commit.html_url,
+        }));
+        return result;
+    }
+
+    if (widgetName === 'user_profile' || widgetName === 'github-user') {
+        const url = params.username
+            ? `https://api.github.com/users/${segment(params.username)}`
+            : 'https://api.github.com/user';
+        const res = await fetchGitHub(url, credentials);
+        const data = (await res.json()) as Profile;
+        const result = {
+            login: data.login,
+            name: data.name,
+            avatar_url: data.avatar_url,
+            public_repos: data.public_repos,
+            followers: data.followers,
+            following: data.following,
+            bio: data.bio,
+        };
+        return result;
+    }
+
+    throw new HttpError('Unknown widget name', 400);
 }
 
 export default {
@@ -110,73 +171,9 @@ export default {
 
         const cacheScope = context.cacheScope || 'unscoped';
         const cacheKey = `${cacheScope}:${widgetName}:${JSON.stringify(params)}`;
-        const requestedRefreshRate = Number(context.refreshRate);
-        const refreshRate = Number.isFinite(requestedRefreshRate)
-            ? Math.max(requestedRefreshRate, MIN_REFRESH_RATE_SECONDS)
-            : MIN_REFRESH_RATE_SECONDS;
-        const cacheTtlMs = Math.min(refreshRate * 1000, MAX_CACHE_TTL_MS);
-        const cached = await getCache(cacheKey);
-        if (cached) return cached;
-
-        if (widgetName === 'repo_stats' || widgetName === 'github-repo') {
-            const res = await fetchGitHub(
-                `https://api.github.com/repos/${segment(params.owner)}/${segment(params.repo)}`,
-                credentials,
-            );
-            const data = (await res.json()) as Repository;
-            const result = {
-                stars: data.stargazers_count,
-                forks: data.forks_count,
-                open_issues: data.open_issues_count,
-                name: data.full_name,
-                description: data.description,
-            };
-            await setCache(cacheKey, result, cacheTtlMs);
-            return result;
-        }
-
-        if (widgetName === 'latest_commits' || widgetName === 'github-commits') {
-            const query = new URLSearchParams({
-                sha: String(params.branch || 'main'),
-                per_page: '5',
-            });
-            const res = await fetchGitHub(
-                `https://api.github.com/repos/${segment(params.owner)}/${segment(params.repo)}/commits?${query}`,
-                credentials,
-            );
-            const data = (await res.json()) as Commit[];
-            const result = data.map((commit) => ({
-                sha: commit.sha,
-                message: commit.commit.message,
-                author: commit.commit.author.name,
-                date: commit.commit.author.date,
-                avatar: commit.author?.avatar_url,
-                url: commit.html_url,
-            }));
-            await setCache(cacheKey, result, cacheTtlMs);
-            return result;
-        }
-
-        if (widgetName === 'user_profile' || widgetName === 'github-user') {
-            const url = params.username
-                ? `https://api.github.com/users/${segment(params.username)}`
-                : 'https://api.github.com/user';
-            const res = await fetchGitHub(url, credentials);
-            const data = (await res.json()) as Profile;
-            const result = {
-                login: data.login,
-                name: data.name,
-                avatar_url: data.avatar_url,
-                public_repos: data.public_repos,
-                followers: data.followers,
-                following: data.following,
-                bio: data.bio,
-            };
-            await setCache(cacheKey, result, cacheTtlMs);
-            return result;
-        }
-
-        throw new HttpError('Unknown widget name', 400);
+        return cached(cacheKey, widgetCacheTtl(context.refreshRate), () =>
+            loadWidget(widgetName, params, credentials),
+        );
     },
     clearCache,
 } satisfies ServiceDefinition & { clearCache: typeof clearCache };
