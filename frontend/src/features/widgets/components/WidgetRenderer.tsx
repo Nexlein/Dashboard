@@ -1,4 +1,7 @@
-import { useCallback } from 'react';
+import { getErrorMessage } from '@/i18n/errors';
+import { formatNumber, formatPeriod } from '@/i18n/format';
+import { useTranslation } from 'react-i18next';
+import { Suspense, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError } from '@/lib/apiClient';
 import { Loader2 } from 'lucide-react';
@@ -10,7 +13,16 @@ import {
 import { useUpdateWidget } from '@/features/widgets/hooks/useWidgets';
 import { findWidgetDefinition, getServiceDefinition } from '@/features/widgets/lib/registry';
 
+function WidgetLoading() {
+    return (
+        <div className="flex h-full min-h-0 w-full items-center justify-center">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+    );
+}
+
 export default function WidgetRenderer({ widget }: { widget: DashboardWidget }) {
+    const { t } = useTranslation('widgets');
     const { id, serviceName, widgetName, refreshRate } = widget;
     const updateWidgetMutation = useUpdateWidget();
     const queryClient = useQueryClient();
@@ -55,7 +67,7 @@ export default function WidgetRenderer({ widget }: { widget: DashboardWidget }) 
         retry: false,
     });
 
-    const error = queryError?.message || null;
+    const error = queryError ? getErrorMessage(queryError) : null;
     const retryAfter =
         quotaLimited && queryError instanceof ApiError ? queryError.retryAfter : undefined;
     const savedData = quotaLimited
@@ -89,7 +101,7 @@ export default function WidgetRenderer({ widget }: { widget: DashboardWidget }) 
     if (!serviceDef || !widgetDef) {
         return (
             <div className="flex h-full items-center justify-center text-center text-sm text-muted-foreground">
-                This widget is not implemented yet.
+                {t('unimplemented')}
             </div>
         );
     }
@@ -104,7 +116,12 @@ export default function WidgetRenderer({ widget }: { widget: DashboardWidget }) 
 
     // The response shape depends on the widget; each catalog component declares its own
     // data type, so this is the one place where the untyped API response is handed over.
-    if (!isDataFetchingWidget) return <Component {...viewProps} data={undefined as never} />;
+    if (!isDataFetchingWidget)
+        return (
+            <Suspense fallback={<WidgetLoading />}>
+                <Component {...viewProps} data={undefined as never} />
+            </Suspense>
+        );
 
     if (retryAfter && !displayData) {
         return (
@@ -113,21 +130,30 @@ export default function WidgetRenderer({ widget }: { widget: DashboardWidget }) 
                 role="status"
             >
                 <Loader2 className="size-5 animate-spin text-muted-foreground" />
-                <p className="text-sm font-medium">Loading data progressively</p>
+                <p className="text-sm font-medium">{t('loadingProgressively')}</p>
                 <p className="text-xs text-muted-foreground">{error}</p>
                 <p className="text-xs text-muted-foreground">
-                    Automatic retry in {retryAfter} seconds.
+                    {t('automaticRetry', { seconds: formatNumber(retryAfter) })}
                 </p>
             </div>
         );
     }
 
     if (error && !displayData) {
-        const needsServiceConnection = error.includes('Configure it in Services');
+        const needsServiceConnection =
+            queryError instanceof ApiError &&
+            [
+                'SERVICE_NOT_CONNECTED',
+                'OPENWEATHER_NOT_CONNECTED',
+                'COINGECKO_NOT_CONNECTED',
+                'TWELVE_DATA_NOT_CONNECTED',
+                'ACCOUNT_SELECTION_REQUIRED',
+                'ACCOUNT_CONNECTION_EXPIRED',
+            ].includes(queryError.code ?? '');
         return (
             <div className="flex flex-col items-center justify-center h-full p-4 text-center">
                 <p className="text-destructive text-sm font-medium">
-                    Error loading {widgetDef.name}
+                    {t('loadingError', { name: widgetDef.name })}
                 </p>
                 <p className="text-muted-foreground text-xs mt-1">{error}</p>
                 {needsServiceConnection && (
@@ -135,7 +161,7 @@ export default function WidgetRenderer({ widget }: { widget: DashboardWidget }) 
                         href="/services"
                         className="mt-3 text-sm font-medium text-primary underline-offset-4 hover:underline"
                     >
-                        Open Services
+                        {t('openServices')}
                     </a>
                 )}
             </div>
@@ -143,18 +169,14 @@ export default function WidgetRenderer({ widget }: { widget: DashboardWidget }) 
     }
 
     if (!displayData) {
-        return (
-            <div className="flex items-center justify-center h-full">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-        );
+        return <WidgetLoading />;
     }
 
     return (
         <div className="flex h-full min-h-0 w-full flex-col gap-2">
             {queryError && displayData && !quotaLimited && (
                 <p role="alert" className="shrink-0 text-xs text-destructive">
-                    Refresh unavailable: {error}. Showing previously loaded data.
+                    {t('staleData', { error })}
                 </p>
             )}
             {pendingPeriod && (
@@ -163,16 +185,21 @@ export default function WidgetRenderer({ widget }: { widget: DashboardWidget }) 
                     role="status"
                 >
                     {retryAfter
-                        ? `Waiting for API credits. Automatic retry in ${retryAfter} seconds.`
+                        ? t('waitingCredits', { seconds: formatNumber(retryAfter) })
                         : queryError
-                          ? `Refresh unavailable: ${error}`
-                          : 'Loading the requested period…'}{' '}
-                    Showing previously loaded data (
-                    {String((displayData as { period?: string }).period ?? '')}).
+                          ? t('refreshUnavailable', { error })
+                          : t('loadingPeriod')}{' '}
+                    {t('savedPeriod', {
+                        period: formatPeriod(
+                            String((displayData as { period?: string }).period ?? ''),
+                        ),
+                    })}
                 </p>
             )}
             <div className="min-h-0 flex-1">
-                <Component {...viewProps} data={displayData as never} />
+                <Suspense fallback={<WidgetLoading />}>
+                    <Component {...viewProps} data={displayData as never} />
+                </Suspense>
             </div>
         </div>
     );

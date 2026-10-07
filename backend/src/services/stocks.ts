@@ -1,3 +1,4 @@
+import type { ApiErrorCode } from 'shared';
 import {
     StockPendingError,
     withStockProvider,
@@ -86,15 +87,19 @@ class StockServiceError extends HttpError {
     /** Status returned by Twelve Data, when the error comes from its answer. */
     providerStatus?: number;
 
-    constructor(message: string, statusCode = 502) {
-        super(message, statusCode);
+    constructor(message: string, statusCode: number, code: ApiErrorCode) {
+        super(message, statusCode, code);
     }
 }
 
 function getApiKey(options: Pick<ServiceContext, 'credentials'>): string {
     const apiKey = options?.credentials?.apiKey;
     if (typeof apiKey !== 'string' || !apiKey.trim()) {
-        throw new StockServiceError('Twelve Data is not connected. Configure it in Services.', 409);
+        throw new StockServiceError(
+            'Twelve Data is not connected. Configure it in Services.',
+            409,
+            'TWELVE_DATA_NOT_CONNECTED',
+        );
     }
     return apiKey.trim();
 }
@@ -118,12 +123,20 @@ async function fetchTwelveData<T>(
             signal: AbortSignal.timeout(path === '/logo' ? 5000 : 10_000),
         });
     } catch {
-        throw new StockServiceError('Twelve Data provider is unavailable');
+        throw new StockServiceError(
+            'Twelve Data provider is unavailable',
+            502,
+            'TWELVE_DATA_UNAVAILABLE',
+        );
     }
 
     await recordStockCredits(apiKey, response);
     if (response.status === 401 || response.status === 403) {
-        const error = new StockServiceError('Twelve Data API key is invalid or lacks access', 400);
+        const error = new StockServiceError(
+            'Twelve Data API key is invalid or lacks access',
+            400,
+            'TWELVE_DATA_KEY_INVALID',
+        );
         error.providerStatus = response.status;
         throw error;
     }
@@ -131,7 +144,11 @@ async function fetchTwelveData<T>(
         await stockRateLimit(apiKey, '', response.headers?.get('retry-after'));
     }
     if (!response.ok) {
-        const error = new StockServiceError('Twelve Data request failed');
+        const error = new StockServiceError(
+            'Twelve Data request failed',
+            502,
+            'TWELVE_DATA_REQUEST_FAILED',
+        );
         error.providerStatus = response.status;
         throw error;
     }
@@ -150,6 +167,7 @@ async function fetchTwelveData<T>(
                 ? 'Twelve Data API rate limit reached'
                 : payload.message || 'Twelve Data request failed',
             rateLimited ? 503 : 400,
+            rateLimited ? 'TWELVE_DATA_RATE_LIMIT' : 'TWELVE_DATA_REQUEST_FAILED',
         );
         error.providerStatus = payload.code;
         throw error;
@@ -163,7 +181,11 @@ async function verifyCredentials(credentials: ServiceCredentials) {
         fetchTwelveData<{ price?: unknown }>('/price', { symbol: 'AAPL' }, apiKey),
     );
     if (!Number.isFinite(Number(payload?.price))) {
-        throw new StockServiceError('Twelve Data API key could not be verified', 400);
+        throw new StockServiceError(
+            'Twelve Data API key could not be verified',
+            400,
+            'TWELVE_DATA_KEY_UNVERIFIED',
+        );
     }
 }
 
@@ -186,7 +208,11 @@ function normalizedSymbols(value: unknown): string[] {
         symbols.length > MAX_STOCKS ||
         symbols.some((symbol) => symbol.length > 24 || !/^[A-Z0-9.^/-]+$/.test(symbol))
     ) {
-        throw new StockServiceError(`Select between 1 and ${MAX_STOCKS} valid stock symbols`, 400);
+        throw new StockServiceError(
+            `Select between 1 and ${MAX_STOCKS} valid stock symbols`,
+            400,
+            'STOCK_SYMBOLS_INVALID',
+        );
     }
     return symbols;
 }
@@ -194,7 +220,7 @@ function normalizedSymbols(value: unknown): string[] {
 function normalizedPeriod(value: unknown): Period {
     const period = typeof value === 'string' ? value.trim().toUpperCase() : '';
     if (!Object.hasOwn(PERIODS, period)) {
-        throw new StockServiceError('Stock chart period is invalid', 400);
+        throw new StockServiceError('Stock chart period is invalid', 400, 'STOCK_PERIOD_INVALID');
     }
     return period as Period;
 }
@@ -420,7 +446,7 @@ async function searchUnlocked(
 ): Promise<StockSearchResult[]> {
     const normalizedQuery = typeof query === 'string' ? query.trim() : '';
     if (normalizedQuery.length < 1 || normalizedQuery.length > 80) {
-        throw new StockServiceError('Enter a stock name or symbol', 400);
+        throw new StockServiceError('Enter a stock name or symbol', 400, 'STOCK_SEARCH_REQUIRED');
     }
     const apiKey = getApiKey(options);
     const cacheKey = `${options.cacheScope || 'unscoped'}:stocks:search:${normalizedQuery.toLowerCase()}`;
@@ -474,11 +500,15 @@ async function getLogo(symbol: string, apiKey: string, cacheScope: string) {
 
 function validateParams(widgetName: string, params: WidgetParams = {}) {
     if (!['stock_market', 'stock_profile'].includes(widgetName)) {
-        throw new StockServiceError('Unsupported stock widget', 400);
+        throw new StockServiceError('Unsupported stock widget', 400, 'STOCK_WIDGET_UNSUPPORTED');
     }
     const symbols = normalizedSymbols(params.symbols);
     if (widgetName === 'stock_profile' && symbols.length !== 1) {
-        throw new StockServiceError('Select exactly one company for a stock profile', 400);
+        throw new StockServiceError(
+            'Select exactly one company for a stock profile',
+            400,
+            'STOCK_PROFILE_SINGLE_COMPANY',
+        );
     }
     normalizedPeriod(params.period);
 }
@@ -518,6 +548,7 @@ async function executeUnlocked(widgetName: string, params: WidgetParams, options
         throw new StockServiceError(
             unavailable.map((item) => `${item.symbol}: ${item.message}`).join('; '),
             404,
+            'MARKET_DATA_UNAVAILABLE',
         );
 
     const logos = new Map<string, string | null>();

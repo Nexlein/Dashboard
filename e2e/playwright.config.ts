@@ -2,11 +2,14 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
     testDir: './tests',
+    // Production bundle checks run against the compiled preview via i18n.config.ts.
+    testIgnore: ['best-practices.spec.ts', 'performance.spec.ts'],
     retries: 0,
     workers: 1,
     reporter: 'html',
     use: {
         baseURL: 'http://localhost:5173',
+        locale: 'en-US',
         trace: 'on-first-retry',
     },
     projects: [

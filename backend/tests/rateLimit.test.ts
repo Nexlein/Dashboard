@@ -127,7 +127,7 @@ describe('createRateLimiter', () => {
         expect((await request(app).get('/')).status).toBe(200);
         const blocked = await request(app).get('/');
         expect(blocked.status).toBe(429);
-        expect(blocked.body).toEqual({ error: 'Slow down' });
+        expect(blocked.body).toEqual({ error: 'Slow down', code: 'TOO_MANY_ATTEMPTS' });
     });
 
     test('lets requests through when Redis is unavailable instead of failing or waiting', async () => {

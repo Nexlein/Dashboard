@@ -3,6 +3,7 @@ import { act, fireEvent, queryClient, render, screen, waitFor } from '@/test-uti
 import { makeWidget, mockApi } from '@/test/fixtures';
 import WidgetRenderer from '@/features/widgets/components/WidgetRenderer';
 import type { YouTubeWatchData } from './YouTubeWatchWidget';
+import { findWidgetDefinition } from '../lib/registry';
 
 const widget = makeWidget({
     id: 9,
@@ -40,6 +41,8 @@ const data: YouTubeWatchData = {
 beforeEach(() => localStorage.clear());
 
 it('refreshes on the configured timer and follows a changed refresh rate', async () => {
+    // Resolve the component import before replacing the refresh clock with fake timers.
+    await findWidgetDefinition('youtube', 'channel_watch')?.component.preload?.();
     vi.useFakeTimers();
     const fetch = mockApi({ 'GET /widgets/9/data': { body: data } });
     const view = render(<WidgetRenderer widget={{ ...widget, refreshRate: 120 }} />);
@@ -76,12 +79,16 @@ it('uses the common loading and error states, and retains data after a timer fai
     expect(screen.queryByRole('button', { name: 'Refresh publications' })).toBeNull();
     await screen.findByText('Alpha news');
     fetch.mockResolvedValueOnce(
-        new Response(JSON.stringify({ error: 'Feed unavailable' }), { status: 503 }),
+        new Response(JSON.stringify({ error: 'Feed unavailable', code: 'YOUTUBE_UNAVAILABLE' }), {
+            status: 503,
+        }),
     );
     await act(async () => {
         await queryClient.invalidateQueries({ queryKey: ['widget', widget.id] });
     });
-    expect(await screen.findByRole('alert')).toHaveTextContent('Feed unavailable');
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+        'YouTube is temporarily unavailable',
+    );
     expect(screen.getByText('Alpha news')).toBeInTheDocument();
 });
 
@@ -122,10 +129,14 @@ it('requests a manual refresh and preserves existing cards if it fails', async (
     render(<WidgetRenderer widget={widget} />);
     await screen.findByText('Alpha news');
     fetch.mockResolvedValueOnce(
-        new Response(JSON.stringify({ error: 'Feed unavailable' }), { status: 503 }),
+        new Response(JSON.stringify({ error: 'Feed unavailable', code: 'YOUTUBE_UNAVAILABLE' }), {
+            status: 503,
+        }),
     );
     fireEvent.click(screen.getByRole('button', { name: 'Refresh publications' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Feed unavailable');
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+        'YouTube is temporarily unavailable',
+    );
     expect(screen.getByText('Alpha news')).toBeInTheDocument();
     expect(String(fetch.mock.calls[1][0])).toContain('?refresh=true');
     fetch.mockResolvedValueOnce(
@@ -145,7 +156,13 @@ it('shows partial failure warnings alongside the remaining channels and handles 
                 ...data,
                 channels: [data.channels[0]],
                 videos: [],
-                warnings: [{ channel: '@beta', message: 'Channel not found' }],
+                warnings: [
+                    {
+                        channel: '@beta',
+                        message: 'Channel not found',
+                        code: 'YOUTUBE_CHANNEL_NOT_FOUND',
+                    },
+                ],
             },
         },
     });

@@ -52,7 +52,7 @@ describe('Weather service', () => {
                     dt: 123,
                     main: { temp: 18.6, feels_like: 18.1, humidity: 70 },
                     wind: { speed: 3.2 },
-                    weather: [{ description: 'clear sky', icon: '01d' }],
+                    weather: [{ id: 800, description: 'clear sky', icon: '01d' }],
                 }),
             });
 
@@ -76,6 +76,7 @@ describe('Weather service', () => {
             humidity: 70,
             windSpeed: 3.2,
             condition: 'clear sky',
+            conditionCode: 800,
             icon: '01d',
         });
         expect(second).toEqual(first);
@@ -94,7 +95,7 @@ describe('Weather service', () => {
                     dt: 123,
                     main: { temp: 19, feels_like: 19, humidity: 70 },
                     wind: { speed: 3 },
-                    weather: [{ description: 'clear sky', icon: '01d' }],
+                    weather: [{ id: 800, description: 'clear sky', icon: '01d' }],
                 }),
             })
             .mockResolvedValueOnce({
@@ -107,7 +108,7 @@ describe('Weather service', () => {
                     dt: 124,
                     main: { temp: 20, feels_like: 20, humidity: 68 },
                     wind: { speed: 2 },
-                    weather: [{ description: 'clear sky', icon: '01d' }],
+                    weather: [{ id: 800, description: 'clear sky', icon: '01d' }],
                 }),
             });
 
@@ -143,7 +144,7 @@ describe('Weather service', () => {
                     dt: 123,
                     main: { temp: 18.6, feels_like: 18, humidity: 70 },
                     wind: { speed: 3 },
-                    weather: [{ description: 'clear sky', icon: '01d' }],
+                    weather: [{ id: 800, description: 'clear sky', icon: '01d' }],
                 }),
             })
             .mockResolvedValueOnce({
@@ -156,7 +157,7 @@ describe('Weather service', () => {
                     dt: 183,
                     main: { temp: 20, feels_like: 20, humidity: 65 },
                     wind: { speed: 2 },
-                    weather: [{ description: 'clear sky', icon: '01d' }],
+                    weather: [{ id: 800, description: 'clear sky', icon: '01d' }],
                 }),
             });
 
@@ -195,7 +196,7 @@ describe('Weather service', () => {
                     dt: 123,
                     main: { temp: 19, feels_like: 18, humidity: 70 },
                     wind: { speed: 3 },
-                    weather: [{ description: 'clear sky', icon: '01d' }],
+                    weather: [{ id: 800, description: 'clear sky', icon: '01d' }],
                 }),
             });
 
@@ -240,7 +241,7 @@ describe('Weather service', () => {
                     dt: 123,
                     main: { temp: 19, feels_like: 19, humidity: 70 },
                     wind: { speed: 3 },
-                    weather: [{ description: 'clear sky', icon: '01d' }],
+                    weather: [{ id: 800, description: 'clear sky', icon: '01d' }],
                 }),
             });
 

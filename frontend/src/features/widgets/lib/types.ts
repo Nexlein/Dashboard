@@ -49,7 +49,7 @@ export type WidgetDefinition = {
     aliases?: string[];
     // `never` accepts any catalog component whatever its data type; WidgetRenderer is the
     // single place that hands the untyped API response to it.
-    component: ComponentType<WidgetViewProps<never>>;
+    component: ComponentType<WidgetViewProps<never>> & { preload?: () => Promise<unknown> };
     customConfigUi?: ComponentType<CustomConfigProps>;
     /** Overrides the service default when a widget needs no data requests. */
     hasRefresh?: boolean;

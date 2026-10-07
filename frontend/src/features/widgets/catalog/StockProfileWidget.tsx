@@ -1,3 +1,5 @@
+import { locale, formatNumber, formatPeriod } from '@/i18n/format';
+import { useTranslation } from 'react-i18next';
 import { useId, useState } from 'react';
 import type { WidgetViewProps } from '@/features/widgets/lib/types';
 import type { StockMarketData } from './StockMarketWidget';
@@ -10,24 +12,24 @@ const PAD = 8;
 function money(value: number, currency: string) {
     if (!Number.isFinite(value)) return '—';
     try {
-        return new Intl.NumberFormat(undefined, {
+        return new Intl.NumberFormat(locale(), {
             style: 'currency',
             currency,
             maximumFractionDigits: value < 1 ? 4 : 2,
         }).format(value);
     } catch {
-        return `${value.toFixed(2)} ${currency}`;
+        return `${formatNumber(value, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
     }
 }
 
 function percent(value: number | null) {
     return value !== null && Number.isFinite(value)
-        ? `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`
+        ? `${value >= 0 ? '+' : ''}${formatNumber(value, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`
         : '—';
 }
 
 function date(timestamp: number) {
-    return new Intl.DateTimeFormat(undefined, {
+    return new Intl.DateTimeFormat(locale(), {
         day: 'numeric',
         month: 'short',
         year: 'numeric',
@@ -40,11 +42,12 @@ export function StockProfileWidget({
     onPeriodChange,
     periodUpdating,
 }: WidgetViewProps<StockMarketData>) {
+    const { t } = useTranslation('markets');
     const gradientId = useId().replace(/:/g, '');
     const [hoverIndex, setHoverIndex] = useState<number | null>(null);
     const [failedLogo, setFailedLogo] = useState<string | null>(null);
     const stock = data.series[0];
-    if (!stock) return <p className="text-sm text-muted-foreground">No company data available.</p>;
+    if (!stock) return <p className="text-sm text-muted-foreground">{t('noCompany')}</p>;
 
     const points = (Array.isArray(stock.prices) ? stock.prices : [])
         .filter(
@@ -93,7 +96,7 @@ export function StockProfileWidget({
                     <div className="flex items-center gap-2">
                         <span className="text-sm font-bold tracking-wide">{stock.symbol}</span>
                         <span className="truncate rounded-md bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                            {stock.exchange || 'Listed stock'} · {stock.currency}
+                            {stock.exchange || t('listedStock')} · {stock.currency}
                         </span>
                     </div>
                     <p className="truncate text-xs text-muted-foreground" title={stock.name}>
@@ -108,11 +111,11 @@ export function StockProfileWidget({
                 </p>
                 <div className="mt-1 flex items-center gap-2 text-xs">
                     <span
-                        className={`rounded-md px-1.5 py-0.5 font-semibold tabular-nums ${stock.change === null ? 'bg-muted text-muted-foreground' : dailyPositive ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-red-500/10 text-red-600 dark:text-red-400'}`}
+                        className={`rounded-md px-1.5 py-0.5 font-semibold tabular-nums ${stock.change === null ? 'bg-muted text-muted-foreground' : dailyPositive ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' : 'bg-red-500/10 text-red-700 dark:text-red-400'}`}
                     >
                         {percent(stock.change)}
                     </span>
-                    <span className="text-muted-foreground">Last trading session</span>
+                    <span className="text-muted-foreground">{t('lastSession')}</span>
                 </div>
             </div>
 
@@ -121,7 +124,7 @@ export function StockProfileWidget({
                 role="group"
                 onMouseDown={(event) => event.stopPropagation()}
                 onPointerDown={(event) => event.stopPropagation()}
-                aria-label="Stock chart period"
+                aria-label={t('stockPeriod')}
             >
                 {PERIODS.map((period) => (
                     <button
@@ -135,7 +138,7 @@ export function StockProfileWidget({
                         }}
                         className={`min-w-0 flex-1 rounded-md py-1.5 text-[11px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-50 ${period === activePeriod ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:bg-background/60 hover:text-foreground'}`}
                     >
-                        {period}
+                        {formatPeriod(period)}
                     </button>
                 ))}
             </div>
@@ -159,7 +162,7 @@ export function StockProfileWidget({
                             preserveAspectRatio="none"
                             className="min-h-0 w-full flex-1"
                             role="img"
-                            aria-label={`${stock.symbol} price history chart`}
+                            aria-label={t('priceHistory', { symbol: stock.symbol })}
                             onPointerLeave={() => setHoverIndex(null)}
                             onPointerMove={(event) => {
                                 const rect = event.currentTarget.getBoundingClientRect();
@@ -255,30 +258,27 @@ export function StockProfileWidget({
                         </div>
                     </>
                 ) : (
-                    <p className="m-auto text-xs text-muted-foreground">
-                        No price history available for this period.
-                    </p>
+                    <p className="m-auto text-xs text-muted-foreground">{t('noHistory')}</p>
                 )}
             </div>
 
             <div className="grid shrink-0 grid-cols-3 gap-2 border-t pt-2 text-xs">
                 <div>
-                    <p className="text-[10px] text-muted-foreground">Lowest close</p>
+                    <p className="text-[10px] text-muted-foreground">{t('lowestClose')}</p>
                     <p className="mt-0.5 truncate font-medium tabular-nums">
                         {low === null ? '—' : money(low, stock.currency)}
                     </p>
                 </div>
                 <div>
-                    <p className="text-[10px] text-muted-foreground">Highest close</p>
+                    <p className="text-[10px] text-muted-foreground">{t('highestClose')}</p>
                     <p className="mt-0.5 truncate font-medium tabular-nums">
                         {high === null ? '—' : money(high, stock.currency)}
                     </p>
                 </div>
                 <div className="text-right">
-                    <p className="text-[10px] text-muted-foreground">Period change</p>
+                    <p className="text-[10px] text-muted-foreground">{t('periodChange')}</p>
                     <p
-                        className="mt-0.5 font-semibold tabular-nums"
-                        style={{ color: change === null ? undefined : color }}
+                        className={`mt-0.5 font-semibold tabular-nums ${change === null ? '' : change < 0 ? 'text-red-700 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-400'}`}
                     >
                         {percent(change)}
                     </p>

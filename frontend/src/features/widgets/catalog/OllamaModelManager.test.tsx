@@ -85,16 +85,22 @@ describe('OllamaModelManager', () => {
 
     it('shows the API error when Ollama is unreachable', async () => {
         mockApi({
-            'GET /chatbot/models': { status: 502, body: { error: 'Failed to fetch models' } },
+            'GET /chatbot/models': {
+                status: 502,
+                body: { error: 'Failed to fetch models', code: 'OLLAMA_MODELS_FAILED' },
+            },
         });
         renderManager();
-        expect(await screen.findByText('Failed to fetch models')).toBeInTheDocument();
+        expect(await screen.findByText('Failed to fetch models from Ollama')).toBeInTheDocument();
     });
 
     it('shows the error when a pull fails', async () => {
         mockApi({
             'GET /chatbot/models': { body: { models: [] } },
-            'POST /chatbot/pull': { status: 500, body: { error: 'model not found' } },
+            'POST /chatbot/pull': {
+                status: 500,
+                body: { error: 'model not found', code: 'MODEL_PULL_FAILED' },
+            },
         });
         renderManager();
         fireEvent.click(
@@ -102,6 +108,6 @@ describe('OllamaModelManager', () => {
                 name: /Install/,
             }),
         );
-        expect(await screen.findByText('model not found')).toBeInTheDocument();
+        expect(await screen.findByText('Failed to pull model')).toBeInTheDocument();
     });
 });

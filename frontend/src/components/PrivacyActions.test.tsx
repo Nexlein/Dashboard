@@ -29,7 +29,7 @@ function openAccount(onLogout = vi.fn()) {
             <Navbar user={makeUser()} onLogout={onLogout} />
         </MemoryRouter>,
     );
-    fireEvent.click(screen.getByRole('button', { name: /ouvrir le menu du compte/i }));
+    fireEvent.click(screen.getByRole('button', { name: /open the account menu/i }));
     return onLogout;
 }
 
@@ -44,7 +44,7 @@ it.each([401, 500])(
         const onLogout = openAccount();
         fireEvent.click(screen.getByRole('menuitem', { name: /delete my account/i }));
         expect(await screen.findByRole('alert')).toHaveTextContent(
-            'La suppression n’a pas pu être confirmée',
+            'Deletion could not be confirmed',
         );
         expect(onLogout).not.toHaveBeenCalled();
     },
@@ -77,7 +77,7 @@ it('asks for a new sign-in when the session is too old to delete the account', a
     );
     const onLogout = openAccount();
     fireEvent.click(screen.getByRole('menuitem', { name: /delete my account/i }));
-    expect((await screen.findByRole('alert')).textContent).toContain('reconnectez-vous');
+    expect((await screen.findByRole('alert')).textContent).toContain('sign in again');
     expect(onLogout).not.toHaveBeenCalled();
 });
 
@@ -114,7 +114,7 @@ it('reports a failed export instead of silently doing nothing', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(500)));
     openAccount();
     fireEvent.click(screen.getByRole('menuitem', { name: /download my data/i }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Le téléchargement a échoué');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Download failed');
 });
 
 it('downloads a successful export as JSON', async () => {

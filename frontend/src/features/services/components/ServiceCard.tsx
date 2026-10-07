@@ -1,3 +1,5 @@
+import { formatDate } from '@/i18n/format';
+import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { CheckCircle2, ExternalLink, KeyRound, Loader2, Unplug } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -12,10 +14,11 @@ interface ServiceCardProps {
     service: ServiceConnection;
     onConnect: (serviceName: string, apiKey: string) => Promise<void>;
     onDisconnect: (serviceName: string) => Promise<void>;
-    setError: (error: string) => void;
+    setError: (error: unknown) => void;
 }
 
 export function ServiceCard({ service, onConnect, onDisconnect, setError }: ServiceCardProps) {
+    const { t } = useTranslation('services');
     const [apiKey, setApiKey] = useState('');
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -31,20 +34,20 @@ export function ServiceCard({ service, onConnect, onDisconnect, setError }: Serv
             setApiKey('');
             setIsEditing(false);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Unable to connect service');
+            setError(err);
         } finally {
             setIsSaving(false);
         }
     };
 
     const handleDisconnectClick = async () => {
-        if (!window.confirm(`Disconnect ${service.displayName}?`)) return;
+        if (!window.confirm(t('disconnectConfirm', { service: service.displayName }))) return;
         setIsSaving(true);
         try {
             await onDisconnect(service.name);
             setIsEditing(false);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Unable to disconnect service');
+            setError(err);
         } finally {
             setIsSaving(false);
         }
@@ -58,10 +61,25 @@ export function ServiceCard({ service, onConnect, onDisconnect, setError }: Serv
                     <div>
                         <CardTitle>{service.displayName}</CardTitle>
                         <p className="mt-1 text-sm text-muted-foreground">
-                            {service.description ||
-                                (service.name === 'github'
-                                    ? 'Statistiques et activité des dépôts'
-                                    : 'Current weather and forecasts')}
+                            {isOAuth
+                                ? service.accounts?.length
+                                    ? t('connectedAccounts', {
+                                          count: service.accounts.length,
+                                      })
+                                    : t('githubDescription')
+                                : service.verifiedAt
+                                  ? t('connectedOn', {
+                                        date: formatDate(new Date(service.verifiedAt), {
+                                            dateStyle: 'medium',
+                                        }),
+                                    })
+                                  : service.name === 'crypto'
+                                    ? t('cryptoDescription')
+                                    : service.name === 'stocks'
+                                      ? t('stocksDescription')
+                                      : service.name === 'weather'
+                                        ? t('weatherDescription')
+                                        : t('otherDescription')}
                         </p>
                     </div>
                 </div>
@@ -72,7 +90,7 @@ export function ServiceCard({ service, onConnect, onDisconnect, setError }: Serv
                             : 'bg-muted text-muted-foreground'
                     }`}
                 >
-                    {service.connected ? 'Connected' : 'Not connected'}
+                    {service.connected ? t('connected') : t('notConnected')}
                 </span>
             </CardHeader>
             <CardContent className="space-y-4 p-5">
@@ -82,9 +100,9 @@ export function ServiceCard({ service, onConnect, onDisconnect, setError }: Serv
                     <div className="flex items-center gap-3 rounded-lg bg-muted/60 p-3">
                         <CheckCircle2 className="size-5 text-emerald-500" />
                         <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium">API key verified</p>
+                            <p className="text-sm font-medium">{t('keyVerified')}</p>
                             <p className="text-xs text-muted-foreground">
-                                Key ending in ••••{service.keyHint}
+                                {t('keyHint', { hint: service.keyHint })}
                             </p>
                         </div>
                     </div>
@@ -93,14 +111,16 @@ export function ServiceCard({ service, onConnect, onDisconnect, setError }: Serv
                 {showForm && !isOAuth && (
                     <div className="space-y-2">
                         <Label htmlFor={`${service.name}-api-key`}>
-                            {service.credentialLabel || 'API key'}
+                            {service.name === 'crypto'
+                                ? t('cryptoApiKey')
+                                : t('providerKey', { service: service.displayName })}
                         </Label>
                         <div className="flex gap-2">
                             <Input
                                 id={`${service.name}-api-key`}
                                 type="password"
                                 autoComplete="off"
-                                placeholder="Paste your API key"
+                                placeholder={t('apiKeyPlaceholder')}
                                 value={apiKey}
                                 onChange={(event) => setApiKey(event.target.value)}
                             />
@@ -109,19 +129,17 @@ export function ServiceCard({ service, onConnect, onDisconnect, setError }: Serv
                                 disabled={isSaving || !apiKey.trim()}
                             >
                                 {isSaving ? <Loader2 className="animate-spin" /> : <KeyRound />}
-                                {service.connected ? 'Replace' : 'Connect'}
+                                {service.connected ? t('replace') : t('connect')}
                             </Button>
                         </div>
-                        <p className="text-xs text-muted-foreground">
-                            The key is verified, encrypted and never displayed again.
-                        </p>
+                        <p className="text-xs text-muted-foreground">{t('keySecurity')}</p>
                     </div>
                 )}
 
                 <div className="flex flex-wrap items-center gap-2">
                     {service.connected && !showForm && !isOAuth && (
                         <Button variant="outline" onClick={() => setIsEditing(true)}>
-                            Replace key
+                            {t('replaceKey')}
                         </Button>
                     )}
                     {service.connected && !isOAuth && (
@@ -132,7 +150,7 @@ export function ServiceCard({ service, onConnect, onDisconnect, setError }: Serv
                             onClick={handleDisconnectClick}
                         >
                             <Unplug />
-                            Disconnect
+                            {t('disconnect')}
                         </Button>
                     )}
                     {service.documentationUrl && (
@@ -147,7 +165,7 @@ export function ServiceCard({ service, onConnect, onDisconnect, setError }: Serv
                                 />
                             }
                         >
-                            Get an API key
+                            {t('getKey')}
                             <ExternalLink />
                         </Button>
                     )}

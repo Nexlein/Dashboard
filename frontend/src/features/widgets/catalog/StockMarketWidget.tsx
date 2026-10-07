@@ -1,3 +1,5 @@
+import { locale, formatNumber, formatPeriod } from '@/i18n/format';
+import { useTranslation } from 'react-i18next';
 import { useMemo, useState } from 'react';
 import type { WidgetViewProps } from '@/features/widgets/lib/types';
 
@@ -71,8 +73,8 @@ function StockLogo({
     return (
         <span
             data-testid={`stock-logo-${symbol}`}
-            className="flex size-6 shrink-0 items-center justify-center rounded-md text-[9px] font-bold text-white"
-            style={{ backgroundColor: color }}
+            className="flex size-6 shrink-0 items-center justify-center rounded-md border-2 bg-muted text-[9px] font-bold text-foreground"
+            style={{ borderColor: color }}
             aria-hidden="true"
         >
             {symbol.slice(0, 2)}
@@ -82,13 +84,13 @@ function StockLogo({
 
 function currencyValue(value: number, currency: string) {
     try {
-        return new Intl.NumberFormat(undefined, {
+        return new Intl.NumberFormat(locale(), {
             style: 'currency',
             currency,
             maximumFractionDigits: value < 1 ? 4 : 2,
         }).format(value);
     } catch {
-        return `${value.toLocaleString()} ${currency}`;
+        return `${formatNumber(value)} ${currency}`;
     }
 }
 
@@ -102,7 +104,7 @@ function dateLabel(timestamp: number, period: StockMarketData['period']) {
     if (!Number.isFinite(timestamp)) return '';
     const date = new Date(timestamp);
     if (Number.isNaN(date.getTime())) return '';
-    return new Intl.DateTimeFormat(undefined, options).format(date);
+    return new Intl.DateTimeFormat(locale(), options).format(date);
 }
 
 function chartPath(points: ChartPoint[], bounds: ChartBounds) {
@@ -126,6 +128,7 @@ export function StockMarketWidget({
     onPeriodChange,
     periodUpdating,
 }: WidgetViewProps<StockMarketData>) {
+    const { t } = useTranslation('markets');
     const [hiddenSymbols, setHiddenSymbols] = useState(() => new Set<string>());
     const activePeriod = String(selectedPeriod ?? data.period).toUpperCase();
     const normalizedSeries = useMemo(
@@ -217,10 +220,17 @@ export function StockMarketWidget({
                             </p>
                             <p
                                 className={`mt-0.5 text-xs font-medium ${
-                                    positive ? 'text-emerald-500' : 'text-red-500'
+                                    positive
+                                        ? 'text-emerald-700 dark:text-emerald-400'
+                                        : 'text-red-700 dark:text-red-400'
                                 }`}
                             >
-                                {positive ? '↑' : '↓'} {Math.abs(change).toFixed(2)}%
+                                {positive ? '↑' : '↓'}{' '}
+                                {formatNumber(Math.abs(change), {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                })}
+                                %
                             </p>
                         </div>
                     );
@@ -258,7 +268,7 @@ export function StockMarketWidget({
                 </div>
                 <div
                     className="flex items-center rounded-md bg-muted p-0.5"
-                    aria-label="Stock chart period"
+                    aria-label={t('stockPeriod')}
                 >
                     {PERIODS.map((period) => (
                         <button
@@ -273,7 +283,7 @@ export function StockMarketWidget({
                             disabled={periodUpdating}
                             onClick={() => onPeriodChange(period)}
                         >
-                            {period}
+                            {formatPeriod(period)}
                         </button>
                     ))}
                 </div>
@@ -284,7 +294,7 @@ export function StockMarketWidget({
                     viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
                     className="h-full min-h-32 w-full"
                     role="img"
-                    aria-label="Stock performance comparison chart"
+                    aria-label={t('stockChart')}
                 >
                     {yTicks.map((tick) => {
                         const y =
@@ -307,7 +317,7 @@ export function StockMarketWidget({
                                     textAnchor="end"
                                     className="fill-muted-foreground text-[11px]"
                                 >
-                                    {tick.toFixed(0)}%
+                                    {formatNumber(tick, { maximumFractionDigits: 0 })}%
                                 </text>
                             </g>
                         );
@@ -349,7 +359,7 @@ export function StockMarketWidget({
                             textAnchor="middle"
                             className="fill-muted-foreground text-sm"
                         >
-                            Select a stock from the legend
+                            {t('selectStock')}
                         </text>
                     )}
                 </svg>

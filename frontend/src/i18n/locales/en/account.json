@@ -1,0 +1,12 @@
+{
+    "title": "Profile Settings",
+    "profileUpdated": "Profile updated successfully",
+    "emailUpdated": "Email address updated",
+    "emailCodeSent": "We sent a 6-digit code to {{email}}. Your address changes once you enter it.",
+    "code": "Verification code",
+    "checking": "Checking...",
+    "confirmEmail": "Confirm Email",
+    "displayName": "Display Name",
+    "emailAddress": "Email Address",
+    "emailHint": "A new address is confirmed with a code sent to it."
+}

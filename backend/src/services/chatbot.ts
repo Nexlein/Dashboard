@@ -14,7 +14,7 @@ export default {
     chat: async (params: WidgetParams, _context: unknown, messages: ChatMessage[]) => {
         const { model } = params;
         if (typeof model !== 'string' || !model) {
-            throw new HttpError('Missing model parameter', 400);
+            throw new HttpError('Missing model parameter', 400, 'MODEL_PARAMETER_REQUIRED');
         }
 
         const url = 'http://ollama:11434/api/chat';
@@ -30,7 +30,7 @@ export default {
         });
 
         if (!res.ok) {
-            throw new HttpError(`Ollama API Error: ${res.statusText}`, res.status);
+            throw new HttpError(`Ollama API Error: ${res.statusText}`, res.status, 'CHAT_FAILED');
         }
 
         const data = (await res.json()) as { message: { content: string } };

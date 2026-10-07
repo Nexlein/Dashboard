@@ -22,16 +22,25 @@ export default {
     validateParams(widgetName: string, params: WidgetParams) {
         if (widgetName === 'channel_watch') {
             if (!youtubeChannels(params.channels))
-                throw new HttpError('Add between 1 and 5 valid YouTube channels', 400);
+                throw new HttpError(
+                    'Add between 1 and 5 valid YouTube channels',
+                    400,
+                    'YOUTUBE_CHANNELS_INVALID',
+                );
             return;
         }
-        if (widgetName !== 'video_player') throw new HttpError('Unsupported YouTube widget', 400);
+        if (widgetName !== 'video_player')
+            throw new HttpError('Unsupported YouTube widget', 400, 'YOUTUBE_WIDGET_UNSUPPORTED');
         if (!youtubeVideoId(params.video_url))
-            throw new HttpError('Enter a valid YouTube video link', 400);
+            throw new HttpError('Enter a valid YouTube video link', 400, 'YOUTUBE_VIDEO_INVALID');
     },
     async execute(widgetName, params, context) {
         if (widgetName !== 'channel_watch')
-            throw new HttpError('This widget does not provide feed data', 400);
+            throw new HttpError(
+                'This widget does not provide feed data',
+                400,
+                'YOUTUBE_FEED_UNSUPPORTED',
+            );
         return youtubeWatch(params, context);
     },
 } satisfies ServiceDefinition;

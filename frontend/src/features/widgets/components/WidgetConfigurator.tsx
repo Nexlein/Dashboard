@@ -1,3 +1,5 @@
+import { getErrorMessage } from '@/i18n/errors';
+import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { KeyRound, Loader2 } from 'lucide-react';
@@ -45,18 +47,19 @@ function areParamsComplete(widgetDef: WidgetDefinition | undefined, params: Widg
     });
 }
 
-export function WidgetConfigurator() {
+export function WidgetConfigurator({ initialOpen = false }: { initialOpen?: boolean }) {
+    const { t } = useTranslation('widgets');
     const navigate = useNavigate();
     const addWidgetMutation = useAddWidget();
 
-    const [open, setOpen] = useState(false);
+    const [open, setOpen] = useState(initialOpen);
     const [service, setService] = useState('');
     const [widgetType, setWidgetType] = useState('');
     const [params, setParams] = useState<WidgetParams>({});
     const [refreshTimer, setRefreshTimer] = useState('60'); // seconds
     const [serviceConnections, setServiceConnections] = useState<ServiceConnection[]>([]);
     const [connectionsLoading, setConnectionsLoading] = useState(false);
-    const [error, setError] = useState('');
+    const [error, setError] = useState<unknown>('');
     const catalog = useWidgetCatalog(open);
 
     const handleOpenChange = (nextOpen: boolean) => {
@@ -67,7 +70,7 @@ export function WidgetConfigurator() {
         setConnectionsLoading(true);
         fetchServices()
             .then(setServiceConnections)
-            .catch((err) => setError(err.message))
+            .catch((err) => setError(err))
             .finally(() => setConnectionsLoading(false));
     };
 
@@ -133,7 +136,7 @@ export function WidgetConfigurator() {
                     setOpen(false);
                 },
                 onError: (err: Error) => {
-                    setError(err.message || 'Failed to create widget');
+                    setError(err);
                 },
             },
         );
@@ -142,18 +145,16 @@ export function WidgetConfigurator() {
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
-                <Button>Add Widget</Button>
+                <Button className="h-11 rounded-xl px-3">{t('add')}</Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-106.25">
                 <DialogHeader>
-                    <DialogTitle>Add New Widget</DialogTitle>
-                    <DialogDescription>
-                        Configure a new widget for your dashboard.
-                    </DialogDescription>
+                    <DialogTitle>{t('addTitle')}</DialogTitle>
+                    <DialogDescription>{t('addSubtitle')}</DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                     <div className="grid gap-2">
-                        <Label htmlFor="service">Service</Label>
+                        <Label htmlFor="service">{t('service')}</Label>
                         <Select
                             value={service}
                             onValueChange={handleServiceChange}
@@ -163,8 +164,8 @@ export function WidgetConfigurator() {
                                 <SelectValue
                                     placeholder={
                                         catalog.isPending
-                                            ? 'Loading services…'
-                                            : 'Select a service...'
+                                            ? t('loadingServices')
+                                            : t('selectService')
                                     }
                                 />
                             </SelectTrigger>
@@ -186,20 +187,22 @@ export function WidgetConfigurator() {
                         </Select>
                         {catalog.isError && (
                             <p className="text-sm text-destructive" role="alert">
-                                Unable to load the available services: {catalog.error.message}
+                                {t('servicesError', {
+                                    error: getErrorMessage(catalog.error),
+                                })}
                             </p>
                         )}
                     </div>
 
                     <div className="grid gap-2">
-                        <Label htmlFor="widgetType">Widget Type</Label>
+                        <Label htmlFor="widgetType">{t('widgetType')}</Label>
                         <Select
                             value={widgetType}
                             onValueChange={(type) => handleWidgetTypeChange(type)}
                             disabled={!serviceDef || connectionsLoading || !serviceConnected}
                         >
                             <SelectTrigger id="widgetType">
-                                <SelectValue placeholder="Select a widget type..." />
+                                <SelectValue placeholder={t('selectType')} />
                             </SelectTrigger>
                             <SelectContent>
                                 {serviceDef?.widgets.map((w) => (
@@ -217,13 +220,19 @@ export function WidgetConfigurator() {
                                 <KeyRound className="mt-0.5 size-4 shrink-0 text-sky-500" />
                                 <div>
                                     <p className="font-medium">
-                                        {selectedConnection?.displayName || service} is not
-                                        connected
+                                        {t('notConnected', {
+                                            service: selectedConnection?.displayName || service,
+                                        })}
                                     </p>
                                     <p className="mt-1 text-muted-foreground">
                                         {selectedConnection?.connectionType === 'oauth'
-                                            ? `Please link your ${selectedConnection?.displayName || service} account in Services before creating this widget.`
-                                            : `Add and verify your personal API key in Services before creating a ${service} widget.`}
+                                            ? t('linkAccountHint', {
+                                                  service:
+                                                      selectedConnection?.displayName || service,
+                                              })
+                                            : t('addKeyHint', {
+                                                  service: serviceDef?.name || service,
+                                              })}
                                     </p>
                                     <Button
                                         type="button"
@@ -234,7 +243,7 @@ export function WidgetConfigurator() {
                                             navigate('/services');
                                         }}
                                     >
-                                        Open Services
+                                        {t('openServices')}
                                     </Button>
                                 </div>
                             </div>
@@ -244,7 +253,7 @@ export function WidgetConfigurator() {
                     {connectionsLoading && service && (
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <Loader2 className="size-4 animate-spin" />
-                            Checking service connection…
+                            {t('checkingConnection')}
                         </div>
                     )}
 
@@ -259,7 +268,11 @@ export function WidgetConfigurator() {
                         />
                     )}
 
-                    {error && <p className="text-sm font-medium text-destructive">{error}</p>}
+                    {Boolean(error) && (
+                        <p className="text-sm font-medium text-destructive">
+                            {getErrorMessage(error)}
+                        </p>
+                    )}
                 </div>
                 <DialogFooter>
                     <Button
@@ -272,7 +285,7 @@ export function WidgetConfigurator() {
                         }
                         onClick={handleSave}
                     >
-                        {addWidgetMutation.isPending ? 'Adding...' : 'Add to Dashboard'}
+                        {addWidgetMutation.isPending ? t('adding') : t('addDashboard')}
                     </Button>
                 </DialogFooter>
             </DialogContent>

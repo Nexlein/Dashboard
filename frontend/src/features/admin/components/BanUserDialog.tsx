@@ -1,3 +1,6 @@
+import { getErrorMessage } from '@/i18n/errors';
+import i18n from '@/i18n';
+import { useTranslation } from 'react-i18next';
 import { useState, type SubmitEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -20,10 +23,30 @@ import {
 import type { AdminUser } from '../lib/admin';
 
 const DURATIONS = [
-    { value: '1', label: '1 jour' },
-    { value: '7', label: '7 jours' },
-    { value: '30', label: '30 jours' },
-    { value: 'permanent', label: 'Jusqu’à levée du bannissement' },
+    {
+        value: '1',
+        get label() {
+            return i18n.t('admin:oneDay');
+        },
+    },
+    {
+        value: '7',
+        get label() {
+            return i18n.t('admin:sevenDays');
+        },
+    },
+    {
+        value: '30',
+        get label() {
+            return i18n.t('admin:thirtyDays');
+        },
+    },
+    {
+        value: 'permanent',
+        get label() {
+            return i18n.t('admin:permanentBan');
+        },
+    },
 ];
 
 /** Asks for the reason and the length of a ban. Mounted only while a user is being banned. */
@@ -36,9 +59,10 @@ export function BanUserDialog({
     onCancel: () => void;
     onBan: (reason: string, expiresInDays?: number) => Promise<void>;
 }) {
+    const { t } = useTranslation(['admin', 'common']);
     const [reason, setReason] = useState('');
     const [duration, setDuration] = useState('7');
-    const [error, setError] = useState('');
+    const [error, setError] = useState<unknown>('');
     const [busy, setBusy] = useState(false);
 
     async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
@@ -48,7 +72,7 @@ export function BanUserDialog({
         try {
             await onBan(reason, duration === 'permanent' ? undefined : Number(duration));
         } catch (banError) {
-            setError(banError instanceof Error ? banError.message : 'Le bannissement a échoué.');
+            setError(banError);
             setBusy(false);
         }
     }
@@ -58,24 +82,23 @@ export function BanUserDialog({
             <DialogContent className="sm:max-w-md">
                 <form onSubmit={handleSubmit} className="grid gap-4">
                     <DialogHeader>
-                        <DialogTitle>Bannir {user.name || user.email}</DialogTitle>
-                        <DialogDescription>
-                            L’utilisateur est déconnecté de tous ses appareils et ne peut plus se
-                            connecter pendant la durée choisie.
-                        </DialogDescription>
+                        <DialogTitle>
+                            {t('admin:banTitle', { name: user.name || user.email })}
+                        </DialogTitle>
+                        <DialogDescription>{t('admin:banHint')}</DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-2">
-                        <Label htmlFor="ban-reason">Motif (facultatif, visible par l’équipe)</Label>
+                        <Label htmlFor="ban-reason">{t('admin:reason')}</Label>
                         <Input
                             id="ban-reason"
                             value={reason}
                             maxLength={200}
-                            placeholder="ex. spam"
+                            placeholder={t('admin:reasonPlaceholder')}
                             onChange={(event) => setReason(event.target.value)}
                         />
                     </div>
                     <div className="grid gap-2">
-                        <Label htmlFor="ban-duration">Durée</Label>
+                        <Label htmlFor="ban-duration">{t('admin:duration')}</Label>
                         <Select value={duration} onValueChange={setDuration}>
                             <SelectTrigger id="ban-duration">
                                 <SelectValue />
@@ -89,17 +112,17 @@ export function BanUserDialog({
                             </SelectContent>
                         </Select>
                     </div>
-                    {error && (
+                    {Boolean(error) && (
                         <p className="text-sm text-destructive" role="alert">
-                            {error}
+                            {getErrorMessage(error)}
                         </p>
                     )}
                     <DialogFooter>
                         <Button type="button" variant="outline" onClick={onCancel}>
-                            Annuler
+                            {t('common:cancel')}
                         </Button>
                         <Button type="submit" variant="destructive" disabled={busy}>
-                            {busy ? 'Bannissement…' : 'Bannir'}
+                            {busy ? t('admin:banning') : t('admin:ban')}
                         </Button>
                     </DialogFooter>
                 </form>

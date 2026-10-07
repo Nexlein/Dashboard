@@ -1,3 +1,6 @@
+import { formatDate, formatNumber } from '@/i18n/format';
+import { getErrorMessage } from '@/i18n/errors';
+import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { useIsFetching, useQueryClient } from '@tanstack/react-query';
 import { ArrowUpRight, CheckCheck, Radio, RefreshCw } from 'lucide-react';
@@ -17,10 +20,11 @@ export type YouTubeWatchData = {
         url: string;
         thumbnail: string;
     }[];
-    warnings: { channel: string; message: string }[];
+    warnings: { channel: string; message: string; code?: string }[];
 };
 
 export function YouTubeWatchWidget({ data, widget }: WidgetViewProps<YouTubeWatchData>) {
+    const { t } = useTranslation('youtube');
     const queryClient = useQueryClient();
     const [filter, setFilter] = useState('all');
     const storageKey = `${YOUTUBE_WATCH_HISTORY_PREFIX}${widget.id}`;
@@ -47,7 +51,7 @@ export function YouTubeWatchWidget({ data, widget }: WidgetViewProps<YouTubeWatc
             return next;
         });
     };
-    const [refreshError, setRefreshError] = useState('');
+    const [refreshError, setRefreshError] = useState<unknown>('');
     const [refreshing, setRefreshing] = useState(false);
     // Keep the previous feed visible during a manual refresh, including on failure.
     const refresh = async () => {
@@ -60,7 +64,7 @@ export function YouTubeWatchWidget({ data, widget }: WidgetViewProps<YouTubeWatc
             );
             queryClient.setQueryData(queryKey, fresh);
         } catch (error) {
-            setRefreshError(error instanceof Error ? error.message : 'Unable to refresh the feed');
+            setRefreshError(error);
         } finally {
             setRefreshing(false);
         }
@@ -78,13 +82,14 @@ export function YouTubeWatchWidget({ data, widget }: WidgetViewProps<YouTubeWatc
         >
             <div className="flex shrink-0 items-center justify-between gap-2">
                 <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                    <Radio className="size-4 text-red-500" aria-hidden="true" /> Channel Watch
+                    <Radio className="size-4 text-red-500" aria-hidden="true" />
+                    {t('channelWatch')}
                 </div>
                 <div className="flex items-center gap-2">
                     <button
                         type="button"
-                        aria-label="Mark visible publications as seen"
-                        title="Mark as seen"
+                        aria-label={t('markVisible')}
+                        title={t('markSeen')}
                         disabled={!visible.some((video) => !seen.includes(video.id))}
                         onClick={() => markSeen(visible.map((video) => video.id))}
                         className="cursor-pointer rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-40"
@@ -93,8 +98,8 @@ export function YouTubeWatchWidget({ data, widget }: WidgetViewProps<YouTubeWatc
                     </button>
                     <button
                         type="button"
-                        aria-label="Refresh publications"
-                        title="Refresh"
+                        aria-label={t('refreshPublications')}
+                        title={t('refresh')}
                         disabled={busy}
                         onClick={refresh}
                         className="cursor-pointer rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-40"
@@ -105,24 +110,23 @@ export function YouTubeWatchWidget({ data, widget }: WidgetViewProps<YouTubeWatc
             </div>
             <div
                 className="flex shrink-0 gap-1.5 overflow-x-auto pb-1"
-                aria-label="Filter publications by channel"
+                aria-label={t('filterChannels')}
             >
-                {[{ id: 'all', title: 'All channels' }, ...data.channels].map((channel) => (
+                {[{ id: 'all', title: t('allChannels') }, ...data.channels].map((channel) => (
                     <button
                         key={channel.id}
                         type="button"
                         aria-pressed={activeFilter === channel.id}
                         onClick={() => setFilter(channel.id)}
-                        className={`shrink-0 cursor-pointer rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${activeFilter === channel.id ? 'bg-red-500/10 text-red-600 dark:text-red-400' : 'bg-muted text-muted-foreground hover:text-foreground'}`}
+                        className={`shrink-0 cursor-pointer rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${activeFilter === channel.id ? 'bg-red-500/10 text-red-700 dark:text-red-400' : 'bg-muted text-muted-foreground hover:text-foreground'}`}
                     >
                         {channel.title}
                     </button>
                 ))}
             </div>
-            {refreshError && (
+            {Boolean(refreshError) && (
                 <p role="alert" className="shrink-0 text-xs text-destructive">
-                    {refreshError}
-                    {' Showing saved publications.'}
+                    {getErrorMessage(refreshError)} {t('savedPublications')}
                 </p>
             )}
             {!!data.warnings.length && (
@@ -132,7 +136,7 @@ export function YouTubeWatchWidget({ data, widget }: WidgetViewProps<YouTubeWatc
                 >
                     {data.warnings.map((warning) => (
                         <p key={warning.channel}>
-                            {warning.channel}: {warning.message}
+                            {warning.channel}: {getErrorMessage(warning)}
                         </p>
                     ))}
                 </div>
@@ -140,9 +144,7 @@ export function YouTubeWatchWidget({ data, widget }: WidgetViewProps<YouTubeWatc
             <div className="min-h-0 flex-1 overflow-y-auto pr-1">
                 {!visible.length && (
                     <div className="flex h-full items-center justify-center p-4 text-center text-sm text-muted-foreground">
-                        {data.channels.length
-                            ? 'No recent publications from these channels.'
-                            : 'Channels are unavailable. Try refreshing or edit your channel list.'}
+                        {data.channels.length ? t('noPublications') : t('channelsUnavailable')}
                     </div>
                 )}
                 <div className="flex flex-col gap-3">
@@ -164,7 +166,7 @@ export function YouTubeWatchWidget({ data, widget }: WidgetViewProps<YouTubeWatc
                                 />
                                 {!seen.includes(video.id) && (
                                     <span className="absolute left-1.5 top-1.5 rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
-                                        New
+                                        {t('new')}
                                     </span>
                                 )}
                             </div>
@@ -177,7 +179,7 @@ export function YouTubeWatchWidget({ data, widget }: WidgetViewProps<YouTubeWatc
                                 </p>
                                 <div className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground">
                                     <time dateTime={video.publishedAt}>
-                                        {new Date(video.publishedAt).toLocaleDateString(undefined, {
+                                        {formatDate(new Date(video.publishedAt), {
                                             day: 'numeric',
                                             month: 'short',
                                             year: 'numeric',
@@ -194,11 +196,13 @@ export function YouTubeWatchWidget({ data, widget }: WidgetViewProps<YouTubeWatc
                 </div>
             </div>
             <p className="shrink-0 border-t pt-2 text-[10px] text-muted-foreground">
-                Updates every{' '}
-                {widget.refreshRate % 60 === 0
-                    ? `${widget.refreshRate / 60} min`
-                    : `${widget.refreshRate} s`}{' '}
-                · {data.channels.length} channel(s)
+                {t('updates', {
+                    duration:
+                        widget.refreshRate % 60 === 0
+                            ? `${formatNumber(widget.refreshRate / 60)} min`
+                            : `${formatNumber(widget.refreshRate)} s`,
+                })}{' '}
+                · {t('channels', { count: data.channels.length })}
             </p>
         </div>
     );

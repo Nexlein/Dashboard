@@ -1,0 +1,12 @@
+{
+    "title": "Paramètres du profil",
+    "profileUpdated": "Profil mis à jour",
+    "emailUpdated": "Adresse e-mail mise à jour",
+    "emailCodeSent": "Nous avons envoyé un code à 6 chiffres à {{email}}. Votre adresse sera modifiée après sa saisie.",
+    "code": "Code de vérification",
+    "checking": "Vérification…",
+    "confirmEmail": "Confirmer l’adresse e-mail",
+    "displayName": "Nom d’affichage",
+    "emailAddress": "Adresse e-mail",
+    "emailHint": "La nouvelle adresse est confirmée à l’aide d’un code qui lui est envoyé."
+}

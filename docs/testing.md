@@ -2,15 +2,77 @@
 
 ## Overview
 
-| Layer    | Tools                          | Location                         |
-| -------- | ------------------------------ | -------------------------------- |
-| Shared   | Vitest                         | `shared/tests/`                  |
-| Backend  | Vitest, Supertest              | `backend/tests/`                 |
-| Frontend | Vitest, React Testing Library  | next to components (`*.test.tsx`)|
-| E2E      | Playwright, axe-core           | `e2e/tests/`                     |
-| Load     | k6                             | `backend/tests/k6/`              |
+| Layer      | Tools                         | Location                            |
+| ---------- | ----------------------------- | ----------------------------------- |
+| Shared     | Vitest                        | `shared/tests/`                     |
+| Backend    | Vitest, Supertest             | `backend/tests/`                    |
+| Frontend   | Vitest, React Testing Library | next to components (`*.test.tsx`)    |
+| E2E        | Playwright, axe-core          | `e2e/tests/`                        |
+| Lighthouse | Lighthouse CI, Chromium       | `e2e/lighthouse/`, `lighthouserc.cjs` |
+| Load       | k6                            | `backend/tests/k6/`                 |
 
-The CI pipeline runs all of them except k6 on every PR and push to `main`.
+The CI pipeline runs all of them except k6 on every PR and push to `main` or `master`.
+
+## Lighthouse regression checks
+
+The `lighthouse` job in `.github/workflows/ci.yml` runs on every pull request and
+push to `main` or `master`. It builds the production frontend, starts a local
+fixture server, checks that the dashboard actually contains five loaded widgets,
+and audits it three times with the desktop profile (1200 × 900).
+
+From the repository root, with Node 24 and dependencies installed:
+
+```bash
+npm exec -w e2e -- playwright install chromium # first time only
+npm run lighthouse
+```
+
+On a Linux machine missing browser system libraries, use
+`npm exec -w e2e -- playwright install --with-deps chromium` instead. To use an
+existing Chrome installation locally, set `CHROME_PATH` to its executable path.
+CI uses the Chromium version pinned by the Playwright lockfile.
+
+The checks in `lighthouserc.cjs` fail the command/job when:
+
+- the median performance score across three runs is below **95/100**;
+- any run has an accessibility, best-practices or SEO score below **95/100**.
+
+For example, performance scores 94, 96 and 98 pass (median 96); 93, 94 and 98
+fail (median 94). Warnings and diagnostics in a Lighthouse report are not all
+blocking assertions: the configuration defines which results make CI fail.
+Only the four category scores are asserted; an individual audit (such as console
+errors) is reported and contributes to its category, without a separate gate.
+
+Reports stay local: HTML and JSON files are written to `lighthouse-reports/`,
+and the raw runs/assertions to `e2e/.lighthouseci/`. On GitHub, open the workflow run
+in **Actions**, then download the **lighthouse-reports** artifact at the bottom
+of the run page. It is retained for seven days, including when the audit fails.
+No public report upload, Lighthouse server, GitHub token or real account is needed.
+
+The fixed scenario uses crypto charts, Ollama chat, a YouTube player, channel
+monitoring and stock charts. `fixtures.mjs` supplies a fictitious session and
+stable data, with 50 ms API latency. `browser.cjs` fixes English/light mode,
+declines optional cookies and replaces the YouTube thumbnail with a local
+480 × 360 image; all other external requests are blocked. Lighthouse still uses
+its normal storage/cache reset between runs. The fixture server mirrors nginx's
+static compression/cache policy and reads its CSP directly from the production
+template.
+
+This is a repeatable **frontend regression benchmark**, not a measurement of
+production provider/network latency or backend performance. Scores can differ
+from DevTools audits on your machine. It covers the initial dashboard; existing
+Playwright/axe tests continue to cover interactions and both light/dark themes.
+An accessibility score of 100 only covers Lighthouse's automated checks.
+
+The isolated build is written to `frontend/dist-lighthouse/`, leaving the normal
+deployment output separate. Builds/reports are ignored by Git and formatting
+tools. The test server only listens on `127.0.0.1:4174`; stop any other process
+using that port before running the command.
+
+When the first GitHub run passes, a repository administrator can make the
+`lighthouse` check required in the branch protection/ruleset for `main`. Until
+then, a red job reports a failure but does not itself prevent a merge. Pushing
+only to a feature branch does not trigger this workflow: open/update its PR.
 
 ## Rule for Developers
 
@@ -28,6 +90,16 @@ npm test                 # shared, backend and frontend unit tests
 npm test -w backend      # a single workspace
 npm run test:e2e         # end-to-end (see below)
 ```
+
+Before pushing frontend or backend changes, also run the same coverage checks as CI:
+
+```bash
+npm test -w frontend -- --coverage
+npm test -w backend -- --coverage
+```
+
+Passing `npm test` alone does not check coverage thresholds. Add tests for observable
+behavior (success, errors and regressions), rather than lowering those thresholds.
 
 Unit tests mock Prisma and external providers; they need no database. The root
 `npm test` and `npm run test:e2e` scripts build `shared` and generate the Prisma client
@@ -85,6 +157,12 @@ The frontend uses **Vitest** and **React Testing Library**.
 - Component tests are located alongside components (e.g. `Navbar.test.tsx`).
   `src/test-utils.tsx` renders components inside the Query client, theme and router providers.
 - `features/widgets/lib/widgets.test.ts` covers the API-to-dashboard widget mapping (titles, sizes, refresh rate).
+- `features/widgets/lib/registry.test.tsx` covers catalog translations, stable API
+  identifiers, legacy aliases and shared lazy imports.
+- `features/widgets/hooks/useWidgets.test.tsx` covers concurrent widget preloading,
+  video thumbnail priority, failed imports and successful/failed layout persistence.
+- `lib/apiClient.test.ts` covers session credentials, API error codes, retry delays,
+  proxy/network failures, empty responses and request cancellation.
 - `WidgetRenderer.test.tsx` covers crypto price rendering, multiple comparison
   curves, curve toggling, logos, and persisted period changes.
 - `WidgetParameterField.test.tsx` covers arbitrary CoinGecko IDs and removing

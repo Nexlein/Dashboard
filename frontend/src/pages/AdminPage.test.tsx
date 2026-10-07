@@ -1,3 +1,8 @@
+import i18n from '@/i18n';
+import { beforeEach as beforeLocaleTest } from 'vitest';
+beforeLocaleTest(async () => {
+    await i18n.changeLanguage('fr');
+});
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@/test-utils';
 import { makeUser, mockApi, type Route } from '@/test/fixtures';
@@ -155,7 +160,7 @@ describe('AdminPage', () => {
         fireEvent.click(await screen.findByRole('menuitem', { name: 'Lever le bannissement' }));
 
         expect(await screen.findByRole('alert')).toHaveTextContent(
-            'You are not allowed to ban users',
+            'Vous n’avez pas la permission d’effectuer cette action.',
         );
     });
 

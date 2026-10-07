@@ -241,7 +241,10 @@ describe('WidgetConfigurator', () => {
         mockApi({
             'GET /about.json': { body: makeAbout() },
             'GET /services': { body: [connectedCrypto] },
-            'POST /widgets': { status: 400, body: { error: 'Unknown coin: bitcon' } },
+            'POST /widgets': {
+                status: 400,
+                body: { error: 'Unknown coin: bitcon', code: 'CRYPTO_NOT_FOUND' },
+            },
         });
         const dialog = await openDialog();
         await choose(dialog, 'Service', 'Crypto');
@@ -252,7 +255,9 @@ describe('WidgetConfigurator', () => {
         fireEvent.change(within(dialog).getByLabelText('Currency'), { target: { value: 'eur' } });
         fireEvent.click(within(dialog).getByRole('button', { name: 'Add to Dashboard' }));
 
-        expect(await within(dialog).findByText('Unknown coin: bitcon')).toBeInTheDocument();
+        expect(
+            await within(dialog).findByText('Cryptocurrency or currency not found'),
+        ).toBeInTheDocument();
     });
 
     it('offers only the widgets /about.json declares, with the params it declares', async () => {
@@ -313,11 +318,14 @@ describe('WidgetConfigurator', () => {
     it('says when the available services cannot be loaded', async () => {
         mockApi({
             'GET /services': { body: [connectedCrypto] },
-            'GET /about.json': { status: 503, body: { error: 'Service unavailable' } },
+            'GET /about.json': {
+                status: 503,
+                body: { error: 'Service unavailable', code: 'INTERNAL_SERVER_ERROR' },
+            },
         });
         const dialog = await openDialog();
 
-        expect(await within(dialog).findByRole('alert')).toHaveTextContent('Service unavailable');
+        expect(await within(dialog).findByRole('alert')).toHaveTextContent('Internal server error');
         expect(within(dialog).getByRole('combobox', { name: 'Service' })).toBeDisabled();
     });
 });

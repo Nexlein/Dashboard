@@ -1,3 +1,4 @@
+import { validationErrorCode } from 'shared';
 import { betterAuth } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { APIError, createAuthMiddleware, getOAuthState, getSessionFromCtx } from 'better-auth/api';
@@ -166,7 +167,7 @@ export const auth = betterAuth({
                 const parsed = registerSchema.safeParse(body);
                 if (!parsed.success) {
                     throw APIError.from('BAD_REQUEST', {
-                        code: 'INVALID_REGISTRATION',
+                        code: validationErrorCode(parsed.error.issues[0]),
                         message: parsed.error.issues[0].message,
                     });
                 }
@@ -181,7 +182,7 @@ export const auth = betterAuth({
                 const parsed = profileSchema.safeParse(body);
                 if (!parsed.success) {
                     throw APIError.from('BAD_REQUEST', {
-                        code: 'INVALID_PROFILE',
+                        code: validationErrorCode(parsed.error.issues[0]),
                         message: parsed.error.issues[0].message,
                     });
                 }

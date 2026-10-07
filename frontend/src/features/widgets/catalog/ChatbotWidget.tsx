@@ -1,4 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { getErrorMessage } from '@/i18n/errors';
+import { resources } from '@/i18n/resources';
+import { useTranslation } from 'react-i18next';
+import { useState, useEffect, useRef, useId } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { Send, User, Loader2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,23 +14,37 @@ import {
 import { OllamaLogo } from '@/features/widgets/catalog/OllamaLogo';
 import { CHAT_HISTORY_PREFIX } from '@/lib/auth';
 
+type DisplayMessage = ChatMessage & { uiMessage?: 'greeting' | 'responseError' };
+const greeting = (): DisplayMessage => ({
+    role: 'assistant',
+    content: resources.en.chatbot.greeting,
+    uiMessage: 'greeting',
+});
+
 export function ChatbotWidget({ widget }: { widget: DashboardWidget }) {
+    const { t } = useTranslation('chatbot');
+    const inputId = useId();
     const { id } = widget;
     const storageKey = `${CHAT_HISTORY_PREFIX}${id}`;
 
-    const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    const [messages, setMessages] = useState<DisplayMessage[]>(() => {
         try {
             const saved = localStorage.getItem(storageKey);
-            return saved
-                ? JSON.parse(saved)
-                : [{ role: 'assistant', content: 'Hello! How can I help you today?' }];
+            if (!saved) return [greeting()];
+            const history: DisplayMessage[] = JSON.parse(saved);
+            if (!Array.isArray(history)) return [greeting()];
+            // Tag only the previous application's default greeting, not user/model content.
+            if (history[0]?.role === 'assistant' && history[0].content === greeting().content) {
+                history[0] = { ...history[0], uiMessage: 'greeting' };
+            }
+            return history;
         } catch {
-            return [{ role: 'assistant', content: 'Hello! How can I help you today?' }];
+            return [greeting()];
         }
     });
 
     const [input, setInput] = useState('');
-    const [error, setError] = useState<string | null>(null);
+    const [error, setError] = useState<unknown>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const previousMessageCountRef = useRef(messages.length);
 
@@ -47,10 +64,10 @@ export function ChatbotWidget({ widget }: { widget: DashboardWidget }) {
             setMessages((prev) => [...prev, { role: 'assistant', content: data.reply }]);
         },
         onError: (err: Error) => {
-            setError(err.message);
+            setError(err);
             setMessages((prev) => [
                 ...prev,
-                { role: 'assistant', content: 'Error: Could not get a response.' },
+                { role: 'assistant', content: '', uiMessage: 'responseError' },
             ]);
         },
     });
@@ -62,7 +79,7 @@ export function ChatbotWidget({ widget }: { widget: DashboardWidget }) {
         if (!input.trim() || loading) return;
 
         const userMsg: ChatMessage = { role: 'user', content: input.trim() };
-        const newMessages = [...messages, userMsg];
+        const newMessages: DisplayMessage[] = [...messages, userMsg];
         setMessages(newMessages);
         setInput('');
         setError(null);
@@ -72,9 +89,14 @@ export function ChatbotWidget({ widget }: { widget: DashboardWidget }) {
         let charCount = 0;
         const payloadMessages: ChatMessage[] = [];
         for (let i = newMessages.length - 1; i >= 0; i--) {
-            charCount += newMessages[i].content.length;
+            const message = newMessages[i];
+            const content = message.uiMessage ? t(`${message.uiMessage}`) : message.content;
+            charCount += content.length;
             if (charCount > MAX_CHARS && payloadMessages.length > 0) break;
-            payloadMessages.unshift(newMessages[i]);
+            payloadMessages.unshift({
+                role: message.role,
+                content,
+            });
         }
 
         chatMutation.mutate(payloadMessages);
@@ -103,7 +125,9 @@ export function ChatbotWidget({ widget }: { widget: DashboardWidget }) {
                             <div
                                 className={`rounded-xl px-3 py-2 ${msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}
                             >
-                                <p className="whitespace-pre-wrap wrap-break-word">{msg.content}</p>
+                                <p className="whitespace-pre-wrap wrap-break-word">
+                                    {msg.uiMessage ? t(`${msg.uiMessage}`) : msg.content}
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -120,9 +144,9 @@ export function ChatbotWidget({ widget }: { widget: DashboardWidget }) {
                         </div>
                     </div>
                 )}
-                {error && (
+                {Boolean(error) && (
                     <div className="text-xs text-destructive text-center p-2 bg-destructive/10 rounded-md mt-2">
-                        {error}
+                        {getErrorMessage(error)}
                     </div>
                 )}
                 <div ref={messagesEndRef} />
@@ -138,20 +162,23 @@ export function ChatbotWidget({ widget }: { widget: DashboardWidget }) {
                     className="size-10 shrink-0"
                     disabled={loading || messages.length <= 1}
                     onClick={() => {
-                        setMessages([
-                            { role: 'assistant', content: 'Hello! How can I help you today?' },
-                        ]);
+                        setMessages([greeting()]);
                         setError(null);
                     }}
-                    title="Clear Chat"
+                    title={t('clear')}
                 >
                     <Trash2 className="size-4 text-muted-foreground" />
-                    <span className="sr-only">Clear Chat</span>
+                    <span className="sr-only">{t('clear')}</span>
                 </Button>
+                <label htmlFor={inputId} className="sr-only">
+                    {t('message')}
+                </label>
                 <Input
+                    id={inputId}
+                    name="message"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    placeholder="Type a message..."
+                    placeholder={t('placeholder')}
                     disabled={loading}
                     className="flex-1 h-10"
                 />
@@ -161,7 +188,7 @@ export function ChatbotWidget({ widget }: { widget: DashboardWidget }) {
                     disabled={!input.trim() || loading}
                 >
                     <Send className="size-4" />
-                    <span className="sr-only">Send</span>
+                    <span className="sr-only">{t('send')}</span>
                 </Button>
             </form>
         </div>

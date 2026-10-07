@@ -1,3 +1,4 @@
+import type { ApiErrorCode } from 'shared';
 import { cached, clearCache, widgetCacheTtl } from '../utils/redisCache.ts';
 import { HttpError } from '../utils/httpError.ts';
 import type {
@@ -9,7 +10,7 @@ import type {
 
 // The parts of the OpenWeather responses this service reads.
 type GeoLocation = { name: string; country: string; state?: string; lat: number; lon: number };
-type Conditions = { weather?: { description: string; icon: string }[] };
+type Conditions = { weather?: { id?: number; description: string; icon: string }[] };
 type CurrentPayload = Conditions & {
     dt: number;
     main: { temp: number; feels_like: number; humidity: number };
@@ -31,8 +32,8 @@ type ForecastDay = {
 };
 
 class WeatherServiceError extends HttpError {
-    constructor(message: string, statusCode = 502) {
-        super(message, statusCode);
+    constructor(message: string, statusCode: number, code: ApiErrorCode) {
+        super(message, statusCode, code);
     }
 }
 
@@ -42,6 +43,7 @@ function getApiKey(options: Pick<ServiceContext, 'credentials'>): string {
         throw new WeatherServiceError(
             'OpenWeather is not connected. Configure it in Services.',
             409,
+            'OPENWEATHER_NOT_CONNECTED',
         );
     }
     return apiKey.trim();
@@ -62,19 +64,35 @@ async function fetchOpenWeather<T>(
             break;
         } catch {
             if (attempt === 1) {
-                throw new WeatherServiceError('Weather provider is unavailable');
+                throw new WeatherServiceError(
+                    'Weather provider is unavailable',
+                    502,
+                    'WEATHER_UNAVAILABLE',
+                );
             }
         }
     }
 
     if (!response?.ok) {
         if (response?.status === 401) {
-            throw new WeatherServiceError('Weather API key is invalid or not active yet', 503);
+            throw new WeatherServiceError(
+                'Weather API key is invalid or not active yet',
+                503,
+                'WEATHER_KEY_INVALID',
+            );
         }
         if (response?.status === 429) {
-            throw new WeatherServiceError('Weather API rate limit reached', 503);
+            throw new WeatherServiceError(
+                'Weather API rate limit reached',
+                503,
+                'WEATHER_RATE_LIMIT',
+            );
         }
-        throw new WeatherServiceError('Weather provider request failed');
+        throw new WeatherServiceError(
+            'Weather provider request failed',
+            502,
+            'WEATHER_REQUEST_FAILED',
+        );
     }
 
     return (await response.json()) as T;
@@ -87,7 +105,7 @@ async function resolveCity(city: string, apiKey: string): Promise<GeoLocation> {
         apiKey,
     );
     if (!locations.length) {
-        throw new WeatherServiceError('City not found', 404);
+        throw new WeatherServiceError('City not found', 404, 'CITY_NOT_FOUND');
     }
     return locations[0];
 }
@@ -141,6 +159,7 @@ function aggregateForecast(payload: ForecastPayload, location: GeoLocation) {
             max: Math.round(day.max),
             precipitationProbability: Math.round(day.precipitationProbability * 100),
             condition: day.representative.weather?.[0]?.description || '',
+            conditionCode: day.representative.weather?.[0]?.id ?? null,
             icon: day.representative.weather?.[0]?.icon || '',
         })),
     };
@@ -157,9 +176,13 @@ async function execute(
     };
     const normalizedWidgetName = aliases[widgetName] || widgetName;
     const city = typeof params.city === 'string' ? params.city.trim() : '';
-    if (!city) throw new WeatherServiceError('City is required', 400);
+    if (!city) throw new WeatherServiceError('City is required', 400, 'CITY_REQUIRED');
     if (!['current_weather', 'forecast'].includes(normalizedWidgetName)) {
-        throw new WeatherServiceError('Unsupported weather widget', 400);
+        throw new WeatherServiceError(
+            'Unsupported weather widget',
+            400,
+            'WEATHER_WIDGET_UNSUPPORTED',
+        );
     }
 
     const apiKey = getApiKey(options);
@@ -189,6 +212,7 @@ async function execute(
                 humidity: payload.main.humidity,
                 windSpeed: payload.wind?.speed ?? null,
                 condition: payload.weather?.[0]?.description || '',
+                conditionCode: payload.weather?.[0]?.id ?? null,
                 icon: payload.weather?.[0]?.icon || '',
             };
         } else {

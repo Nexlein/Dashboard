@@ -1,4 +1,5 @@
-import { afterEach } from 'vitest';
+import i18n from '@/i18n';
+import { afterEach, beforeEach } from 'vitest';
 import { queryClient } from '@/test-utils';
 import '@testing-library/jest-dom/vitest';
 
@@ -17,3 +18,8 @@ Element.prototype.scrollIntoView ??= () => {};
 
 // Tests share one QueryClient: start each one without the answers of the previous ones.
 afterEach(() => queryClient.clear());
+
+// Locale is explicit and reset: tests do not depend on the machine or previous tests.
+beforeEach(async () => {
+    await i18n.changeLanguage('en');
+});

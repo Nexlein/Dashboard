@@ -17,6 +17,8 @@
     ],
     "scripts": {
         "build": "npm run build -w shared && npm run build -w frontend",
+        "build:lighthouse": "npm run build -w shared && VITE_API_URL=http://127.0.0.1:4174 npm run build -w frontend -- --outDir dist-lighthouse",
+        "lighthouse": "npm run build:lighthouse && npm run lighthouse -w e2e",
         "test": "npm run build -w shared && npm run db:generate -w backend && npm test -w shared -w backend -w frontend",
         "test:e2e": "npm run build -w shared && npm run db:generate -w backend && npm test -w e2e",
         "prepare": "husky",

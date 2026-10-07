@@ -1,3 +1,6 @@
+import { useTranslation } from 'react-i18next';
+import { Suspense } from 'react';
+import { Loader2 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { WidgetParameterField } from './WidgetParameterField';
@@ -19,6 +22,7 @@ export function WidgetForm({
     refreshTimer: string;
     setRefreshTimer: (value: string) => void;
 }) {
+    const { t } = useTranslation('widgets');
     const CustomConfigUi = widgetDef.customConfigUi;
     const hasRefresh = widgetDef.hasRefresh ?? serviceDef.hasRefresh;
 
@@ -38,17 +42,21 @@ export function WidgetForm({
             {/* Custom UI for specific widgets (e.g. Chatbot Model Manager) */}
             {CustomConfigUi && (
                 <div className="animate-in fade-in slide-in-from-top-2">
-                    <CustomConfigUi
-                        selectedModel={String(params.model ?? '')}
-                        onSelectModel={(model) => setParams({ ...params, model })}
-                    />
+                    <Suspense
+                        fallback={<Loader2 className="size-5 animate-spin text-muted-foreground" />}
+                    >
+                        <CustomConfigUi
+                            selectedModel={String(params.model ?? '')}
+                            onSelectModel={(model) => setParams({ ...params, model })}
+                        />
+                    </Suspense>
                 </div>
             )}
 
             {/* Refresh Rate Timer */}
             {hasRefresh && (
                 <div className="grid gap-2 animate-in fade-in slide-in-from-top-2">
-                    <Label htmlFor="refreshTimer">Refresh Rate (seconds)</Label>
+                    <Label htmlFor="refreshTimer">{t('refreshRate')}</Label>
                     <Input
                         id="refreshTimer"
                         type="number"
@@ -57,7 +65,7 @@ export function WidgetForm({
                         onChange={(e) => setRefreshTimer(e.target.value)}
                     />
                     <p className="text-[0.8rem] text-muted-foreground">
-                        Minimum refresh rate is {MIN_REFRESH_RATE_SECONDS}s.
+                        {t('minimumRefresh', { seconds: MIN_REFRESH_RATE_SECONDS })}
                     </p>
                 </div>
             )}

@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { useUpdateLayout, useWidgets } from './useWidgets';
-import type { Layout } from 'react-grid-layout';
+import type { Layout, ResponsiveLayouts } from 'react-grid-layout';
 import type { DashboardWidget, WidgetLayout } from '@/features/widgets/lib/widgets';
 
 const SAVE_DELAY_MS = 500;
@@ -30,17 +30,20 @@ function matchesStored(
 }
 
 /**
- * Saves grid changes once dragging or resizing pauses. The grid also reports its layout
- * when it mounts; layouts identical to the stored ones are not sent.
+ * Saves the desktop layout once dragging or resizing pauses. Narrower layouts are
+ * temporary adaptations and must never overwrite the single layout stored by the API.
+ * The grid also reports layouts on mount and viewport changes; unchanged ones are ignored.
  */
 export function useWidgetLayoutManager() {
     const { data: widgets } = useWidgets();
     const updateLayoutMutation = useUpdateLayout();
     const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    const onLayoutChange = (layout: Layout) => {
+    const onLayoutChange = (layout: Layout, responsiveLayouts?: ResponsiveLayouts) => {
+        const desktopLayout = responsiveLayouts ? responsiveLayouts.lg : layout;
+        if (!desktopLayout) return;
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
-        const layouts = toLayouts(layout);
+        const layouts = toLayouts(desktopLayout);
         if (widgets && matchesStored(layouts, widgets)) return;
 
         timeoutRef.current = setTimeout(() => updateLayoutMutation.mutate(layouts), SAVE_DELAY_MS);

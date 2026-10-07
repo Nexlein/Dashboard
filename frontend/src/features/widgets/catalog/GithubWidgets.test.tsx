@@ -30,8 +30,8 @@ describe('GitHub widgets', () => {
         );
         expect(screen.getByText('facebook/react')).toBeInTheDocument();
         expect(screen.getByText('No description provided.')).toBeInTheDocument();
-        expect(screen.getByText('230000')).toBeInTheDocument();
-        expect(screen.getByText('47000')).toBeInTheDocument();
+        expect(screen.getByText('230,000')).toBeInTheDocument();
+        expect(screen.getByText('47,000')).toBeInTheDocument();
         expect(screen.getByText('900')).toBeInTheDocument();
     });
 

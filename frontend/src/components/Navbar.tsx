@@ -1,25 +1,24 @@
-import { useEffect, useState } from 'react';
+import { ThemeSwitcher } from '@/components/ThemeSwitcher';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { notice, getErrorMessage } from '@/i18n/errors';
+import { useTranslation } from 'react-i18next';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useTheme } from '@/lib/theme';
 import type { User } from 'shared';
 import { deleteMyAccount, exportMyData } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import {
-    Check,
     ChevronDown,
     LayoutDashboard,
     LogOut,
-    Moon,
     Plug,
-    Sun,
     UserRound,
     Download,
     Trash2,
     Shield,
     ShieldCheck,
 } from 'lucide-react';
-import { WidgetConfigurator } from '@/features/widgets/components/WidgetConfigurator';
-import { ProfileSettingsModal } from '@/components/ProfileSettingsModal';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -30,6 +29,17 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
+const WidgetConfigurator = lazy(() =>
+    import('@/features/widgets/components/WidgetConfigurator').then((module) => ({
+        default: module.WidgetConfigurator,
+    })),
+);
+const ProfileSettingsModal = lazy(() =>
+    import('@/components/ProfileSettingsModal').then((module) => ({
+        default: module.ProfileSettingsModal,
+    })),
+);
+
 export default function Navbar({
     user,
     onLogout,
@@ -39,11 +49,13 @@ export default function Navbar({
     onLogout: () => void;
     showWidgetConfigurator?: boolean;
 }) {
-    const { theme, setTheme } = useTheme();
+    const { t } = useTranslation(['common', 'widgets']);
+    const { theme } = useTheme();
     const [profileOpen, setProfileOpen] = useState(false);
-    const [privacyError, setPrivacyError] = useState('');
+    const [configuratorLoaded, setConfiguratorLoaded] = useState(false);
+    const [privacyError, setPrivacyError] = useState<unknown>('');
     const [privacyBusy, setPrivacyBusy] = useState(false);
-    const accountLabel = user?.name || user?.email || 'Compte';
+    const accountLabel = user?.name || user?.email || t('common:account');
     const initial = accountLabel.charAt(0).toUpperCase();
 
     useEffect(() => {
@@ -74,19 +86,14 @@ export default function Navbar({
             link.remove();
             setTimeout(() => URL.revokeObjectURL(url), 0);
         } catch {
-            setPrivacyError('Le téléchargement a échoué. Veuillez réessayer.');
+            setPrivacyError(notice('common:downloadError'));
         } finally {
             setPrivacyBusy(false);
         }
     }
 
     async function deleteAccount() {
-        if (
-            !window.confirm(
-                'Supprimer définitivement votre compte et toutes ses données ? Cette action est irréversible.',
-            )
-        )
-            return;
+        if (!window.confirm(t('common:deleteConfirmation'))) return;
         setPrivacyError('');
         setPrivacyBusy(true);
         try {
@@ -95,8 +102,8 @@ export default function Navbar({
         } catch (err) {
             setPrivacyError(
                 (err as { code?: string }).code === 'SESSION_EXPIRED'
-                    ? 'Par sécurité, reconnectez-vous puis supprimez votre compte.'
-                    : 'La suppression n’a pas pu être confirmée. Veuillez réessayer.',
+                    ? notice('common:deleteFreshSession')
+                    : notice('common:deleteError'),
             );
         } finally {
             setPrivacyBusy(false);
@@ -108,6 +115,7 @@ export default function Navbar({
             <div className="flex items-center gap-1">
                 <NavLink
                     to="/"
+                    aria-label={t('common:dashboard')}
                     end
                     className={({ isActive }) =>
                         `flex h-10 items-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors ${
@@ -118,10 +126,11 @@ export default function Navbar({
                     }
                 >
                     <LayoutDashboard className="size-4" />
-                    <span className="hidden sm:inline">Dashboard</span>
+                    <span className="hidden sm:inline">{t('common:dashboard')}</span>
                 </NavLink>
                 <NavLink
                     to="/services"
+                    aria-label={t('common:services')}
                     className={({ isActive }) =>
                         `flex h-10 items-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors ${
                             isActive
@@ -131,11 +140,12 @@ export default function Navbar({
                     }
                 >
                     <Plug className="size-4" />
-                    <span className="hidden sm:inline">Services</span>
+                    <span className="hidden sm:inline">{t('common:services')}</span>
                 </NavLink>
                 {user?.role === 'admin' && (
                     <NavLink
                         to="/admin"
+                        aria-label={t('common:administration')}
                         className={({ isActive }) =>
                             `flex h-10 items-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors ${
                                 isActive
@@ -145,12 +155,32 @@ export default function Navbar({
                         }
                     >
                         <ShieldCheck className="size-4" />
-                        <span className="hidden sm:inline">Administration</span>
+                        <span className="hidden sm:inline">{t('common:administration')}</span>
                     </NavLink>
                 )}
             </div>
-            <div className="flex min-w-0 items-center gap-3">
-                {showWidgetConfigurator && <WidgetConfigurator />}
+            <div className="flex min-w-0 flex-wrap items-center gap-3">
+                {showWidgetConfigurator && (
+                    <Suspense
+                        fallback={
+                            <Button disabled aria-busy="true" className="h-11 rounded-xl px-3">
+                                {t('widgets:add')}
+                            </Button>
+                        }
+                    >
+                        {configuratorLoaded ? (
+                            <WidgetConfigurator initialOpen />
+                        ) : (
+                            <Button
+                                className="h-11 rounded-xl px-3"
+                                onClick={() => setConfiguratorLoaded(true)}
+                            >
+                                {t('widgets:add')}
+                            </Button>
+                        )}
+                    </Suspense>
+                )}
+                <ThemeSwitcher />
 
                 <DropdownMenu>
                     <DropdownMenuTrigger
@@ -158,7 +188,7 @@ export default function Navbar({
                             <Button
                                 variant="outline"
                                 className="h-11 min-w-0 gap-2 rounded-xl px-2.5 sm:px-3"
-                                aria-label={`Ouvrir le menu du compte ${accountLabel}`}
+                                aria-label={t('common:accountMenu', { name: accountLabel })}
                             />
                         }
                     >
@@ -185,23 +215,9 @@ export default function Navbar({
 
                         <DropdownMenuSeparator />
                         <DropdownMenuGroup>
-                            <DropdownMenuLabel className="px-2 pt-2">Thème</DropdownMenuLabel>
-                            <DropdownMenuItem
-                                className="min-h-9 px-2"
-                                onClick={() => setTheme('light')}
-                            >
-                                <Sun />
-                                Thème clair
-                                {theme === 'light' && <Check className="ml-auto" />}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                                className="min-h-9 px-2"
-                                onClick={() => setTheme('dark')}
-                            >
-                                <Moon />
-                                Thème sombre
-                                {theme === 'dark' && <Check className="ml-auto" />}
-                            </DropdownMenuItem>
+                            <div className="flex justify-start px-2 py-1.5">
+                                <LanguageSwitcher inMenu />
+                            </div>
                         </DropdownMenuGroup>
 
                         <DropdownMenuItem
@@ -209,19 +225,19 @@ export default function Navbar({
                             onClick={() => setProfileOpen(true)}
                         >
                             <UserRound className="mr-2 size-4" />
-                            Edit Profile
+                            {t('common:editProfile')}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuGroup>
                             <DropdownMenuLabel className="px-2 pt-2">
-                                Data & Privacy (GDPR)
+                                {t('common:dataPrivacy')}
                             </DropdownMenuLabel>
                             <DropdownMenuItem
                                 className="min-h-9 px-2"
                                 render={<NavLink to="/privacy" />}
                             >
                                 <Shield className="mr-2 size-4" />
-                                Privacy Policy
+                                {t('common:privacyPolicy')}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                                 className="min-h-9 px-2 cursor-pointer"
@@ -229,7 +245,7 @@ export default function Navbar({
                                 onClick={downloadData}
                             >
                                 <Download className="mr-2 size-4" />
-                                Download My Data
+                                {t('common:downloadData')}
                             </DropdownMenuItem>
                         </DropdownMenuGroup>
                         <DropdownMenuSeparator />
@@ -240,7 +256,7 @@ export default function Navbar({
                             onClick={deleteAccount}
                         >
                             <Trash2 className="mr-2 size-4" />
-                            Delete My Account
+                            {t('common:deleteAccount')}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                             variant="destructive"
@@ -248,23 +264,27 @@ export default function Navbar({
                             onClick={onLogout}
                         >
                             <LogOut className="mr-2 size-4" />
-                            Se déconnecter
+                            {t('common:signOut')}
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
             </div>
 
-            {privacyError && (
+            {Boolean(privacyError) && (
                 <p role="alert" className="order-last w-full text-sm text-destructive">
-                    {privacyError}
+                    {getErrorMessage(privacyError)}
                 </p>
             )}
-            <ProfileSettingsModal
-                open={profileOpen}
-                onOpenChange={setProfileOpen}
-                user={user}
-                onUserUpdated={() => window.location.reload()}
-            />
+            {profileOpen && (
+                <Suspense fallback={null}>
+                    <ProfileSettingsModal
+                        open={profileOpen}
+                        onOpenChange={setProfileOpen}
+                        user={user}
+                        onUserUpdated={() => window.location.reload()}
+                    />
+                </Suspense>
+            )}
         </nav>
     );
 }

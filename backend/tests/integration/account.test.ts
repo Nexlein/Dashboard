@@ -88,6 +88,7 @@ describe('profile', () => {
             .send({ name: 'a'.repeat(51) });
         expect(tooLong.status).toBe(400);
         expect(tooLong.body.message).toBe('Display name must be 50 characters or fewer');
+        expect(tooLong.body.code).toBe('DISPLAY_NAME_LENGTH');
     });
 
     it('cannot change the email or the role through update-user', async () => {

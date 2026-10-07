@@ -1,3 +1,6 @@
+import { locale, formatNumber } from '@/i18n/format';
+import i18n from '@/i18n';
+import { useTranslation } from 'react-i18next';
 import { useMemo, useState } from 'react';
 import type { WidgetViewProps } from '@/features/widgets/lib/types';
 
@@ -44,10 +47,30 @@ const FALLBACK_COLORS = [
     '#14b8a6',
 ];
 const PERIODS = [
-    { value: '7', label: '1W' },
-    { value: '30', label: '1M' },
-    { value: '90', label: '3M' },
-    { value: '365', label: '1Y' },
+    {
+        value: '7',
+        get label() {
+            return i18n.t('markets:week');
+        },
+    },
+    {
+        value: '30',
+        get label() {
+            return i18n.t('markets:month');
+        },
+    },
+    {
+        value: '90',
+        get label() {
+            return i18n.t('markets:threeMonths');
+        },
+    },
+    {
+        value: '365',
+        get label() {
+            return i18n.t('markets:year');
+        },
+    },
 ];
 
 function coinMeta(coin: string, index: number) {
@@ -72,6 +95,7 @@ function CoinLogo({
     if (series.image && !failed) {
         return (
             <img
+                crossOrigin="anonymous"
                 src={series.image}
                 alt=""
                 data-testid={`crypto-logo-${series.coin}`}
@@ -94,18 +118,18 @@ function CoinLogo({
 
 function currencyValue(value: number, currency: string) {
     try {
-        return new Intl.NumberFormat(undefined, {
+        return new Intl.NumberFormat(locale(), {
             style: 'currency',
             currency: currency.toUpperCase(),
             maximumFractionDigits: value < 1 ? 6 : 2,
         }).format(value);
     } catch {
-        return `${value.toLocaleString()} ${currency.toUpperCase()}`;
+        return `${formatNumber(value)} ${currency.toUpperCase()}`;
     }
 }
 
 function dateLabel(timestamp: number, days: number) {
-    return new Intl.DateTimeFormat(undefined, {
+    return new Intl.DateTimeFormat(locale(), {
         ...(days <= 1
             ? { hour: '2-digit', minute: '2-digit' }
             : { month: 'short', day: 'numeric' }),
@@ -133,6 +157,7 @@ export function CryptoChartWidget({
     onPeriodChange,
     periodUpdating,
 }: WidgetViewProps<CryptoChartData>) {
+    const { t } = useTranslation('markets');
     const [hiddenCoins, setHiddenCoins] = useState(() => new Set<string>());
     const activePeriod =
         String(selectedPeriod ?? data.days) === 'max' ? '365' : String(selectedPeriod ?? data.days);
@@ -210,10 +235,17 @@ export function CryptoChartWidget({
                             </p>
                             <p
                                 className={`mt-0.5 text-xs font-medium ${
-                                    positive ? 'text-emerald-500' : 'text-red-500'
+                                    positive
+                                        ? 'text-emerald-700 dark:text-emerald-400'
+                                        : 'text-red-700 dark:text-red-400'
                                 }`}
                             >
-                                {positive ? '↑' : '↓'} {Math.abs(change).toFixed(2)}%
+                                {positive ? '↑' : '↓'}{' '}
+                                {formatNumber(Math.abs(change), {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                })}
+                                %
                             </p>
                         </div>
                     );
@@ -248,7 +280,7 @@ export function CryptoChartWidget({
                 <div className="flex items-center">
                     <div
                         className="flex items-center rounded-md bg-muted p-0.5"
-                        aria-label="Chart period"
+                        aria-label={t('chartPeriod')}
                     >
                         {PERIODS.map((period) => {
                             const active = activePeriod === period.value;
@@ -278,7 +310,7 @@ export function CryptoChartWidget({
                     viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
                     className="h-full min-h-32 w-full"
                     role="img"
-                    aria-label="Cryptocurrency performance chart"
+                    aria-label={t('cryptoChart')}
                 >
                     {yTicks.map((tick) => {
                         const y =
@@ -301,7 +333,7 @@ export function CryptoChartWidget({
                                     textAnchor="end"
                                     className="fill-muted-foreground text-[11px]"
                                 >
-                                    {tick.toFixed(0)}%
+                                    {formatNumber(tick, { maximumFractionDigits: 0 })}%
                                 </text>
                             </g>
                         );
@@ -343,7 +375,7 @@ export function CryptoChartWidget({
                             textAnchor="middle"
                             className="fill-muted-foreground text-sm"
                         >
-                            Select a market from the legend
+                            {t('selectMarket')}
                         </text>
                     )}
                 </svg>

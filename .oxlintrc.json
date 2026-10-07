@@ -3,6 +3,9 @@
     "plugins": ["typescript", "oxc", "react"],
     "ignorePatterns": [
         "**/dist",
+        "frontend/dist-lighthouse",
+        ".lighthouseci",
+        "lighthouse-reports",
         "**/coverage",
         "**/playwright-report",
         "**/test-results",

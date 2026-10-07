@@ -33,7 +33,7 @@ describe('App routing', () => {
             'GET /api/auth/get-session': { body: null },
         });
         renderAppAt('/');
-        expect(await screen.findByRole('button', { name: 'Se connecter' })).toBeInTheDocument();
+        expect(await screen.findByRole('button', { name: 'Sign in' })).toBeInTheDocument();
         expect(currentPath()).toBe('/login');
     });
 

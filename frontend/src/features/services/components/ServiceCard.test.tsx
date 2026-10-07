@@ -23,7 +23,10 @@ describe('ServiceCard with an API key service', () => {
         const { onConnect } = renderCard();
         const input = screen.getByLabelText('CoinGecko Demo API key');
         const connect = screen.getByRole('button', { name: 'Connect' });
-        expect(screen.getByRole('img', { name: 'CoinGecko logo' })).toBeInTheDocument();
+        expect(screen.getByRole('img', { name: 'CoinGecko logo' })).toHaveAttribute(
+            'src',
+            '/logos/coingecko.svg',
+        );
         expect(connect).toBeDisabled();
 
         fireEvent.change(input, { target: { value: '  demo-key  ' } });
@@ -40,7 +43,11 @@ describe('ServiceCard with an API key service', () => {
             target: { value: 'bad' },
         });
         fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
-        await waitFor(() => expect(props.setError).toHaveBeenCalledWith('Invalid API key'));
+        await waitFor(() =>
+            expect(props.setError).toHaveBeenCalledWith(
+                expect.objectContaining({ message: 'Invalid API key' }),
+            ),
+        );
     });
 
     it('shows only the key hint once connected, and lets the key be replaced', () => {
@@ -115,7 +122,11 @@ describe('ServiceCard with an OAuth service', () => {
         });
         const { setError } = renderCard(github);
         fireEvent.click(screen.getByRole('button', { name: 'Connect a GitHub account' }));
-        await waitFor(() => expect(setError).toHaveBeenCalledWith('Unauthorized'));
+        await waitFor(() =>
+            expect(setError).toHaveBeenCalledWith(
+                expect.objectContaining({ message: 'Unauthorized' }),
+            ),
+        );
     });
 
     it('lists the connected accounts and offers to connect another', () => {

@@ -1,3 +1,5 @@
+import { getErrorMessage, notice, translateNotice, type LocalizedNotice } from '@/i18n/errors';
+import { useTranslation } from 'react-i18next';
 import { useState, type SubmitEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,26 +12,24 @@ type EmailCodeFormProps = {
     onVerified: () => void;
 };
 
-const errorMessage = (error: unknown) =>
-    error instanceof Error ? error.message : 'Une erreur est survenue. Réessayez plus tard.';
-
 /** Asks for the 6-digit code emailed to `email` after sign-up or an unverified sign-in. */
 export function EmailCodeForm({ email, onVerified }: EmailCodeFormProps) {
+    const { t } = useTranslation('auth');
     const [code, setCode] = useState('');
-    const [error, setError] = useState('');
-    const [info, setInfo] = useState('');
+    const [error, setError] = useState<unknown>('');
+    const [info, setInfo] = useState<LocalizedNotice | null>(null);
     const [busy, setBusy] = useState(false);
 
     async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
         event.preventDefault();
         setError('');
-        setInfo('');
+        setInfo(null);
         setBusy(true);
         try {
             await verifyEmailCode(email, code.trim());
             onVerified();
         } catch (verifyError) {
-            setError(errorMessage(verifyError));
+            setError(verifyError);
         } finally {
             setBusy(false);
         }
@@ -37,24 +37,20 @@ export function EmailCodeForm({ email, onVerified }: EmailCodeFormProps) {
 
     async function resend() {
         setError('');
-        setInfo('');
+        setInfo(null);
         try {
             await resendVerificationCode(email);
-            setInfo('Un nouveau code vient d’être envoyé.');
+            setInfo(notice('auth:newCodeSent'));
         } catch (resendError) {
-            setError(errorMessage(resendError));
+            setError(resendError);
         }
     }
 
     return (
         <form className="space-y-4" onSubmit={handleSubmit}>
-            <p className="text-sm text-muted-foreground">
-                Nous avons envoyé un code à 6 chiffres à{' '}
-                <span className="font-medium text-foreground">{email}</span>. Il expire dans 5
-                minutes.
-            </p>
+            <p className="text-sm text-muted-foreground">{t('verificationSent', { email })}</p>
             <div className="space-y-2">
-                <Label htmlFor="verification-code">Code de vérification</Label>
+                <Label htmlFor="verification-code">{t('verificationCode')}</Label>
                 <Input
                     id="verification-code"
                     name="code"
@@ -67,21 +63,21 @@ export function EmailCodeForm({ email, onVerified }: EmailCodeFormProps) {
                     required
                 />
             </div>
-            {error && (
+            {Boolean(error) && (
                 <p className="text-sm text-destructive" role="alert">
-                    {error}
+                    {getErrorMessage(error)}
                 </p>
             )}
             {info && (
                 <p className="text-sm text-muted-foreground" role="status">
-                    {info}
+                    {translateNotice(info)}
                 </p>
             )}
             <Button className="h-10 w-full" type="submit" disabled={busy || code.length !== 6}>
-                {busy ? 'Vérification…' : 'Vérifier'}
+                {busy ? t('checking') : t('verify')}
             </Button>
             <Button type="button" variant="ghost" className="w-full" onClick={resend}>
-                Renvoyer le code
+                {t('resendCode')}
             </Button>
         </form>
     );

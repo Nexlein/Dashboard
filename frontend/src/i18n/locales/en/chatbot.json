@@ -1,0 +1,20 @@
+{
+    "greeting": "Hello! How can I help you today?",
+    "responseError": "Error: Could not get a response.",
+    "clear": "Clear Chat",
+    "message": "Message",
+    "placeholder": "Type a message...",
+    "send": "Send",
+    "fastModel": "Llama 3.2 (1B) - Very Fast",
+    "lightModel": "Qwen 2 (1.5B) - Smart & Light",
+    "powerfulModel": "Llama 3 (8B) - Powerful",
+    "recommended": "Recommended Models",
+    "refreshModels": "Refresh installed models",
+    "selected": "Selected",
+    "select": "Select",
+    "pulling": "Pulling...",
+    "install": "Install",
+    "customTag": "Custom model tag",
+    "customTagPlaceholder": "Custom model tag (e.g. mistral)",
+    "pull": "Pull"
+}

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { NextFunction, Request, Response } from 'express';
 import errorHandler from '../src/middleware/errorHandler.ts';
+import { HttpError } from '../src/utils/httpError.ts';
 
 function respond(err: Error & { statusCode?: number; code?: string }) {
     const res = { status: vi.fn(), json: vi.fn() };
@@ -18,25 +19,41 @@ beforeEach(() => {
 });
 
 describe('errorHandler', () => {
+    it('returns the explicit HttpError code while preserving its status and message', () => {
+        expect(respond(new HttpError('City not found', 404, 'CITY_NOT_FOUND'))).toEqual({
+            status: 404,
+            body: { error: 'City not found', code: 'CITY_NOT_FOUND' },
+        });
+    });
+
+    it('preserves an explicit error code even when its message changes', () => {
+        expect(
+            respond(new HttpError('The provider rejected this key', 409, 'WEATHER_KEY_INVALID')),
+        ).toEqual({
+            status: 409,
+            body: { error: 'The provider rejected this key', code: 'WEATHER_KEY_INVALID' },
+        });
+    });
+
     it('uses the status code an error carries', () => {
         expect(respond(Object.assign(new Error('Nope'), { statusCode: 418 }))).toEqual({
             status: 418,
-            body: { error: 'Nope' },
+            body: { error: 'Nope', code: 'REQUEST_FAILED' },
         });
     });
 
     it.each([
-        ['P2002', 409, 'Resource already exists (conflict)'],
-        ['P2025', 404, 'Resource not found'],
-        ['P2003', 500, 'Internal server error'],
-    ])('maps the Prisma error %s to %i', (code, status, error) => {
-        expect(respond(prismaError(code))).toEqual({ status, body: { error } });
+        ['P2002', 409, 'Resource already exists (conflict)', 'RESOURCE_EXISTS'],
+        ['P2025', 404, 'Resource not found', 'RESOURCE_NOT_FOUND'],
+        ['P2003', 500, 'Internal server error', 'INTERNAL_SERVER_ERROR'],
+    ])('maps the Prisma error %s to %i', (code, status, error, errorCode) => {
+        expect(respond(prismaError(code))).toEqual({ status, body: { error, code: errorCode } });
     });
 
     it('hides the message of unexpected errors', () => {
         expect(respond(new Error('connection string with password'))).toEqual({
             status: 500,
-            body: { error: 'Internal server error' },
+            body: { error: 'Internal server error', code: 'INTERNAL_SERVER_ERROR' },
         });
     });
 });

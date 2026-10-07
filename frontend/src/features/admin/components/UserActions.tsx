@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Ban, EllipsisVertical, LogOut, ShieldCheck, ShieldOff, Trash2, Undo2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -21,6 +22,7 @@ export function UserActions({
     disabled: boolean;
     onAction: (action: UserAction) => void;
 }) {
+    const { t } = useTranslation('admin');
     const label = user.name || user.email;
     return (
         <DropdownMenu>
@@ -29,7 +31,7 @@ export function UserActions({
                     <Button
                         variant="ghost"
                         size="icon"
-                        aria-label={`Actions pour ${label}`}
+                        aria-label={t('actionsFor', { name: label })}
                         disabled={disabled}
                     />
                 }
@@ -40,33 +42,33 @@ export function UserActions({
                 {user.role === 'admin' ? (
                     <DropdownMenuItem onClick={() => onAction('demote')}>
                         <ShieldOff />
-                        Retirer le rôle administrateur
+                        {t('demote')}
                     </DropdownMenuItem>
                 ) : (
                     <DropdownMenuItem onClick={() => onAction('promote')}>
                         <ShieldCheck />
-                        Nommer administrateur
+                        {t('promote')}
                     </DropdownMenuItem>
                 )}
                 <DropdownMenuItem onClick={() => onAction('signOut')}>
                     <LogOut />
-                    Déconnecter de partout
+                    {t('signOutEverywhere')}
                 </DropdownMenuItem>
                 {user.banned ? (
                     <DropdownMenuItem onClick={() => onAction('unban')}>
                         <Undo2 />
-                        Lever le bannissement
+                        {t('unban')}
                     </DropdownMenuItem>
                 ) : (
                     <DropdownMenuItem onClick={() => onAction('ban')}>
                         <Ban />
-                        Bannir…
+                        {t('banAction')}
                     </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem variant="destructive" onClick={() => onAction('remove')}>
                     <Trash2 />
-                    Supprimer le compte
+                    {t('remove')}
                 </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>

@@ -49,6 +49,35 @@ afterEach(() => {
 });
 
 describe('useWidgetLayoutManager', () => {
+    it('does not overwrite the desktop layout with an automatic phone layout', async () => {
+        const { result, puts, loaded } = setup();
+        await loaded();
+        const phone = grid().map((item, index) => ({ ...item, x: 0, y: index * 2, w: 2 }));
+
+        act(() => result.current.onLayoutChange(phone, { lg: grid(), xxs: phone }));
+        await act(() => vi.advanceTimersByTimeAsync(1000));
+
+        expect(puts()).toHaveLength(0);
+    });
+
+    it('saves the desktop arrangement even if the active layout is for a phone', async () => {
+        const { result, puts, loaded } = setup();
+        await loaded();
+        const desktop = grid({ 1: { x: 6 } });
+        const phone = grid().map((item, index) => ({ ...item, x: 0, y: index * 2, w: 2 }));
+
+        act(() => result.current.onLayoutChange(phone, { lg: desktop, xxs: phone }));
+        await act(() => vi.advanceTimersByTimeAsync(500));
+
+        expect(puts()).toHaveLength(1);
+        expect(JSON.parse(String(puts()[0][1]?.body)).layouts[0].layout).toEqual({
+            x: 6,
+            y: 0,
+            w: 3,
+            h: 2,
+        });
+    });
+
     it('saves a moved widget once the user stops dragging', async () => {
         const { result, puts, loaded } = setup();
         await loaded();

@@ -1,0 +1,20 @@
+{
+    "greeting": "Bonjour ! Comment puis-je vous aider aujourd’hui ?",
+    "responseError": "Erreur : aucune réponse n’a pu être obtenue.",
+    "clear": "Effacer la discussion",
+    "message": "Message",
+    "placeholder": "Écrivez un message…",
+    "send": "Envoyer",
+    "fastModel": "Llama 3.2 (1B) - Très rapide",
+    "lightModel": "Qwen 2 (1.5B) - Intelligent et léger",
+    "powerfulModel": "Llama 3 (8B) - Puissant",
+    "recommended": "Modèles recommandés",
+    "refreshModels": "Actualiser les modèles installés",
+    "selected": "Sélectionné",
+    "select": "Sélectionner",
+    "pulling": "Téléchargement…",
+    "install": "Installer",
+    "customTag": "Identifiant de modèle personnalisé",
+    "customTagPlaceholder": "Identifiant du modèle (ex. mistral)",
+    "pull": "Télécharger"
+}
