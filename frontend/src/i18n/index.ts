@@ -14,7 +14,11 @@ const i18n = createInstance();
 
 function syncDocumentLanguage(language: string) {
     if (typeof document !== 'undefined') {
-        document.documentElement.lang = normalizeLanguage(language) ?? FALLBACK_LANGUAGE;
+        const resolvedLanguage = normalizeLanguage(language) ?? FALLBACK_LANGUAGE;
+        document.documentElement.lang = resolvedLanguage;
+        document
+            .querySelector('meta[name="description"]')
+            ?.setAttribute('content', resources[resolvedLanguage].common.metaDescription);
     }
 }
 

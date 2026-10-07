@@ -35,5 +35,6 @@
     "readPrivacy": "Lire notre politique de confidentialité",
     "decline": "Refuser",
     "accept": "Accepter",
-    "accountMenu": "Ouvrir le menu du compte {{name}}"
+    "accountMenu": "Ouvrir le menu du compte {{name}}",
+    "metaDescription": "Un tableau de bord personnalisable pour suivre la météo, les cryptomonnaies, la bourse, GitHub et YouTube, en français et en anglais."
 }

@@ -35,5 +35,6 @@
     "readPrivacy": "Read our Privacy Policy",
     "decline": "Decline",
     "accept": "Accept",
-    "accountMenu": "Open the account menu for {{name}}"
+    "accountMenu": "Open the account menu for {{name}}",
+    "metaDescription": "A customizable dashboard for weather, cryptocurrency, stocks, GitHub and YouTube, available in French and English."
 }
