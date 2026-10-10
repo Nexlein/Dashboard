@@ -2,6 +2,8 @@
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
 @import '@fontsource-variable/geist';
+@import '@fontsource/atkinson-hyperlegible/400.css';
+@import '@fontsource/atkinson-hyperlegible/700.css';
 
 /* `dark:` follows the .dark class set by the theme provider, not the OS setting. */
 @custom-variant dark (&:is(.dark *));
@@ -129,6 +131,72 @@
 
     html {
         @apply font-sans;
+    }
+}
+
+/* Accessibility settings (lib/accessibility.ts sets these classes on <html>). The text size
+   is the <html> font size: every Tailwind size is in rem, so it scales the whole page. */
+
+/* High contrast: text and borders close to black (white in dark mode), strong focus ring. */
+.a11y-contrast {
+    --muted-foreground: oklch(0.25 0 0);
+    --border: oklch(0.35 0 0);
+    --input: oklch(0.35 0 0);
+    --ring: oklch(0.145 0 0);
+}
+
+.a11y-contrast.dark {
+    --muted-foreground: oklch(0.92 0 0);
+    --border: oklch(0.8 0 0);
+    --input: oklch(0.8 0 0);
+    --ring: oklch(0.985 0 0);
+}
+
+.a11y-contrast :focus-visible {
+    outline: 3px solid var(--ring) !important;
+    outline-offset: 2px;
+}
+
+.a11y-underline-links a {
+    text-decoration-line: underline;
+    text-underline-offset: 0.2em;
+}
+
+/* WCAG 1.4.12 text spacing. */
+.a11y-text-spacing * {
+    line-height: 1.5 !important;
+    letter-spacing: 0.12em !important;
+    word-spacing: 0.16em !important;
+}
+
+.a11y-text-spacing p {
+    margin-bottom: 2em;
+}
+
+/* `@theme inline` copies the font into each utility, so override the family directly. */
+.a11y-readable-font,
+.a11y-readable-font :not(code, pre, kbd) {
+    font-family: 'Atkinson Hyperlegible', sans-serif !important;
+}
+
+/* Reduced motion: chosen in the menu, or by the operating system unless the user allows it. */
+html[data-motion='reduce'] *,
+html[data-motion='reduce'] *::before,
+html[data-motion='reduce'] *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html:not([data-motion='allow']) *,
+    html:not([data-motion='allow']) *::before,
+    html:not([data-motion='allow']) *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
     }
 }
 

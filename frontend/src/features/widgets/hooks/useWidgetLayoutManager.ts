@@ -1,9 +1,18 @@
 import { useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useUpdateLayout, useWidgets } from './useWidgets';
 import type { Layout, ResponsiveLayouts } from 'react-grid-layout';
-import type { DashboardWidget, WidgetLayout } from '@/features/widgets/lib/widgets';
+import {
+    toDashboardWidget,
+    type DashboardWidget,
+    type WidgetLayout,
+} from '@/features/widgets/lib/widgets';
 
 const SAVE_DELAY_MS = 500;
+/** Columns of the desktop layout, the one stored by the API. */
+export const DESKTOP_COLUMNS = 12;
+
+export type LayoutChange = { dx?: number; dy?: number; dw?: number; dh?: number };
 
 function toLayouts(layout: Layout) {
     return layout.map((item) => ({
@@ -37,6 +46,7 @@ function matchesStored(
 export function useWidgetLayoutManager() {
     const { data: widgets } = useWidgets();
     const updateLayoutMutation = useUpdateLayout();
+    const queryClient = useQueryClient();
     const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const onLayoutChange = (layout: Layout, responsiveLayouts?: ResponsiveLayouts) => {
@@ -49,8 +59,60 @@ export function useWidgetLayoutManager() {
         timeoutRef.current = setTimeout(() => updateLayoutMutation.mutate(layouts), SAVE_DELAY_MS);
     };
 
+    /**
+     * Moves or resizes one widget from the keyboard, within the desktop grid, and saves at
+     * once; returns null when nothing changes (e.g. already against the edge). The grid packs
+     * widgets upwards, so moving up or down jumps over the neighbouring widget in the same
+     * columns. The grid then packs the others around it, which onLayoutChange saves.
+     */
+    const changeWidget = (id: number, { dx = 0, dy = 0, dw = 0, dh = 0 }: LayoutChange) => {
+        const widget = widgets?.find((item) => item.id === id);
+        if (!widgets || !widget) return null;
+        const w = Math.min(Math.max(widget.w + dw, widget.minW ?? 1), DESKTOP_COLUMNS);
+        let y = widget.y;
+        if (dy) {
+            const sameColumns = widgets.filter(
+                (other) =>
+                    other.id !== id &&
+                    other.x < widget.x + widget.w &&
+                    widget.x < other.x + other.w,
+            );
+            const neighbour =
+                dy > 0
+                    ? sameColumns.filter((other) => other.y > widget.y).sort((a, b) => a.y - b.y)[0]
+                    : sameColumns
+                          .filter((other) => other.y < widget.y)
+                          .sort((a, b) => b.y - a.y)[0];
+            if (!neighbour) return null;
+            y = dy > 0 ? neighbour.y + neighbour.h : neighbour.y;
+        }
+        const layout: WidgetLayout = {
+            w,
+            h: Math.max(widget.h + dh, widget.minH ?? 1),
+            x: Math.min(Math.max(widget.x + dx, 0), DESKTOP_COLUMNS - w),
+            y,
+        };
+        if (
+            layout.x === widget.x &&
+            layout.y === widget.y &&
+            layout.w === widget.w &&
+            layout.h === widget.h
+        )
+            return null;
+        queryClient.setQueryData<DashboardWidget[]>(['widgets'], (current) =>
+            current?.map((item) =>
+                item.id === id ? toDashboardWidget({ ...item, layout }) : item,
+            ),
+        );
+        updateLayoutMutation.mutate(
+            widgets.map((item) => ({ id: item.id, layout: item.id === id ? layout : item.layout })),
+        );
+        return layout;
+    };
+
     return {
         onLayoutChange,
+        changeWidget,
         isSaving: updateLayoutMutation.isPending,
         error: updateLayoutMutation.error,
     };

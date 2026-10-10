@@ -275,7 +275,7 @@ function StockMultiSelectField({ param, value, onChange }: FieldProps) {
                                         {result.name}
                                     </span>
                                 </span>
-                                <span className="shrink-0 text-[10px] text-muted-foreground">
+                                <span className="shrink-0 text-[0.625rem] text-muted-foreground">
                                     {result.exchange}
                                 </span>
                             </button>

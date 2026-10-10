@@ -107,5 +107,11 @@
     "youtubeVideoTitle": "Vidéo YouTube",
     "youtubeWatchTitle": "Suivi YouTube",
     "cryptoPriceTitle": "Cours des cryptomonnaies",
-    "cryptoMarketTitle": "Marché des cryptomonnaies"
+    "cryptoMarketTitle": "Marché des cryptomonnaies",
+    "moveHandle": "Déplacer ou redimensionner {{name}}",
+    "moveHelp": "Les flèches déplacent le widget, Maj + flèches le redimensionnent.",
+    "moved": "{{name}} déplacé en colonne {{x}}.",
+    "resized": "{{name}} redimensionné en {{w}} sur {{h}}.",
+    "movedUp": "{{name}} déplacé vers le haut.",
+    "movedDown": "{{name}} déplacé vers le bas."
 }

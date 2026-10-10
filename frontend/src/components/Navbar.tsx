@@ -1,4 +1,5 @@
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
+import { AccessibilityMenu } from '@/components/AccessibilityMenu';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { notice, getErrorMessage } from '@/i18n/errors';
 import { useTranslation } from 'react-i18next';
@@ -180,6 +181,7 @@ export default function Navbar({
                         )}
                     </Suspense>
                 )}
+                <AccessibilityMenu />
                 <ThemeSwitcher />
 
                 <DropdownMenu>

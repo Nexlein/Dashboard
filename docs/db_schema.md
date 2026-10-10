@@ -18,7 +18,7 @@ The core entity representing a registered user. `User`, `Session`, `Account` and
 | `id`            | Int       | Primary Key                                                   |
 | `name`          | String    | Display name; empty when the user did not give one            |
 | `email`         | String    | Unique email address                                          |
-| `emailVerified` | Boolean   | `true` when GitHub verified it; reset when the email changes  |
+| `emailVerified` | Boolean   | `true` after the emailed code, or when GitHub verified it      |
 | `image`         | String?   | Avatar URL (GitHub)                                           |
 | `role`          | String?   | `user` or `admin` (admin plugin)                              |
 | `banned`, `banReason`, `banExpires` | | Ban state (admin plugin)                          |
@@ -35,11 +35,11 @@ cascades on delete).
 
 ### 2. Account, Session and Verification (Better Auth)
 
-**Account**: one row per sign-in method of a user.
+**Account**: one row per sign-in method or connected GitHub account of a user.
 
 | Field         | Type      | Description                                                       |
 | ------------- | --------- | ----------------------------------------------------------------- |
-| `providerId`  | String    | `credential` (email/password) or `github`                         |
+| `providerId`  | String    | `credential` (email/password), `github` (sign-in) or `github-service` |
 | `accountId`   | String    | The GitHub user id, or the user id for `credential`               |
 | `password`    | String?   | Password hash (scrypt), `credential` only                         |
 | `accessToken`, `refreshToken`, `idToken` | String? | GitHub tokens, encrypted (AES-256-GCM)  |
@@ -50,8 +50,8 @@ cascades on delete).
 **Session**: `token` (unique, the value of the session cookie), `expiresAt`, `ipAddress`,
 `userAgent`, `impersonatedBy` (admin plugin), `userId`.
 
-**Verification**: short-lived values (`identifier`, `value`, `expiresAt`), such as OAuth
-states.
+**Verification**: short-lived values (`identifier`, `value`, `expiresAt`): OAuth states and
+the emailed 6-digit codes (hashed, with their attempt count).
 
 ---
 

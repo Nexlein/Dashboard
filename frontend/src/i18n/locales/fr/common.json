@@ -36,5 +36,32 @@
     "decline": "Refuser",
     "accept": "Accepter",
     "accountMenu": "Ouvrir le menu du compte {{name}}",
-    "metaDescription": "Un tableau de bord personnalisable pour suivre la météo, les cryptomonnaies, la bourse, GitHub et YouTube, en français et en anglais."
+    "metaDescription": "Un tableau de bord personnalisable pour suivre la météo, les cryptomonnaies, la bourse, GitHub et YouTube, en français et en anglais.",
+    "skipToContent": "Aller au contenu",
+    "accessibility": {
+        "open": "Réglages d’accessibilité",
+        "title": "Accessibilité",
+        "description": "Réglages enregistrés dans ce navigateur. Ils s’appliquent à toutes les pages.",
+        "textSize": "Taille du texte",
+        "highContrast": "Contraste élevé",
+        "highContrastHelp": "Texte plus foncé, bordures et contour de focus plus marqués.",
+        "motion": "Animations",
+        "motionSystem": "Comme mon appareil",
+        "motionReduce": "Réduire",
+        "motionAllow": "Autoriser",
+        "underlineLinks": "Souligner les liens",
+        "textSpacing": "Espacement du texte élargi",
+        "textSpacingHelp": "Plus d’espace entre les lignes, les lettres et les mots.",
+        "readableFont": "Police facile à lire",
+        "readableFontHelp": "Atkinson Hyperlegible, conçue pour la basse vision.",
+        "reset": "Réinitialiser",
+        "done": "Terminé"
+    },
+    "pageTitle": {
+        "login": "Connexion",
+        "register": "Créer un compte",
+        "forgotPassword": "Mot de passe oublié",
+        "terms": "Conditions d’utilisation",
+        "privacy": "Politique de confidentialité"
+    }
 }

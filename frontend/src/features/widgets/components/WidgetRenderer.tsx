@@ -181,7 +181,7 @@ export default function WidgetRenderer({ widget }: { widget: DashboardWidget }) 
             )}
             {pendingPeriod && (
                 <p
-                    className="shrink-0 rounded-md bg-muted px-2 py-1 text-[11px] text-muted-foreground"
+                    className="shrink-0 rounded-md bg-muted px-2 py-1 text-[0.6875rem] text-muted-foreground"
                     role="status"
                 >
                     {retryAfter

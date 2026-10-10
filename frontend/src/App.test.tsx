@@ -93,4 +93,25 @@ describe('App routing', () => {
         ).toBeInTheDocument();
         expect(currentPath()).toBe('/privacy');
     });
+
+    it('names each page in the browser tab', async () => {
+        mockApi({ 'GET /api/auth/get-session': { body: null } });
+        renderAppAt('/login');
+        await screen.findByRole('button', { name: 'Sign in' });
+        await waitFor(() => expect(document.title).toBe('Sign in · Dashboard'));
+    });
+
+    it('lets keyboard users skip the navigation of signed-in pages', async () => {
+        mockApi({
+            'GET /api/auth/get-session': {
+                body: { user: { id: '1', email: 'ada@example.com', name: 'Ada' }, session: {} },
+            },
+            'GET /widgets': { body: [] },
+        });
+        renderAppAt('/');
+        const skip = await screen.findByRole('link', { name: 'Skip to content' });
+
+        expect(skip).toHaveAttribute('href', '#main-content');
+        expect(document.getElementById('main-content')).toHaveAttribute('tabindex', '-1');
+    });
 });

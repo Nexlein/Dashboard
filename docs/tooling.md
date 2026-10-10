@@ -19,10 +19,12 @@
 
 ## 4. GitHub Actions (CI/CD)
 
-- **CI Pipeline (`.github/workflows/ci.yml`)**, on pushes and pull requests to `main`:
+- **CI Pipeline (`.github/workflows/ci.yml`)**, on pushes and pull requests to `main` or `master`:
   - `lint`: oxlint and Prettier.
-  - `test-shared`, `test-backend` (with PostgreSQL: migrations applied and checked against the schema, then the GDPR integration check), `test-frontend` (with coverage).
-  - `test-e2e`: Playwright against the dev servers and a PostgreSQL service.
+  - `test-shared`, `test-backend` (with PostgreSQL: migrations applied and checked against the schema, then the authentication and GDPR integration tests).
+  - `test-frontend`: unit tests with coverage.
+  - `test-e2e`: Playwright against the dev servers, PostgreSQL and Mailpit (report kept as the `playwright-report` artifact).
+  - `lighthouse`: three Lighthouse audits of the production build, fails under 95 (see [lighthouse.md](lighthouse.md)).
   - `docker`: builds both images with Docker Compose.
 - **Mirror Pipeline (`.github/workflows/mirror.yml`)**: Automatically pushes your code to the Epitech grading repository when you push to `main`. Requires the `SSH_PRIVATE_KEY` secret in GitHub.
 - **Dependabot (`.github/dependabot.yml`)**: weekly updates for npm (root lockfile, minor/patch grouped), the Dockerfiles and GitHub Actions.

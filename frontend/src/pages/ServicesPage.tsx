@@ -50,7 +50,11 @@ export default function ServicesPage() {
     );
 
     return (
-        <main className="mx-auto w-full max-w-5xl p-4 sm:p-8">
+        <main
+            id="main-content"
+            tabIndex={-1}
+            className="outline-none mx-auto w-full max-w-5xl p-4 sm:p-8"
+        >
             <div className="mb-8">
                 <h1 className="text-3xl font-semibold tracking-tight">{t('common:services')}</h1>
                 <p className="mt-2 text-muted-foreground">{t('services:subtitle')}</p>

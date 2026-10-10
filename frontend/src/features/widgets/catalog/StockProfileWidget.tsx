@@ -95,7 +95,7 @@ export function StockProfileWidget({
                 <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                         <span className="text-sm font-bold tracking-wide">{stock.symbol}</span>
-                        <span className="truncate rounded-md bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                        <span className="truncate rounded-md bg-muted px-1.5 py-0.5 text-[0.625rem] text-muted-foreground">
                             {stock.exchange || t('listedStock')} · {stock.currency}
                         </span>
                     </div>
@@ -136,7 +136,7 @@ export function StockProfileWidget({
                             setHoverIndex(null);
                             onPeriodChange(period);
                         }}
-                        className={`min-w-0 flex-1 rounded-md py-1.5 text-[11px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-50 ${period === activePeriod ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:bg-background/60 hover:text-foreground'}`}
+                        className={`min-w-0 flex-1 rounded-md py-1.5 text-[0.6875rem] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-50 ${period === activePeriod ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:bg-background/60 hover:text-foreground'}`}
                     >
                         {formatPeriod(period)}
                     </button>
@@ -148,7 +148,7 @@ export function StockProfileWidget({
                     <>
                         {hovered && (
                             <div
-                                className="pointer-events-none absolute left-2 top-0 z-10 rounded-md border bg-background/95 px-2 py-1 text-[10px] text-foreground shadow-sm"
+                                className="pointer-events-none absolute left-2 top-0 z-10 rounded-md border bg-background/95 px-2 py-1 text-[0.625rem] text-foreground shadow-sm"
                                 role="status"
                             >
                                 {date(hovered.timestamp)}{' '}
@@ -252,7 +252,7 @@ export function StockProfileWidget({
                                 </g>
                             )}
                         </svg>
-                        <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
+                        <div className="mt-1 flex justify-between text-[0.625rem] text-muted-foreground">
                             <span>{date(first!.timestamp)}</span>
                             <span>{date(last!.timestamp)}</span>
                         </div>
@@ -264,19 +264,19 @@ export function StockProfileWidget({
 
             <div className="grid shrink-0 grid-cols-3 gap-2 border-t pt-2 text-xs">
                 <div>
-                    <p className="text-[10px] text-muted-foreground">{t('lowestClose')}</p>
+                    <p className="text-[0.625rem] text-muted-foreground">{t('lowestClose')}</p>
                     <p className="mt-0.5 truncate font-medium tabular-nums">
                         {low === null ? '—' : money(low, stock.currency)}
                     </p>
                 </div>
                 <div>
-                    <p className="text-[10px] text-muted-foreground">{t('highestClose')}</p>
+                    <p className="text-[0.625rem] text-muted-foreground">{t('highestClose')}</p>
                     <p className="mt-0.5 truncate font-medium tabular-nums">
                         {high === null ? '—' : money(high, stock.currency)}
                     </p>
                 </div>
                 <div className="text-right">
-                    <p className="text-[10px] text-muted-foreground">{t('periodChange')}</p>
+                    <p className="text-[0.625rem] text-muted-foreground">{t('periodChange')}</p>
                     <p
                         className={`mt-0.5 font-semibold tabular-nums ${change === null ? '' : change < 0 ? 'text-red-700 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-400'}`}
                     >

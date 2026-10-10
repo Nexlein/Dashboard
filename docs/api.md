@@ -1,5 +1,10 @@
 # API Documentation
 
+**Errors.** Every error answer of the project's routes has the shape
+`{ "error": "Readable message", "code": "WIDGET_NOT_FOUND" }`. `error` is an English
+diagnostic; `code` (listed in `shared/src/apiErrors.ts`) is what the frontend translates.
+Some answers add fields, such as `retryAfter` on a `429`.
+
 ## System
 
 ### `GET /health`
@@ -231,7 +236,8 @@ equal to `60`, and `layout` an object of integers `x`, `y`, `w`, `h`.
 ```json
 {
     "params": {
-        "repository": "Nexlein/Dashboard"
+        "owner": "Nexlein",
+        "repo": "Dashboard"
     },
     "refreshRate": 120,
     "layout": { "x": 2, "y": 0, "w": 2, "h": 2 }
@@ -246,7 +252,25 @@ equal to `60`, and `layout` an object of integers `x`, `y`, `w`, `h`.
 
 Widget ids in every `/widgets/:id` route must be positive integers written with
 digits only; anything else (`abc`, `0`, `1.5`) returns `400 Bad Request` with
-`{ "error": "Invalid widget id" }`.
+`{ "error": "Invalid widget id", "code": "WIDGET_ID_INVALID" }`.
+
+### `PUT /widgets/layout`
+
+Saves the position of several widgets in one transaction (the frontend sends the whole grid
+after a drag, a resize or a keyboard move). Widgets of other users are ignored.
+
+```json
+{
+    "layouts": [
+        { "id": 1, "layout": { "x": 0, "y": 0, "w": 4, "h": 3 } },
+        { "id": 2, "layout": { "x": 4, "y": 0, "w": 8, "h": 3 } }
+    ]
+}
+```
+
+**Response (204 No Content)**
+
+- `400 Bad Request` for an invalid body.
 
 ### `DELETE /widgets/:id`
 
@@ -282,8 +306,13 @@ assets with different price scales can be compared.
 - `403 Forbidden` when the widget belongs to another user.
 - `404 Not Found` when the widget or requested city does not exist.
 - `409 Conflict` when the widget owner has not connected the required provider.
+- `429 Too Many Requests` when the provider quota is spent, with `retryAfter` (seconds) and a
+  `Retry-After` header.
+- `501 Not Implemented` for a registry service without an `execute` function (none today).
 - `502 Bad Gateway` when an external provider cannot answer.
 - `503 Service Unavailable` when a provider rejects requests temporarily or reaches its limit.
+
+`?refresh=true` skips the cache (Channel Watch's manual refresh button).
 
 ### `POST /widgets/:id/chat`
 
@@ -315,6 +344,28 @@ of `{ role, content }` objects with `role` among `system`, `user`, `assistant`.
   the request (for example a model that is not installed).
 - `502 Bad Gateway` when Ollama cannot be reached.
 
+## Chatbot models
+
+Authenticated. Used by the Ollama Chat widget to list and download models.
+
+### `GET /chatbot/models`
+
+Returns Ollama's list of installed models (`{ "models": [{ "name": "llama3.2:1b", ... }] }`).
+Ollama's status with `OLLAMA_MODELS_FAILED` when it refuses.
+
+### `POST /chatbot/pull`
+
+Downloads a model into the `ollama` container and answers when it is done.
+
+```json
+{ "model": "llama3.2:1b" }
+```
+
+**Response (200 OK):** `{ "success": true, "message": "Model llama3.2:1b pulled successfully" }`
+
+- `400 Bad Request` (`MODEL_REQUIRED`) without `model`.
+- Ollama's status with `MODEL_PULL_FAILED` when the download fails (unknown tag, no space).
+
 ## Service connections
 
 All `/services` endpoints are authenticated (session cookie, see [Authentication](#authentication)).
@@ -339,6 +390,11 @@ For `crypto`, a CoinGecko Demo API key is checked with a simple Bitcoin price
 request before it is encrypted and stored. For `stocks`, a Twelve Data key is checked with an AAPL price request. API keys belong to the authenticated
 user and are never read from the project `.env`.
 Invalid or inactive keys return `400 Bad Request` and are not saved.
+
+- `400 Bad Request`: `API_KEY_REQUIRED` (empty key), `API_KEY_TOO_LONG`, `OAUTH_REQUIRED`
+  (GitHub connects through OAuth), `SERVICE_NOT_CONFIGURABLE` or `API_KEY_UNSUPPORTED`
+  (YouTube, chatbot), or the provider's refusal.
+- `404 Not Found`: `SERVICE_NOT_FOUND`.
 
 ### `GET /services/:serviceName/search?q=query`
 

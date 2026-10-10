@@ -5,13 +5,26 @@ We store the following user data:
 - Email address, optional display name and linked GitHub account ID (for authentication and account display)
 - Password hashes (scrypt, through Better Auth; none for GitHub-only accounts)
 - OAuth tokens (encrypted at rest, for connected services like GitHub)
+- Service API keys (OpenWeather, CoinGecko, Twelve Data), encrypted at rest; only their last 4 characters are kept readable
 - Sessions: creation and expiry dates, IP address and user agent
 - Short-lived verification codes (stored hashed, expire after 5 minutes)
+- Widget configurations (parameters encrypted at rest, and layouts)
+- Preferences and consent: language, theme, and the date the terms were accepted (`cguAcceptedAt`)
 
 Emails (verification and password-reset codes) are sent through the SMTP provider configured by the operator, which processes the recipient address and the message.
-- Widget configurations (parameters and layouts)
 
-The session is kept in an httpOnly cookie that page scripts cannot read; its record (creation date, IP address, user agent) is stored in the `Session` table and deleted on sign-out or account deletion. Browser `localStorage` stores dashboard preferences, chatbot histories (removed on logout) and the cookie-banner choice. These are used for application functionality, not tracking.
+The session is kept in an httpOnly cookie that page scripts cannot read; its record (creation date, IP address, user agent) is stored in the `Session` table and deleted on sign-out or account deletion. Browser `localStorage` stores, on your device only:
+
+| Key                            | Content                                       |
+| ------------------------------ | --------------------------------------------- |
+| `dashboard-language`           | Chosen language                               |
+| `vite-ui-theme`                | Light, dark or system theme                   |
+| `dashboard-accessibility`      | Accessibility settings                        |
+| `dashboard-chat-<widget>`      | Chatbot history (removed on sign-out)         |
+| `dashboard-youtube-seen-<widget>` | Channel Watch videos marked as seen (removed on sign-out) |
+| `cookie-consent`               | Cookie-banner choice                          |
+
+These are used for application functionality, not tracking.
 
 ## Data Usage
 - User data is used strictly to provide the dashboard features and widget functionalities.

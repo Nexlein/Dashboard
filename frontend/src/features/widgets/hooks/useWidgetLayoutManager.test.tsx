@@ -129,4 +129,65 @@ describe('useWidgetLayoutManager', () => {
         expect(puts()).toHaveLength(2);
         expect(JSON.parse(String(puts()[1][1]?.body)).layouts[0].layout.x).toBe(0);
     });
+
+    describe('keyboard changes', () => {
+        const body = (puts: unknown[][]) =>
+            JSON.parse(String((puts.at(-1)![1] as RequestInit).body)) as {
+                layouts: { id: number; layout: Record<string, number> }[];
+            };
+
+        it('moves one column and saves at once', async () => {
+            const { result, puts, loaded } = setup();
+            await loaded();
+
+            let layout;
+            act(() => {
+                layout = result.current.changeWidget(1, { dx: 1 });
+            });
+
+            expect(layout).toEqual({ x: 1, y: 0, w: 3, h: 2 });
+            await waitFor(() => expect(puts()).toHaveLength(1));
+            expect(body(puts()).layouts).toContainEqual({
+                id: 1,
+                layout: { x: 1, y: 0, w: 3, h: 2 },
+            });
+        });
+
+        it('stays inside the twelve desktop columns and above the minimum size', async () => {
+            const { result, puts, loaded } = setup();
+            await loaded();
+
+            let changes: unknown[] = [];
+            act(() => {
+                changes = [
+                    result.current.changeWidget(1, { dx: -1 }), // already at column 1
+                    result.current.changeWidget(1, { dw: 20 }),
+                ];
+            });
+
+            expect(changes[0]).toBeNull();
+            expect(changes[1]).toMatchObject({ x: 0, w: 12 });
+            await waitFor(() => expect(puts()).toHaveLength(1));
+        });
+
+        it('jumps over the widget below, and does nothing without one', async () => {
+            const { result, loaded } = setup();
+            await loaded();
+
+            let changes: unknown[] = [];
+            act(() => {
+                changes = [
+                    result.current.changeWidget(1, { dy: 1 }), // nothing below in columns 1-3
+                    result.current.changeWidget(1, { dw: 1 }), // now overlaps widget 2's columns
+                ];
+            });
+            let down;
+            act(() => {
+                down = result.current.changeWidget(2, { dy: -1 });
+            });
+
+            expect(changes[0]).toBeNull();
+            expect(down).toBeNull(); // both on row 1: nothing above widget 2
+        });
+    });
 });

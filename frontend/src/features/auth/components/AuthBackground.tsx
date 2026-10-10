@@ -27,7 +27,7 @@ export function AuthBackground() {
                             {t('widgets:add')}
                         </div>
                         <div className="flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-600">
-                            <span className="flex size-6 items-center justify-center rounded-lg bg-slate-900 text-[10px] font-semibold text-white">
+                            <span className="flex size-6 items-center justify-center rounded-lg bg-slate-900 text-[0.625rem] font-semibold text-white">
                                 U
                             </span>
                             {t('auth:mySpace')}
