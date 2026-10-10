@@ -11,9 +11,10 @@ function openDialog() {
     return screen.findByRole('dialog', { name: 'Add New Widget' });
 }
 
-/** Radix Select opens on pointer down. */
+/** Radix Select opens on pointer down, once enabled (services and widgets loaded). */
 async function choose(dialog: HTMLElement, label: string, option: string) {
     const trigger = within(dialog).getByRole('combobox', { name: label });
+    await waitFor(() => expect(trigger).toBeEnabled());
     fireEvent.pointerDown(trigger, { button: 0, pointerType: 'mouse' });
     fireEvent.click(await screen.findByRole('option', { name: option }));
 }
@@ -149,6 +150,48 @@ describe('WidgetConfigurator', () => {
         expect(await within(dialog).findByText('CoinGecko is not connected')).toBeInTheDocument();
         expect(within(dialog).getByRole('combobox', { name: 'Widget Type' })).toBeDisabled();
         expect(within(dialog).getByRole('button', { name: 'Add to Dashboard' })).toBeDisabled();
+    });
+
+    it('knows which services are connected when the navbar mounts it already open', async () => {
+        mockApi({
+            'GET /about.json': {
+                body: makeAbout([
+                    {
+                        name: 'weather',
+                        widgets: [
+                            {
+                                name: 'current_weather',
+                                description: 'Current weather',
+                                params: [{ name: 'city', type: 'string' }],
+                            },
+                        ],
+                    },
+                    ...makeAbout().server.services,
+                ]),
+            },
+            'GET /services': {
+                body: [
+                    makeService({
+                        name: 'weather',
+                        displayName: 'OpenWeather',
+                        connected: true,
+                        keyHint: 'a1b2',
+                    }),
+                    makeService(),
+                ],
+            },
+        });
+        render(<WidgetConfigurator initialOpen />);
+        const dialog = await screen.findByRole('dialog', { name: 'Add New Widget' });
+        const widgetType = () => within(dialog).getByRole('combobox', { name: 'Widget Type' });
+
+        await choose(dialog, 'Service', 'Weather');
+        await waitFor(() => expect(widgetType()).toBeEnabled());
+        expect(within(dialog).queryByText('OpenWeather is not connected')).toBeNull();
+
+        await choose(dialog, 'Service', 'Crypto');
+        expect(await within(dialog).findByText('CoinGecko is not connected')).toBeInTheDocument();
+        expect(widgetType()).toBeDisabled();
     });
 
     it('creates the configured widget with its default size', async () => {

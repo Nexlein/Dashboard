@@ -1,6 +1,7 @@
 import { getErrorMessage } from '@/i18n/errors';
 import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { KeyRound, Loader2 } from 'lucide-react';
 import { useAddWidget } from '@/features/widgets/hooks/useWidgets';
@@ -57,22 +58,17 @@ export function WidgetConfigurator({ initialOpen = false }: { initialOpen?: bool
     const [widgetType, setWidgetType] = useState('');
     const [params, setParams] = useState<WidgetParams>({});
     const [refreshTimer, setRefreshTimer] = useState('60'); // seconds
-    const [serviceConnections, setServiceConnections] = useState<ServiceConnection[]>([]);
-    const [connectionsLoading, setConnectionsLoading] = useState(false);
     const [error, setError] = useState<unknown>('');
     const catalog = useWidgetCatalog(open);
 
-    const handleOpenChange = (nextOpen: boolean) => {
-        setOpen(nextOpen);
-        if (!nextOpen) return;
-
-        setError('');
-        setConnectionsLoading(true);
-        fetchServices()
-            .then(setServiceConnections)
-            .catch((err) => setError(err))
-            .finally(() => setConnectionsLoading(false));
-    };
+    // Fetched whenever the dialog is open, including when the navbar mounts it already open.
+    const connections = useQuery({
+        queryKey: ['services'],
+        queryFn: fetchServices,
+        enabled: open,
+    });
+    const serviceConnections: ServiceConnection[] = connections.data ?? [];
+    const connectionsLoading = connections.isLoading;
 
     const selectedConnection = serviceConnections.find((item) => item.name === service);
     const serviceConnectionRequired = service === 'weather' || selectedConnection?.configurable;
@@ -143,7 +139,7 @@ export function WidgetConfigurator({ initialOpen = false }: { initialOpen?: bool
     };
 
     return (
-        <Dialog open={open} onOpenChange={handleOpenChange}>
+        <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 <Button className="h-11 rounded-xl px-3">{t('add')}</Button>
             </DialogTrigger>
@@ -268,9 +264,9 @@ export function WidgetConfigurator({ initialOpen = false }: { initialOpen?: bool
                         />
                     )}
 
-                    {Boolean(error) && (
+                    {Boolean(error || connections.error) && (
                         <p className="text-sm font-medium text-destructive">
-                            {getErrorMessage(error)}
+                            {getErrorMessage(error || connections.error)}
                         </p>
                     )}
                 </div>
