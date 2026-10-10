@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useWidgets, useRemoveWidget } from '@/features/widgets/hooks/useWidgets';
 import { useWidgetLayoutManager } from '@/features/widgets/hooks/useWidgetLayoutManager';
-import { lazy, Suspense, useEffect, useId, useState, type KeyboardEvent } from 'react';
+import { lazy, Suspense, useId, useState, type KeyboardEvent } from 'react';
 import WidgetRenderer from './WidgetRenderer';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Edit2, EllipsisVertical, Trash2, Loader2, Move } from 'lucide-react';
@@ -46,13 +46,6 @@ export default function DashboardGrid() {
     const { textSize } = useAccessibility();
     const helpId = useId();
     const [announcement, setAnnouncement] = useState('');
-    // The grid keeps its own layout for narrower screens and ignores later changes to it:
-    // a keyboard move draws the grid again, then gives focus back to the moved widget.
-    const [keyboardMove, setKeyboardMove] = useState({ count: 0, id: 0 });
-    useEffect(() => {
-        if (!keyboardMove.id) return;
-        document.querySelector<HTMLElement>(`[data-move-handle="${keyboardMove.id}"]`)?.focus();
-    }, [keyboardMove]);
 
     const [editingWidget, setEditingWidget] = useState<DashboardWidget | null>(null);
 
@@ -67,7 +60,6 @@ export default function DashboardGrid() {
         event.preventDefault();
         const layout = changeWidget(widget.id, change);
         if (!layout) return;
-        setKeyboardMove(({ count }) => ({ count: count + 1, id: widget.id }));
         const name = getWidgetTitle(widget);
         setAnnouncement(
             event.shiftKey
@@ -92,7 +84,6 @@ export default function DashboardGrid() {
                 </div>
             ) : mounted ? (
                 <Responsive
-                    key={keyboardMove.count}
                     width={width}
                     className="layout"
                     layouts={{ lg: widgets }}
