@@ -14,7 +14,19 @@ different settings (the weather in Paris and in Lyon).
 Requirements: Docker with Docker Compose. Node.js 24 only to run it outside Docker.
 
 ```bash
-cp -n backend/.env.example backend/.env   # then set BETTER_AUTH_SECRET (openssl rand -hex 32)
+cp -n backend/.env.example backend/.env
+```
+
+Before starting Docker, edit `backend/.env`:
+
+- Set `BETTER_AUTH_SECRET` to a personal random secret (`openssl rand -hex 32`).
+- Configure `SMTP_HOST` and the matching `SMTP_*` settings for your email provider so users
+  receive their sign-up and password-reset codes. **SMTP is required with Docker**: the
+  backend runs in production mode and refuses to start without `SMTP_HOST`.
+
+Then start the application:
+
+```bash
 docker compose up --build
 ```
 
@@ -32,8 +44,9 @@ Two demo accounts are created at startup:
 | Administrator  | `admin@dashboard.local` | `admin1234` |
 | User           | `user@dashboard.local`  | `user1234`  |
 
-Optional settings in `backend/.env`: `SMTP_*` to send the sign-up codes by email, and
-`GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` for GitHub sign-in and the GitHub widgets. The
+Optional settings in `backend/.env`: `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` for GitHub
+sign-in and the GitHub widgets. When running the backend outside Docker with `npm run dev`,
+SMTP can be left unset: emails and their codes are printed in the backend console. The
 [README](../README.md#installation--usage) explains each variable and how to run without
 Docker.
 

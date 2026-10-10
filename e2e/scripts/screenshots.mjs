@@ -279,14 +279,14 @@ await page.keyboard.press('Escape');
 // The same dashboard in French and the dark theme.
 await page.evaluate(() => {
     localStorage.setItem('dashboard-language', 'fr');
-    localStorage.setItem('dashboard-theme', 'dark');
+    localStorage.setItem('vite-ui-theme', 'dark');
 });
 await page.reload();
 await page.getByText('facebook/react').waitFor();
 await shot(page, 'dashboard-dark-fr');
 await page.evaluate(() => {
     localStorage.setItem('dashboard-language', 'en');
-    localStorage.setItem('dashboard-theme', 'light');
+    localStorage.setItem('vite-ui-theme', 'light');
 });
 
 await browser.close();
