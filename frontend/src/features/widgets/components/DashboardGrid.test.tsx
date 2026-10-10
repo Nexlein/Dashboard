@@ -7,6 +7,7 @@ import { toDashboardWidget, type DashboardWidget } from '@/features/widgets/lib/
 const mockUseWidgets = vi.fn();
 const mockRemoveWidgetMutate = vi.fn();
 const mockUpdateLayoutChange = vi.fn();
+const mockChangeWidget = vi.fn();
 
 vi.mock('@/features/widgets/hooks/useWidgets', () => ({
     useWidgets: () => mockUseWidgets(),
@@ -20,7 +21,10 @@ vi.mock('@/features/widgets/hooks/useWidgetCatalog', () => ({
 }));
 
 vi.mock('@/features/widgets/hooks/useWidgetLayoutManager', () => ({
-    useWidgetLayoutManager: () => ({ onLayoutChange: mockUpdateLayoutChange }),
+    useWidgetLayoutManager: () => ({
+        onLayoutChange: mockUpdateLayoutChange,
+        changeWidget: mockChangeWidget,
+    }),
 }));
 
 vi.mock('./WidgetRenderer', () => ({
@@ -37,6 +41,7 @@ vi.mock('react-grid-layout/legacy', () => ({
 describe('DashboardGrid Component', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        mockChangeWidget.mockReset();
         mockUseWidgets.mockReturnValue({
             data: [
                 toDashboardWidget({
@@ -98,5 +103,33 @@ describe('DashboardGrid Component', () => {
         fireEvent.click(await screen.findByText('Edit'));
         expect(await screen.findByLabelText('Repository Name')).toHaveValue('react');
         expect(screen.getByLabelText('Refresh Rate (seconds)')).toHaveValue(300);
+    });
+
+    it('moves and resizes a widget with the arrow keys, and announces it', () => {
+        render(<DashboardGrid />);
+        // The grid is drawn again after each move: look the handle up each time.
+        const handle = () => screen.getByRole('button', { name: 'Move or resize Weather' });
+
+        mockChangeWidget.mockReturnValueOnce({ x: 1, y: 0, w: 2, h: 2 });
+        fireEvent.keyDown(handle(), { key: 'ArrowRight' });
+        expect(mockChangeWidget).toHaveBeenLastCalledWith(1, { dx: 1 });
+        expect(screen.getByRole('status')).toHaveTextContent('Weather moved to column 2.');
+
+        mockChangeWidget.mockReturnValueOnce({ x: 1, y: 0, w: 2, h: 3 });
+        fireEvent.keyDown(handle(), { key: 'ArrowDown', shiftKey: true });
+        expect(mockChangeWidget).toHaveBeenLastCalledWith(1, { dh: 1 });
+        expect(screen.getByRole('status')).toHaveTextContent('Weather resized to 2 by 3.');
+    });
+
+    it('ignores other keys and announces nothing when the widget cannot move', () => {
+        render(<DashboardGrid />);
+        const handle = screen.getByRole('button', { name: 'Move or resize Weather' });
+
+        fireEvent.keyDown(handle, { key: 'Enter' });
+        mockChangeWidget.mockReturnValueOnce(null);
+        fireEvent.keyDown(handle, { key: 'ArrowLeft' });
+
+        expect(mockChangeWidget).toHaveBeenCalledTimes(1);
+        expect(screen.getByRole('status')).toBeEmptyDOMElement();
     });
 });

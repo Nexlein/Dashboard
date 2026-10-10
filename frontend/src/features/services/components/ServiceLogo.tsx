@@ -58,7 +58,7 @@ export function ServiceLogo({
                 />
             ) : (
                 <span
-                    className={`font-bold ${size === 'sm' ? 'text-[9px]' : 'text-sm'}`}
+                    className={`font-bold ${size === 'sm' ? 'text-[0.5625rem]' : 'text-sm'}`}
                     aria-hidden="true"
                 >
                     {label.slice(0, 2).toUpperCase()}

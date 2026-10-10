@@ -36,5 +36,32 @@
     "decline": "Decline",
     "accept": "Accept",
     "accountMenu": "Open the account menu for {{name}}",
-    "metaDescription": "A customizable dashboard for weather, cryptocurrency, stocks, GitHub and YouTube, available in French and English."
+    "metaDescription": "A customizable dashboard for weather, cryptocurrency, stocks, GitHub and YouTube, available in French and English.",
+    "skipToContent": "Skip to content",
+    "accessibility": {
+        "open": "Accessibility settings",
+        "title": "Accessibility",
+        "description": "Settings saved in this browser. They apply to every page.",
+        "textSize": "Text size",
+        "highContrast": "High contrast",
+        "highContrastHelp": "Darker text, stronger borders and focus ring.",
+        "motion": "Animations",
+        "motionSystem": "Follow my device",
+        "motionReduce": "Reduce",
+        "motionAllow": "Allow",
+        "underlineLinks": "Underline links",
+        "textSpacing": "Wider text spacing",
+        "textSpacingHelp": "More space between lines, letters and words.",
+        "readableFont": "Easy-to-read font",
+        "readableFontHelp": "Atkinson Hyperlegible, designed for low vision.",
+        "reset": "Reset",
+        "done": "Done"
+    },
+    "pageTitle": {
+        "login": "Sign in",
+        "register": "Create an account",
+        "forgotPassword": "Forgotten password",
+        "terms": "Terms of use",
+        "privacy": "Privacy policy"
+    }
 }

@@ -7,6 +7,10 @@ import './index.css';
 import App from './App.tsx';
 
 import { ThemeProvider } from '@/components/ThemeProvider';
+import { initAccessibility } from '@/lib/accessibility';
+
+// Before the first render, so the page never appears with the default text size first.
+initAccessibility();
 
 const queryClient = new QueryClient({
     defaultOptions: {

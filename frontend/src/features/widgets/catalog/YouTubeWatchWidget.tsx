@@ -165,7 +165,7 @@ export function YouTubeWatchWidget({ data, widget }: WidgetViewProps<YouTubeWatc
                                     className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105 motion-reduce:transform-none"
                                 />
                                 {!seen.includes(video.id) && (
-                                    <span className="absolute left-1.5 top-1.5 rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                                    <span className="absolute left-1.5 top-1.5 rounded bg-red-600 px-1.5 py-0.5 text-[0.625rem] font-semibold text-white">
                                         {t('new')}
                                     </span>
                                 )}
@@ -177,7 +177,7 @@ export function YouTubeWatchWidget({ data, widget }: WidgetViewProps<YouTubeWatc
                                 <p className="mt-1 truncate text-xs text-muted-foreground">
                                     {video.channelTitle}
                                 </p>
-                                <div className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground">
+                                <div className="mt-1 flex items-center gap-1 text-[0.6875rem] text-muted-foreground">
                                     <time dateTime={video.publishedAt}>
                                         {formatDate(new Date(video.publishedAt), {
                                             day: 'numeric',
@@ -195,7 +195,7 @@ export function YouTubeWatchWidget({ data, widget }: WidgetViewProps<YouTubeWatc
                     ))}
                 </div>
             </div>
-            <p className="shrink-0 border-t pt-2 text-[10px] text-muted-foreground">
+            <p className="shrink-0 border-t pt-2 text-[0.625rem] text-muted-foreground">
                 {t('updates', {
                     duration:
                         widget.refreshRate % 60 === 0

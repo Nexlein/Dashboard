@@ -73,7 +73,7 @@ function StockLogo({
     return (
         <span
             data-testid={`stock-logo-${symbol}`}
-            className="flex size-6 shrink-0 items-center justify-center rounded-md border-2 bg-muted text-[9px] font-bold text-foreground"
+            className="flex size-6 shrink-0 items-center justify-center rounded-md border-2 bg-muted text-[0.5625rem] font-bold text-foreground"
             style={{ borderColor: color }}
             aria-hidden="true"
         >
@@ -208,7 +208,7 @@ export function StockMarketWidget({
                                         {series.symbol}
                                     </p>
                                     <p
-                                        className="truncate text-[10px] text-muted-foreground"
+                                        className="truncate text-[0.625rem] text-muted-foreground"
                                         title={series.name}
                                     >
                                         {series.name}
@@ -274,7 +274,7 @@ export function StockMarketWidget({
                         <button
                             key={period}
                             type="button"
-                            className={`rounded px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+                            className={`rounded px-2.5 py-1 text-[0.6875rem] font-semibold transition-colors ${
                                 activePeriod === period
                                     ? 'bg-background text-foreground shadow-sm'
                                     : 'text-muted-foreground hover:text-foreground'
@@ -315,7 +315,7 @@ export function StockMarketWidget({
                                     x={MARGIN.left - 8}
                                     y={y + 4}
                                     textAnchor="end"
-                                    className="fill-muted-foreground text-[11px]"
+                                    className="fill-muted-foreground text-[0.6875rem]"
                                 >
                                     {formatNumber(tick, { maximumFractionDigits: 0 })}%
                                 </text>
@@ -333,7 +333,7 @@ export function StockMarketWidget({
                                 x={x}
                                 y={HEIGHT - 8}
                                 textAnchor="middle"
-                                className="fill-muted-foreground text-[11px]"
+                                className="fill-muted-foreground text-[0.6875rem]"
                             >
                                 {dateLabel(tick, data.period)}
                             </text>

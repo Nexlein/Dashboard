@@ -95,20 +95,20 @@ export function GithubProfileWidget({ data }: WidgetViewProps<GithubProfileData>
             <div className="grid w-full grid-cols-3 gap-2 mt-auto pt-3 border-t">
                 <div className="flex flex-col items-center justify-center">
                     <span className="text-lg font-bold">{formatNumber(data.followers)}</span>
-                    <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1 mt-0.5">
+                    <span className="text-[0.625rem] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1 mt-0.5">
                         <Users className="size-3" />
                         {t('followers')}
                     </span>
                 </div>
                 <div className="flex flex-col items-center justify-center border-l border-r">
                     <span className="text-lg font-bold">{formatNumber(data.following)}</span>
-                    <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mt-0.5">
+                    <span className="text-[0.625rem] font-medium text-muted-foreground uppercase tracking-wider mt-0.5">
                         {t('following')}
                     </span>
                 </div>
                 <div className="flex flex-col items-center justify-center">
                     <span className="text-lg font-bold">{formatNumber(data.public_repos)}</span>
-                    <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1 mt-0.5">
+                    <span className="text-[0.625rem] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1 mt-0.5">
                         <BookOpen className="size-3" />
                         {t('repos')}
                     </span>

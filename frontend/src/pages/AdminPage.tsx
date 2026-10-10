@@ -145,7 +145,11 @@ export default function AdminPage({ currentUser }: { currentUser: User }) {
     if (users.data && !users.isPlaceholderData && page >= pageCount) setPage(pageCount - 1);
 
     return (
-        <main className="mx-auto w-full max-w-6xl p-4 sm:p-8">
+        <main
+            id="main-content"
+            tabIndex={-1}
+            className="outline-none mx-auto w-full max-w-6xl p-4 sm:p-8"
+        >
             <div className="mb-8">
                 <h1 className="text-3xl font-semibold tracking-tight">
                     {t('common:administration')}

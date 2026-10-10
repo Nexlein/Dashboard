@@ -107,5 +107,11 @@
     "youtubeVideoTitle": "YouTube Video",
     "youtubeWatchTitle": "YouTube Watch",
     "cryptoPriceTitle": "Crypto Price",
-    "cryptoMarketTitle": "Crypto Market"
+    "cryptoMarketTitle": "Crypto Market",
+    "moveHandle": "Move or resize {{name}}",
+    "moveHelp": "Arrow keys move the widget, Shift + arrow keys resize it.",
+    "moved": "{{name}} moved to column {{x}}.",
+    "resized": "{{name}} resized to {{w}} by {{h}}.",
+    "movedUp": "{{name}} moved up.",
+    "movedDown": "{{name}} moved down."
 }

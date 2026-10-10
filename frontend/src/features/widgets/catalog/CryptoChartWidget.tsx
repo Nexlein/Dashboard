@@ -288,7 +288,7 @@ export function CryptoChartWidget({
                                 <button
                                     key={period.value}
                                     type="button"
-                                    className={`rounded px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+                                    className={`rounded px-2.5 py-1 text-[0.6875rem] font-semibold transition-colors ${
                                         active
                                             ? 'bg-background text-foreground shadow-xs'
                                             : 'text-muted-foreground hover:text-foreground'
@@ -331,7 +331,7 @@ export function CryptoChartWidget({
                                     x={MARGIN.left - 8}
                                     y={y + 4}
                                     textAnchor="end"
-                                    className="fill-muted-foreground text-[11px]"
+                                    className="fill-muted-foreground text-[0.6875rem]"
                                 >
                                     {formatNumber(tick, { maximumFractionDigits: 0 })}%
                                 </text>
@@ -349,7 +349,7 @@ export function CryptoChartWidget({
                                 x={x}
                                 y={HEIGHT - 8}
                                 textAnchor="middle"
-                                className="fill-muted-foreground text-[11px]"
+                                className="fill-muted-foreground text-[0.6875rem]"
                             >
                                 {dateLabel(tick, data.days)}
                             </text>
