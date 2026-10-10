@@ -7,11 +7,14 @@ A customizable web dashboard that allows authenticated users to monitor digital 
 ## Key Features
 
 - **User Authentication**: [Better Auth](https://www.better-auth.com): email/password with an emailed verification code, forgotten-password reset by code, or GitHub sign-in; revocable sessions in an httpOnly cookie, CSRF protection, and an admin API.
-- **Service Integration**: Supports OAuth 2.0 linking for 3rd-party platforms.
+- **Service Integration**: personal API keys (verified, then encrypted) and GitHub OAuth with several accounts per user.
 - **Dynamic Widgets**:
   - Each widget has configurable parameters.
   - Multiple instances of the same widget can display distinct data.
-- **Auto-Refresh Engine**: Widget data updates automatically based on a configured timer.
+- **Auto-Refresh Engine**: Widget data updates automatically based on a configured timer (60 s minimum), with a shared Redis cache.
+- **Administration**: administrators manage roles, bans, sessions and account deletion.
+- **French and English**, light and dark themes, and accessibility settings (WCAG 2.2 AA, Lighthouse 100 in accessibility).
+- **GDPR**: data export and account deletion from the account menu.
 
 ### Included Services
 
@@ -19,6 +22,10 @@ A customizable web dashboard that allows authenticated users to monitor digital 
 2. **GitHub**: Repository Stats, Latest Commits, User Profile. (Also supports GitHub Login / Account Creation)
 3. **CoinGecko**: Cryptocurrency Price & Market Stats, Crypto Market Comparison Chart.
 4. **Twelve Data**: Stock comparison and single-company profiles with searchable symbols and historical periods.
+5. **YouTube**: Video Player, Channel Watch (no API key).
+6. **Chatbot**: Ollama Chat, a local AI model (no API key).
+
+6 services and 12 widgets in total, listed with their parameters in `about.json`.
 
 Twelve Data, CoinGecko and OpenWeather use a personal API key entered by each authenticated
 user from the **Services** page. These keys are verified before storage,
@@ -35,7 +42,7 @@ with individually toggleable normalized curves, and supports 1W, 1M, 1Y, 5Y, and
 - **Backend**: Node.js, Express, TypeScript, Zod
 - **Database**: PostgreSQL with Prisma ORM
 - **Infrastructure**: Docker & Docker Compose, Nginx (Load Balancer), Redis (Shared Cache), Ollama (local LLM)
-- **Tooling**: npm workspaces, Vitest, Jest, Playwright, oxlint, Prettier, Husky
+- **Tooling**: npm workspaces, Vitest, Playwright, axe, Lighthouse CI, oxlint, Prettier, Husky
 
 ## Repository Layout
 
@@ -60,6 +67,12 @@ Requirements: Node.js 24 (see `.nvmrc`, `nvm use`) and Docker with Docker Compos
 - [Testing Guidelines](docs/testing.md)
 - [Tooling & CI](docs/tooling.md)
 - [Tech Stack Decisions](docs/tech_stack.md)
+- [User Guide](docs/user-guide.md)
+- [How It Works](docs/how-it-works.md)
+- [Accessibility](docs/accessibility.md)
+- [Lighthouse Results](docs/lighthouse.md)
+- [Translations](docs/i18n/README.md)
+- [GDPR](docs/RGPD.md), [Terms of Use](docs/CGU.md), [Data Breach Plan](docs/DATA_BREACH_PLAN.md)
 
 ## Installation & Usage
 
@@ -77,7 +90,9 @@ Requirements: Node.js 24 (see `.nvmrc`, `nvm use`) and Docker with Docker Compos
    `GITHUB_CLIENT_SECRET` to enable GitHub sign-in and the GitHub service (widgets, with
    several GitHub accounts per user), and register both callback URLs in your GitHub OAuth
    App (GitHub matches them exactly): `http://localhost:8080/api/auth/callback/github` and
-   `http://localhost:8080/api/auth/callback/github-service`.
+   `http://localhost:8080/api/auth/callback/github-service`. To use a separate OAuth App for
+   the GitHub service, set `GITHUB_SERVICE_CLIENT_ID` and `GITHUB_SERVICE_CLIENT_SECRET`
+   (they default to the sign-in app).
    YouTube needs no setup: add the Video Player widget and paste a video link
    (`youtube.com/watch`, `youtu.be`, Shorts, live or embed links).
    No API key, Google account linking or public website is needed. The player loads
@@ -96,7 +111,7 @@ Requirements: Node.js 24 (see `.nvmrc`, `nvm use`) and Docker with Docker Compos
    [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords), then set
    `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=465`, `SMTP_SECURE=true`, `SMTP_USER` (the Gmail
    address, also the sender) and `SMTP_PASSWORD` (the app password). Gmail sends about 500
-   emails a day. With `SMTP_HOST` empty, a backend started with `npm run dev` prints the
+   emails a day. `MAIL_FROM` changes the sender (default: `SMTP_USER`). With `SMTP_HOST` empty, a backend started with `npm run dev` prints the
    emails and their codes in its console; the Docker server (production mode) refuses to
    start without it.
    `AUTH_RATE_LIMIT_MAX` caps sign-in, sign-up and code requests per IP every 15 minutes
@@ -137,6 +152,9 @@ Requirements: Node.js 24 (see `.nvmrc`, `nvm use`) and Docker with Docker Compos
    - Frontend: [http://localhost:8081](http://localhost:8081)
    - Backend API: [http://localhost:8080](http://localhost:8080)
    - `about.json`: [http://localhost:8080/about.json](http://localhost:8080/about.json)
+   - API reference (Swagger): [http://localhost:8080/api-docs](http://localhost:8080/api-docs)
+
+   Nginx listens on port 8080 and spreads requests over 3 API replicas.
 
 *Database migrations run automatically before the API accepts requests.*
 
@@ -170,7 +188,9 @@ Run from the repository root:
 npm test           # shared, backend and frontend unit tests
 npm run lint       # oxlint + Prettier check
 npm run build      # shared package and frontend production build
-npm run test:e2e   # Playwright; needs the database and backend/.env (starts both dev servers)
+npm run test:e2e   # Playwright; needs the database, Mailpit (docker compose --profile e2e up -d mailpit)
+                   # and backend/.env; starts both dev servers
+npm run lighthouse # Lighthouse CI on the production build, see docs/lighthouse.md
 ```
 
 Provider tests mock remote APIs and do not require real OpenWeather, GitHub, CoinGecko, or Twelve Data credentials. See [Testing Guidelines](docs/testing.md) for details.

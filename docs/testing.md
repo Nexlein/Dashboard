@@ -138,6 +138,13 @@ Unit test files:
   historical responses, caching, multi-asset limits, supported periods, provider
   errors, and legacy full-history fallback. All CoinGecko calls are mocked.
 - `redisCache.test.ts`: local fallback when Redis is not configured (expiry, at most 1000 entries), `cached()` loading once, sharing one load between concurrent requests and not caching failures, and the widget TTL bounds. `redisCacheFailure.test.ts`: a Redis that fails its commands, or refuses only writes (full), falls back to the local cache, and a later accepted write drops the local copy. `weather.test.ts` checks that two widgets for the same city call OpenWeather once.
+- `github.test.ts`, `weather.test.ts`, `youtube.test.ts`, `youtubeFeed.test.ts`,
+  `chatbot.test.ts`: each provider's params, responses and errors, with `fetch` mocked.
+- `encryption.test.ts`: AES-256-GCM round trip with a fresh IV, key fallback to
+  `BETTER_AUTH_SECRET`, old payloads still readable, tampered data refused.
+- `rateLimit.test.ts`: the Redis store waits for the connection, retries its scripts, and
+  lets requests through while Redis is down.
+- `errorHandler.test.ts`: error answers keep the `{ error, code }` shape and hide internals.
 - `stocks.test.ts`: Twelve Data histories including ALL and 5Y, company logos, shared provider credit budgets, deferred retries, and partial symbol failures. API tests cover authenticated stock search, local configuration validation, and retry headers; stock component tests cover comparison curves, profiles, period controls, and retention of cached charts during provider cooldowns.
 
 *Note: For tests requiring the database, ensure you mock Prisma or use a separate test database.*
@@ -229,6 +236,15 @@ Playwright tests in `e2e/tests/` drive the real frontend and backend:
 - `accessibility-settings.spec.ts`: 200 % text and high contrast kept after a reload and
   free of axe violations, focus back on the button after closing the dialog, a widget moved
   and resized with the keyboard and saved, and the skip link.
+- `dashboard-accessibility.spec.ts`: axe on a populated dashboard in light and dark themes,
+  and unique labels on the Ollama fields.
+- `i18n.spec.ts`: language switch kept after a reload (with a registration draft preserved),
+  every core route translated and fitting phone to desktop widths in both languages, and the
+  desktop layout restored after a phone viewport.
+- `best-practices.spec.ts`: coin images load without cookies or CSP violations under the
+  production security headers.
+- `performance.spec.ts`: only the selected widgets' code loads, the video preview is
+  preloaded and the Ollama model manager is deferred.
 
 Run them with the database and Mailpit (a test inbox, started only for these tests) up. The
 backend Playwright starts sends its emails to Mailpit whatever `backend/.env` says, so the
