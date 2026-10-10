@@ -167,6 +167,10 @@ The frontend uses **Vitest** and **React Testing Library**.
   curves, curve toggling, logos, and persisted period changes.
 - `WidgetParameterField.test.tsx` covers arbitrary CoinGecko IDs and removing
   selected assets from the widget configuration.
+- `lib/accessibility.test.ts` and `components/AccessibilityMenu.test.tsx` cover the
+  accessibility settings: applied to `<html>`, saved, restored, invalid values ignored, reset.
+- `DashboardGrid.test.tsx` and `useWidgetLayoutManager.test.tsx` cover moving and resizing
+  a widget with the keyboard (desktop bounds, minimum size, announcements).
 - Global mocks (like `ResizeObserver` for the grid layout) are configured in `frontend/src/test/setup.ts`.
 - Tests are type-checked like the app (`tsconfig.test.json`, part of `tsc -b`). Build test
   data with `makeWidget`, `makeUser` and `makeService` from `frontend/src/test/fixtures.ts`
@@ -222,6 +226,9 @@ Playwright tests in `e2e/tests/` drive the real frontend and backend:
   checked after a reload. Only the Ollama model listing is stubbed.
 - `a11y.spec.ts`: axe scans of `/login`, `/register` and the dashboard with every
   rule enabled, and the light theme on public pages under a dark OS scheme.
+- `accessibility-settings.spec.ts`: 200 % text and high contrast kept after a reload and
+  free of axe violations, focus back on the button after closing the dialog, a widget moved
+  and resized with the keyboard and saved, and the skip link.
 
 Run them with the database and Mailpit (a test inbox, started only for these tests) up. The
 backend Playwright starts sends its emails to Mailpit whatever `backend/.env` says, so the

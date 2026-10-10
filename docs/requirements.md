@@ -29,9 +29,10 @@
     - [x] YouTube video player and public channel watch without credentials. The watch uses its configured refresh timer; the player loads on demand without a timer.
     - [x] **Crucial**: Widget _must_ have configurable parameters.
     - [x] **Crucial**: Two instances of same widget with different configs display distinct info.
-- [ ] **Accessibility (a11y)**: (axe reports no violation on login, register and dashboard in the e2e suite; not audited manually)
-    - [ ] Full keyboard navigation support.
-    - [ ] Screen reader compatibility (ARIA labels).
+- [x] **Accessibility (a11y)**: WCAG 2.2 AA target, see [accessibility.md](accessibility.md). axe on every page in the e2e suite, Lighthouse accessibility 100.
+    - [x] Full keyboard navigation support (skip link, focus return, widgets moved and resized with the arrow keys).
+    - [x] Screen reader compatibility (ARIA labels, page titles, live regions).
+    - [x] Accessibility settings: text size up to 200 %, high contrast, reduced motion, underlined links, text spacing, easy-to-read font.
 - [x] **Timer**: Periodic refresh of widget data based on widget config.
 
 ## Legal & Compliance
@@ -54,8 +55,8 @@
 
 - [x] **Dark / Light Mode**: Theme toggle saved in local storage.
 - [x] **Responsive Design**: Dashboard grid must stack beautifully on mobile devices.
-- [ ] **Internationalization (i18n)**: UI and Legal texts available in English and French.
-- [ ] **Lighthouse 100/100**: Perfect score on Accessibility and Best Practices.
+- [x] **Internationalization (i18n)**: UI and Legal texts available in English and French.
+- [x] **Lighthouse 100/100**: Perfect score on Accessibility and Best Practices (performance 98, SEO 100), see [lighthouse.md](lighthouse.md).
 
 ## Bonus Features
 
