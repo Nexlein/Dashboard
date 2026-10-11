@@ -2,14 +2,14 @@
 
 ## Overview
 
-| Layer      | Tools                         | Location                            |
-| ---------- | ----------------------------- | ----------------------------------- |
-| Shared     | Vitest                        | `shared/tests/`                     |
-| Backend    | Vitest, Supertest             | `backend/tests/`                    |
-| Frontend   | Vitest, React Testing Library | next to components (`*.test.tsx`)    |
-| E2E        | Playwright, axe-core          | `e2e/tests/`                        |
+| Layer      | Tools                         | Location                              |
+| ---------- | ----------------------------- | ------------------------------------- |
+| Shared     | Vitest                        | `shared/tests/`                       |
+| Backend    | Vitest, Supertest             | `backend/tests/`                      |
+| Frontend   | Vitest, React Testing Library | next to components (`*.test.tsx`)     |
+| E2E        | Playwright, axe-core          | `e2e/tests/`                          |
 | Lighthouse | Lighthouse CI, Chromium       | `e2e/lighthouse/`, `lighthouserc.cjs` |
-| Load       | k6                            | `backend/tests/k6/`                 |
+| Load       | k6                            | `backend/tests/k6/`                   |
 
 The CI pipeline runs all of them except k6 on every PR and push to `main` or `master`.
 
@@ -147,11 +147,12 @@ Unit test files:
 - `errorHandler.test.ts`: error answers keep the `{ error, code }` shape and hide internals.
 - `stocks.test.ts`: Twelve Data histories including ALL and 5Y, company logos, shared provider credit budgets, deferred retries, and partial symbol failures. API tests cover authenticated stock search, local configuration validation, and retry headers; stock component tests cover comparison curves, profiles, period controls, and retention of cached charts during provider cooldowns.
 
-*Note: For tests requiring the database, ensure you mock Prisma or use a separate test database.*
+_Note: For tests requiring the database, ensure you mock Prisma or use a separate test database._
 
 ## Load & Performance Testing
 
 The backend includes a **K6** testing suite in `backend/tests/k6/` to guarantee load balancing and rate limiting stability:
+
 - `load.js`: Verifies sustained traffic processing capabilities.
 - `stress.js`: Pushes the Nginx and Redis boundaries to determine breaking points.
 - `spike.js`: Simulates sudden surges to ensure replicas can absorb viral traffic without cascading failures.
@@ -246,14 +247,17 @@ Playwright tests in `e2e/tests/` drive the real frontend and backend:
 - `performance.spec.ts`: only the selected widgets' code loads, the video preview is
   preloaded and the Ollama model manager is deferred.
 
-Run them with the database and Mailpit (a test inbox, started only for these tests) up. The
+Run them with the database and Mailpit (the local demo/test inbox) up. The
 backend Playwright starts sends its emails to Mailpit whatever `backend/.env` says, so the
 tests never email real addresses. Stop any backend already running on port 8080 first:
 Playwright would reuse it.
 
+With Node 24 and `npm ci` done, create `backend/.env` from the example and set a
+random `BETTER_AUTH_SECRET` for these local Node servers. Use a disposable database.
+
 ```bash
 docker compose up -d db redis
-docker compose --profile e2e up -d mailpit
+docker compose up -d mailpit
 npm run db:deploy -w backend
 npm exec -w e2e -- playwright install chromium   # first time only
 npm run test:e2e

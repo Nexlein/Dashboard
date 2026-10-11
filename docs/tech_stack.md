@@ -4,23 +4,23 @@ For each choice: what we use, why, what else we considered, and what it costs us
 
 ## Overview
 
-| Layer          | Choice                                   | Main reason                                           |
-| -------------- | ---------------------------------------- | ----------------------------------------------------- |
-| Language       | TypeScript everywhere                    | One language, types shared by front and back          |
-| Frontend       | React 19 + Vite                          | Widgets are components; huge ecosystem; fast dev      |
-| Styling        | Tailwind CSS 4 + shadcn/ui               | Fast to build, accessible components we own           |
-| Server state   | TanStack Query                           | Caching and timed refresh (widget timer) built in     |
-| Dashboard grid | react-grid-layout                        | Drag, resize, responsive grid ready-made              |
-| Translations   | i18next / react-i18next                  | Standard, typed keys, plurals and formats             |
-| Backend        | Node.js 24 + Express 5                   | Same language as the front, simple, well known        |
-| Authentication | Better Auth                              | Sessions, email codes, OAuth, admin without rewriting |
-| Validation     | Zod                                      | One schema, shared by front and back                  |
-| Database       | PostgreSQL 15 + Prisma 7                 | Relational data, safe migrations, typed queries       |
-| Cache          | Redis 7                                  | Shared by the 3 API replicas                          |
-| Infrastructure | Docker Compose + Nginx                   | One command to run everything; load balancing         |
-| Chatbot        | Ollama                                   | Local model: free, private, no API key                |
-| Tests          | Vitest, Playwright, axe, Lighthouse CI   | Fast unit tests, real browser tests, a11y and perf    |
-| Code quality   | oxlint, Prettier, Husky, commitlint      | Fast checks on every commit                           |
+| Layer          | Choice                                 | Main reason                                           |
+| -------------- | -------------------------------------- | ----------------------------------------------------- |
+| Language       | TypeScript everywhere                  | One language, types shared by front and back          |
+| Frontend       | React 19 + Vite                        | Widgets are components; huge ecosystem; fast dev      |
+| Styling        | Tailwind CSS 4 + shadcn/ui             | Fast to build, accessible components we own           |
+| Server state   | TanStack Query                         | Caching and timed refresh (widget timer) built in     |
+| Dashboard grid | react-grid-layout                      | Drag, resize, responsive grid ready-made              |
+| Translations   | i18next / react-i18next                | Standard, typed keys, plurals and formats             |
+| Backend        | Node.js 24 + Express 5                 | Same language as the front, simple, well known        |
+| Authentication | Better Auth                            | Sessions, email codes, OAuth, admin without rewriting |
+| Validation     | Zod                                    | One schema, shared by front and back                  |
+| Database       | PostgreSQL 15 + Prisma 7               | Relational data, safe migrations, typed queries       |
+| Cache          | Redis 7                                | Shared by the 3 API replicas                          |
+| Infrastructure | Docker Compose + Nginx                 | One command to run everything; load balancing         |
+| Chatbot        | Ollama                                 | Local model: free, private, no API key                |
+| Tests          | Vitest, Playwright, axe, Lighthouse CI | Fast unit tests, real browser tests, a11y and perf    |
+| Code quality   | oxlint, Prettier, Husky, commitlint    | Fast checks on every commit                           |
 
 ## Language: TypeScript
 
@@ -162,13 +162,13 @@ For each choice: what we use, why, what else we considered, and what it costs us
 
 ## External providers
 
-| Service | Provider    | Why this one                                         | Alternative not taken                    |
-| ------- | ----------- | ---------------------------------------------------- | ---------------------------------------- |
-| Weather | OpenWeather | Free key, current weather and 5-day forecast         | WeatherAPI (similar, smaller free tier)  |
-| Crypto  | CoinGecko   | Free demo key, prices and history for every coin     | Binance API (only coins listed there)    |
-| Stocks  | Twelve Data | Free key, search, quotes, history, logos             | Alpha Vantage (25 calls a day for free)  |
-| GitHub  | GitHub API  | OAuth: private repositories of the user's accounts   | Public API only (no private data)        |
-| YouTube | Public RSS  | No key or Google account needed                      | YouTube Data API (OAuth, daily quota)    |
+| Service | Provider    | Why this one                                       | Alternative not taken                   |
+| ------- | ----------- | -------------------------------------------------- | --------------------------------------- |
+| Weather | OpenWeather | Free key, current weather and 5-day forecast       | WeatherAPI (similar, smaller free tier) |
+| Crypto  | CoinGecko   | Free demo key, prices and history for every coin   | Binance API (only coins listed there)   |
+| Stocks  | Twelve Data | Free key, search, quotes, history, logos           | Alpha Vantage (25 calls a day for free) |
+| GitHub  | GitHub API  | OAuth: private repositories of the user's accounts | Public API only (no private data)       |
+| YouTube | Public RSS  | No key or Google account needed                    | YouTube Data API (OAuth, daily quota)   |
 
 Each user brings their own API key: our quotas are not shared between users, and keys are
 verified, then encrypted in the database.

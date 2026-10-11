@@ -35,4 +35,4 @@ EXPOSE 8080
 # Node runs the TypeScript sources directly (type stripping; CI type-checks them).
 # Apply pending migrations, then start. Prisma holds an advisory lock, so replicas
 # starting together apply each migration once.
-CMD ["sh", "-c", "npx prisma migrate deploy && exec node src/server.ts"]
+CMD ["node", "docker/start.mjs"]

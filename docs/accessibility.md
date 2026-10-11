@@ -11,14 +11,14 @@ switch on public pages. Settings are saved in the browser (`localStorage`,
 defaults first. Code: `frontend/src/lib/accessibility.ts`, `components/AccessibilityMenu.tsx`,
 rules at the end of `index.css`.
 
-| Setting               | Effect                                                                                       | WCAG                    |
-| --------------------- | -------------------------------------------------------------------------------------------- | ----------------------- |
-| Text size             | 100 / 125 / 150 / 200 %. Sets the `<html>` font size: every size in the app is in `rem`.     | 1.4.4 Resize text       |
-| High contrast         | Darker secondary text, solid borders, 3 px focus outline (light and dark themes).            | 1.4.3, 1.4.11, 2.4.7    |
-| Animations            | Follow the device ("reduce motion"), always reduce, or allow.                                | 2.3.3                   |
-| Underline links       | Every link underlined, not only on hover.                                                    | 1.4.1 Use of color      |
-| Wider text spacing    | Line height 1.5, letter spacing 0.12 em, word spacing 0.16 em, paragraph spacing 2 em.      | 1.4.12 Text spacing     |
-| Easy-to-read font     | Atkinson Hyperlegible (designed for low vision), bundled with the app.                      | —                       |
+| Setting            | Effect                                                                                   | WCAG                 |
+| ------------------ | ---------------------------------------------------------------------------------------- | -------------------- |
+| Text size          | 100 / 125 / 150 / 200 %. Sets the `<html>` font size: every size in the app is in `rem`. | 1.4.4 Resize text    |
+| High contrast      | Darker secondary text, solid borders, 3 px focus outline (light and dark themes).        | 1.4.3, 1.4.11, 2.4.7 |
+| Animations         | Follow the device ("reduce motion"), always reduce, or allow.                            | 2.3.3                |
+| Underline links    | Every link underlined, not only on hover.                                                | 1.4.1 Use of color   |
+| Wider text spacing | Line height 1.5, letter spacing 0.12 em, word spacing 0.16 em, paragraph spacing 2 em.   | 1.4.12 Text spacing  |
+| Easy-to-read font  | Atkinson Hyperlegible (designed for low vision), bundled with the app.                   | —                    |
 
 The dashboard grid's row height follows the text size, so enlarged text still fits its widget.
 
@@ -26,12 +26,12 @@ The dashboard grid's row height follows the text size, so enlarged text still fi
 
 Everything works without a mouse. Focus is always visible (focus ring, stronger in high contrast).
 
-| Where          | Keys                                                                                      |
-| -------------- | ----------------------------------------------------------------------------------------- |
-| Any page       | `Tab` / `Shift+Tab` move between controls; the first `Tab` shows **Skip to content**.    |
-| Dialogs, menus | `Esc` closes them; focus returns to the button that opened them; focus stays inside.     |
-| Widget         | Focus its **move** button (four arrows): arrows move it, `Shift` + arrows resize it.     |
-| Selects        | Arrows choose, `Enter` confirms, typing a letter jumps to the matching option.            |
+| Where          | Keys                                                                                  |
+| -------------- | ------------------------------------------------------------------------------------- |
+| Any page       | `Tab` / `Shift+Tab` move between controls; the first `Tab` shows **Skip to content**. |
+| Dialogs, menus | `Esc` closes them; focus returns to the button that opened them; focus stays inside.  |
+| Widget         | Focus its **move** button (four arrows): arrows move it, `Shift` + arrows resize it.  |
+| Selects        | Arrows choose, `Enter` confirms, typing a letter jumps to the matching option.        |
 
 Each widget move or resize is saved at once and announced to screen readers ("Weather moved to
 column 2.").
@@ -57,12 +57,12 @@ with high contrast on.
 
 ## How it is checked
 
-| Check                          | Where                                                                    |
-| ------------------------------ | ------------------------------------------------------------------------ |
+| Check                                                                                | Where                                                                                         |
+| ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------- |
 | axe on login, register, CGU, privacy, dashboard (light, dark, 200 % + high contrast) | `e2e/tests/a11y.spec.ts`, `dashboard-accessibility.spec.ts`, `accessibility-settings.spec.ts` |
-| Keyboard: skip link, focus return, widget move saved after reload | `e2e/tests/accessibility-settings.spec.ts` |
-| Settings applied, saved, reset; menu labels | `frontend/src/lib/accessibility.test.ts`, `components/AccessibilityMenu.test.tsx` |
-| Lighthouse accessibility ≥ 95 on every CI run | `lighthouse` job, see [lighthouse.md](lighthouse.md) |
+| Keyboard: skip link, focus return, widget move saved after reload                    | `e2e/tests/accessibility-settings.spec.ts`                                                    |
+| Settings applied, saved, reset; menu labels                                          | `frontend/src/lib/accessibility.test.ts`, `components/AccessibilityMenu.test.tsx`             |
+| Lighthouse accessibility ≥ 95 on every CI run                                        | `lighthouse` job, see [lighthouse.md](lighthouse.md)                                          |
 
 ### Manual test (before each release and the defense)
 

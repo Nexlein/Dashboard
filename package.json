@@ -16,6 +16,7 @@
         "e2e"
     ],
     "scripts": {
+        "start": "sh scripts/start.sh",
         "build": "npm run build -w shared && npm run build -w frontend",
         "build:lighthouse": "npm run build -w shared && VITE_API_URL=http://127.0.0.1:4174 npm run build -w frontend -- --outDir dist-lighthouse",
         "lighthouse": "npm run build:lighthouse && npm run lighthouse -w e2e",

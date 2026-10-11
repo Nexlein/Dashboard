@@ -1,6 +1,6 @@
 # Agent Context
 
-**Project**: Dashboard (B-DEV-500)
+**Project**: Dashboard (G-WEB-500)
 **Group Size**: 2
 
 ## Core Objective

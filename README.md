@@ -9,8 +9,8 @@ A customizable web dashboard that allows authenticated users to monitor digital 
 - **User Authentication**: [Better Auth](https://www.better-auth.com): email/password with an emailed verification code, forgotten-password reset by code, or GitHub sign-in; revocable sessions in an httpOnly cookie, CSRF protection, and an admin API.
 - **Service Integration**: personal API keys (verified, then encrypted) and GitHub OAuth with several accounts per user.
 - **Dynamic Widgets**:
-  - Each widget has configurable parameters.
-  - Multiple instances of the same widget can display distinct data.
+    - Each widget has configurable parameters.
+    - Multiple instances of the same widget can display distinct data.
 - **Auto-Refresh Engine**: Widget data updates automatically based on a configured timer (60 s minimum), with a shared Redis cache.
 - **Administration**: administrators manage roles, bans, sessions and account deletion.
 - **French and English**, light and dark themes, and accessibility settings (WCAG 2.2 AA, Lighthouse 100 in accessibility).
@@ -48,13 +48,13 @@ with individually toggleable normalized curves, and supports 1W, 1M, 1Y, 5Y, and
 
 npm workspaces sharing one root `package-lock.json`:
 
-| Path        | Content                                                          |
-| ----------- | ---------------------------------------------------------------- |
-| `frontend/` | React + Vite client                                              |
-| `backend/`  | Express API, Prisma schema, service integrations                 |
-| `shared/`   | Zod schemas and TypeScript types used by backend and frontend    |
-| `e2e/`      | Playwright end-to-end and accessibility tests                    |
-| `docs/`     | Architecture, API, database, testing and compliance documents    |
+| Path        | Content                                                       |
+| ----------- | ------------------------------------------------------------- |
+| `frontend/` | React + Vite client                                           |
+| `backend/`  | Express API, Prisma schema, service integrations              |
+| `shared/`   | Zod schemas and TypeScript types used by backend and frontend |
+| `e2e/`      | Playwright end-to-end and accessibility tests                 |
+| `docs/`     | Architecture, API, database, testing and compliance documents |
 
 Requirements: Node.js 24 (see `.nvmrc`, `nvm use`) and Docker with Docker Compose.
 
@@ -76,91 +76,125 @@ Requirements: Node.js 24 (see `.nvmrc`, `nvm use`) and Docker with Docker Compos
 
 ## Installation & Usage
 
-1. **Configure the Backend**
+### Start from a fresh clone
 
-   Copy the example once, keeping any existing local configuration:
+Install Docker with Compose **v2.24 or later**, start Docker, then clone this repository.
+No Node installation, provider credentials or `.env` file is needed for the local demo.
 
-   ```bash
-   cp -n backend/.env.example backend/.env
-   ```
+```bash
+git clone https://github.com/Nexlein/Dashboard.git
+cd Dashboard
+sh scripts/start.sh
+```
 
-   Set `BETTER_AUTH_SECRET` in `backend/.env` to a long random value. You can generate
-   one with `openssl rand -hex 32`. `BETTER_AUTH_URL` is the API's public URL
-   (`http://localhost:8080` by default). Fill in `GITHUB_CLIENT_ID` and
-   `GITHUB_CLIENT_SECRET` to enable GitHub sign-in and the GitHub service (widgets, with
-   several GitHub accounts per user), and register both callback URLs in your GitHub OAuth
-   App (GitHub matches them exactly): `http://localhost:8080/api/auth/callback/github` and
-   `http://localhost:8080/api/auth/callback/github-service`. To use a separate OAuth App for
-   the GitHub service, set `GITHUB_SERVICE_CLIENT_ID` and `GITHUB_SERVICE_CLIENT_SECRET`
-   (they default to the sign-in app).
-   YouTube needs no setup: add the Video Player widget and paste a video link
-   (`youtube.com/watch`, `youtu.be`, Shorts, live or embed links).
-   No API key, Google account linking or public website is needed. The player loads
-   directly in the browser and has no refresh timer. Playback depends on the video's
-   availability and whether its owner permits embedding.
-   The Channel Watch widget follows up to five public channels from their links or
-   `@handles`, merging their recent publications without an API key. Its refresh
-   timer is configurable; public feeds are cached for ten minutes. Filter by
-   channel, refresh manually, or mark publications as seen.
-   Prefer a `/channel/UC…` URL or channel ID for reliable lookup: resolving an
-   `@handle` depends on YouTube's public HTML and may break if that page changes.
-   `CORS_ORIGINS` lists the frontend origins allowed to call the API; the example
-   includes Vite on ports 5173/5174 and the Docker frontend on port 8081.
-   `SMTP_*` configure the emails (verification and reset codes). With Gmail: turn on
-   2-Step Verification on the Google account, create an app password at
-   [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords), then set
-   `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=465`, `SMTP_SECURE=true`, `SMTP_USER` (the Gmail
-   address, also the sender) and `SMTP_PASSWORD` (the app password). Gmail sends about 500
-   emails a day. `MAIL_FROM` changes the sender (default: `SMTP_USER`). With `SMTP_HOST` empty, a backend started with `npm run dev` prints the
-   emails and their codes in its console; the Docker server (production mode) refuses to
-   start without it.
-   `AUTH_RATE_LIMIT_MAX` caps sign-in, sign-up and code requests per IP every 15 minutes
-   (default 20) and `GLOBAL_RATE_LIMIT_MAX` all requests per IP (default 1000); with
-   Redis the counters are shared by every backend replica. The backend validates these variables at startup and exits with
-   an explicit message when one is invalid; empty values count as unset.
-   Keep `backend/.env` private; commit only the example file.
+On Windows, double-click **`start.cmd`** with Docker Desktop running. On Linux/macOS,
+`sh scripts/start.sh` (or `npm start` with Node installed) builds the images, waits for
+healthy services and opens the application. The first build needs internet access.
 
-2. **Run with Docker**
+The subject's two commands also work directly:
 
-   ```bash
-   docker compose up --build
-   ```
+```bash
+docker compose build
+docker compose up
+```
 
-   The server waits for PostgreSQL to be healthy and applies pending database
-   migrations before accepting requests. Emails use the `SMTP_*` settings of
-   `backend/.env`.
+`docker compose` is the current spelling of `docker-compose`; use the latter only if
+that executable is installed and supports Compose v2.24+. The old Python Compose v1
+is unsupported. For a background launch with readiness checks:
 
-3. **Demo accounts (created at startup)**
+```bash
+docker compose up --build --wait --wait-timeout 180
+```
 
-   `docker compose up` creates these accounts the first time the server starts
-   (`SEED_DEMO_DATA=true` in `docker-compose.yml`), already verified:
-   - **Admin:** `admin@dashboard.local` / `admin1234` (opens **Administration**)
-   - **User:** `user@dashboard.local` / `user1234`, with four widgets: YouTube Channel
-     Watch and Video Player (they work at once), Weather and GitHub (they show how to
-     connect a service in **Services**).
+| What              | Address                                                              |
+| ----------------- | -------------------------------------------------------------------- |
+| Application       | [http://localhost:8081](http://localhost:8081)                       |
+| API health        | [http://localhost:8080/health](http://localhost:8080/health)         |
+| Service catalog   | [http://localhost:8080/about.json](http://localhost:8080/about.json) |
+| API reference     | [http://localhost:8080/api-docs](http://localhost:8080/api-docs)     |
+| Local email inbox | [http://localhost:8025](http://localhost:8025)                       |
 
-   Restarts keep them as they are. To recreate them with their original widgets:
+PostgreSQL migrations run before the API starts. Three API replicas share a random
+secret generated by the `init` service and saved in the `auth_data` volume.
+Without a configured SMTP host, emails go to **Mailpit**: open the local inbox to
+read registration and password-reset codes. These demo emails are not delivered to
+real addresses. PostgreSQL data and the secret survive ordinary stops and restarts.
 
-   ```bash
-   docker compose exec server npx prisma db seed
-   ```
+### Demo accounts
 
-   Their passwords are public: remove `SEED_DEMO_DATA` on a real deployment. A new account
-   signs in after entering the code emailed at registration.
+The server creates missing demo accounts on startup:
 
-4. **Access the Application**
-   - Frontend: [http://localhost:8081](http://localhost:8081)
-   - Backend API: [http://localhost:8080](http://localhost:8080)
-   - `about.json`: [http://localhost:8080/about.json](http://localhost:8080/about.json)
-   - API reference (Swagger): [http://localhost:8080/api-docs](http://localhost:8080/api-docs)
+| Account       | Email                   | Password    |
+| ------------- | ----------------------- | ----------- |
+| Administrator | `admin@dashboard.local` | `admin1234` |
+| User          | `user@dashboard.local`  | `user1234`  |
 
-   Nginx listens on port 8080 and spreads requests over 3 API replicas.
+The user starts with YouTube Channel Watch, Video Player, Weather and GitHub widgets.
+YouTube needs no credentials; Weather and GitHub show how to connect a service.
+Restarts preserve changes. To deliberately recreate only the demo accounts and their widgets:
 
-*Database migrations run automatically before the API accepts requests.*
+```bash
+docker compose exec server node docker/start.mjs --seed
+```
+
+The chatbot needs a downloaded Ollama model. Download one through its model manager
+before sending a message; the download needs internet access and sufficient disk/RAM.
+Provider data also depends on connectivity and provider quotas.
+
+### Optional provider configuration
+
+Keep any existing configuration; create the file only when you need it:
+
+```bash
+cp -n backend/.env.example backend/.env
+```
+
+Replace the example secrets with personal random values (`openssl rand -hex 32`)
+before using this optional file with persistent data.
+
+- `BETTER_AUTH_SECRET`: a stable random secret of at least 32 characters; Docker
+  generates one when unset. `ENCRYPTION_KEY` falls back to this secret when empty.
+  Set secrets before storing real data: replacing them makes old encrypted data unreadable.
+- `BETTER_AUTH_URL`: the public API URL, default `http://localhost:8080`.
+- `CORS_ORIGINS`: allowed frontend origins (5173/5174 for Vite and 8081 for Docker).
+- `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET`: enable GitHub sign-in. The service uses
+  `GITHUB_SERVICE_CLIENT_ID` / `GITHUB_SERVICE_CLIENT_SECRET` when provided, otherwise
+  the sign-in app. Register the matching callback URL for each OAuth App:
+  `/api/auth/callback/github` for sign-in and `/api/auth/callback/github-service` for widgets.
+- `SMTP_HOST` and `SMTP_*`: use a real SMTP provider instead of Mailpit. Configure the
+  host, port, TLS, credentials and sender as required by your provider. Outside Docker,
+  an empty host prints codes in the development console; production requires a host.
+- `AUTH_RATE_LIMIT_MAX` / `GLOBAL_RATE_LIMIT_MAX`: requests per IP per 15 minutes,
+  default 20 for authentication and 1000 globally, shared through Redis.
+
+Weather, crypto and stocks use each user's API key, entered on **Services**.
+YouTube uses public feeds and the embedded player, without a key. Prefer channel IDs
+or `/channel/UC…` URLs: `@handle` resolution depends on YouTube's public HTML.
+Video playback depends on availability and the owner's embedding permissions.
+
+Restart Docker services after changing `backend/.env`. Never commit this file.
+
+### Stop and troubleshoot
+
+```bash
+docker compose down                  # stop, preserve data and secret
+docker compose ps -a                 # service state
+docker compose logs --tail=100       # startup diagnostics
+```
+
+Ports 8080, 8081, 5433, 6379, 8025 and 1025 must be available. Stop an existing local
+API on 8080 before starting the Docker stack. Database, Redis and Mailpit ports bind
+only to localhost. `docker compose down --volumes` **deletes the database, downloaded
+models and generated secret**; use it only for disposable data.
+
+This setup is a local grading/demo environment. Before publishing it, disable
+`SEED_DEMO_DATA`, use real SMTP, configure HTTPS/public URLs and restrict access to
+the local inbox. Back up the database and authentication/encryption secret together.
 
 ### Run the backend outside Docker
 
-After configuring `backend/.env` as above, keep `localhost:5433` in its
+After creating `backend/.env` as above, set a random `BETTER_AUTH_SECRET` for Node
+(the Docker-generated secret is used only by the Docker launcher). Keep `localhost:5433` in its
 `DATABASE_URL`. Docker Compose overrides this with `db:5432` when the backend
 itself runs inside Docker.
 
@@ -168,6 +202,7 @@ itself runs inside Docker.
 docker compose up -d db redis
 npm ci                          # from the repository root: installs every workspace
 npm run build -w shared
+npm run db:generate -w backend
 npm run db:deploy -w backend    # apply database migrations
 npm run dev -w backend          # API on http://localhost:8080
 npm run dev -w frontend         # client on http://localhost:5173
@@ -188,7 +223,7 @@ Run from the repository root:
 npm test           # shared, backend and frontend unit tests
 npm run lint       # oxlint + Prettier check
 npm run build      # shared package and frontend production build
-npm run test:e2e   # Playwright; needs the database, Mailpit (docker compose --profile e2e up -d mailpit)
+npm run test:e2e   # Playwright; needs the database, Mailpit (docker compose up -d mailpit)
                    # and backend/.env; starts both dev servers
 npm run lighthouse # Lighthouse CI on the production build, see docs/lighthouse.md
 ```

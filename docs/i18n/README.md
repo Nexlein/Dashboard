@@ -4,18 +4,18 @@
 
 Les ressources de `frontend/src/i18n/locales/en` et `fr` couvrent les routes publiques et authentifiées, les dialogues, le catalogue, les widgets et leurs attributs accessibles.
 
-| Domaine | Couverture |
-| --- | --- |
-| `common` | Navigation, langue, thème, actions, export/suppression, cookies, erreurs de rendu |
-| `auth` | Connexion, inscription, OAuth, codes, mot de passe oublié, décor |
-| `account` | Profil, changement d’adresse e-mail et confirmations |
-| `services` | Connexions, comptes OAuth, clés, descriptions et états |
-| `widgets` | Catalogue, paramètres, configuration, titres, chargements, rechargements |
-| `markets` | Cryptomonnaies, actions, statistiques, périodes et graphiques |
-| `weather`, `github`, `youtube`, `chatbot` | Libellés, conditions météo, actions et états des widgets |
-| `admin` | Filtres, comptes, pluriels, dates, actions et confirmations |
-| `legal` | CGU et politique de confidentialité complètes |
-| `errors` | Messages correspondant aux codes API, à la validation et aux erreurs Better Auth |
+| Domaine                                   | Couverture                                                                        |
+| ----------------------------------------- | --------------------------------------------------------------------------------- |
+| `common`                                  | Navigation, langue, thème, actions, export/suppression, cookies, erreurs de rendu |
+| `auth`                                    | Connexion, inscription, OAuth, codes, mot de passe oublié, décor                  |
+| `account`                                 | Profil, changement d’adresse e-mail et confirmations                              |
+| `services`                                | Connexions, comptes OAuth, clés, descriptions et états                            |
+| `widgets`                                 | Catalogue, paramètres, configuration, titres, chargements, rechargements          |
+| `markets`                                 | Cryptomonnaies, actions, statistiques, périodes et graphiques                     |
+| `weather`, `github`, `youtube`, `chatbot` | Libellés, conditions météo, actions et états des widgets                          |
+| `admin`                                   | Filtres, comptes, pluriels, dates, actions et confirmations                       |
+| `legal`                                   | CGU et politique de confidentialité complètes                                     |
+| `errors`                                  | Messages correspondant aux codes API, à la validation et aux erreurs Better Auth  |
 
 Les libellés des constantes de catalogue et les titres sont résolus dans la langue courante. Le changement de langue recalcule la présentation du catalogue sans recharger `/about.json`. Il conserve les identifiants, paramètres, périodes, configurations enregistrées, saisies et conversations.
 

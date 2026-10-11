@@ -13,20 +13,20 @@ The core entity representing a registered user. `User`, `Session`, `Account` and
 `Verification` follow [Better Auth's schema](https://www.better-auth.com/docs/concepts/database)
 (`backend/src/auth.ts`), with integer ids (`generateId: "serial"`).
 
-| Field           | Type      | Description                                                   |
-| --------------- | --------- | ------------------------------------------------------------- |
-| `id`            | Int       | Primary Key                                                   |
-| `name`          | String    | Display name; empty when the user did not give one            |
-| `email`         | String    | Unique email address                                          |
-| `emailVerified` | Boolean   | `true` after the emailed code, or when GitHub verified it      |
-| `image`         | String?   | Avatar URL (GitHub)                                           |
-| `role`          | String?   | `user` or `admin` (admin plugin)                              |
-| `banned`, `banReason`, `banExpires` | | Ban state (admin plugin)                          |
-| `cguAcceptedAt` | DateTime? | When the user accepted the CGU and confirmed being 16 or older |
-| `language`      | String    | User's i18n preference (`en` or `fr`), defaults to `en`       |
-| `theme`         | String    | User's theme preference (`light`, `dark`, or `system`)        |
-| `createdAt`     | DateTime  | Timestamp of creation                                         |
-| `updatedAt`     | DateTime  | Timestamp of last update                                      |
+| Field                               | Type      | Description                                                    |
+| ----------------------------------- | --------- | -------------------------------------------------------------- |
+| `id`                                | Int       | Primary Key                                                    |
+| `name`                              | String    | Display name; empty when the user did not give one             |
+| `email`                             | String    | Unique email address                                           |
+| `emailVerified`                     | Boolean   | `true` after the emailed code, or when GitHub verified it      |
+| `image`                             | String?   | Avatar URL (GitHub)                                            |
+| `role`                              | String?   | `user` or `admin` (admin plugin)                               |
+| `banned`, `banReason`, `banExpires` |           | Ban state (admin plugin)                                       |
+| `cguAcceptedAt`                     | DateTime? | When the user accepted the CGU and confirmed being 16 or older |
+| `language`                          | String    | User's i18n preference (`en` or `fr`), defaults to `en`        |
+| `theme`                             | String    | User's theme preference (`light`, `dark`, or `system`)         |
+| `createdAt`                         | DateTime  | Timestamp of creation                                          |
+| `updatedAt`                         | DateTime  | Timestamp of last update                                       |
 
 **Relations:** `sessions`, `accounts`, `widgets`, `serviceConnections` (One-to-Many, each
 cascades on delete).
@@ -37,13 +37,13 @@ cascades on delete).
 
 **Account**: one row per sign-in method or connected GitHub account of a user.
 
-| Field         | Type      | Description                                                       |
-| ------------- | --------- | ----------------------------------------------------------------- |
-| `providerId`  | String    | `credential` (email/password), `github` (sign-in) or `github-service` |
-| `accountId`   | String    | The GitHub user id, or the user id for `credential`               |
-| `password`    | String?   | Password hash (scrypt), `credential` only                         |
-| `accessToken`, `refreshToken`, `idToken` | String? | GitHub tokens, encrypted (AES-256-GCM)  |
-| `accessTokenExpiresAt`, `refreshTokenExpiresAt`, `scope` | | Token metadata            |
+| Field                                                    | Type    | Description                                                           |
+| -------------------------------------------------------- | ------- | --------------------------------------------------------------------- |
+| `providerId`                                             | String  | `credential` (email/password), `github` (sign-in) or `github-service` |
+| `accountId`                                              | String  | The GitHub user id, or the user id for `credential`                   |
+| `password`                                               | String? | Password hash (scrypt), `credential` only                             |
+| `accessToken`, `refreshToken`, `idToken`                 | String? | GitHub tokens, encrypted (AES-256-GCM)                                |
+| `accessTokenExpiresAt`, `refreshTokenExpiresAt`, `scope` |         | Token metadata                                                        |
 
 `(providerId, accountId)` is unique: a GitHub account belongs to one Dashboard account.
 
@@ -59,15 +59,15 @@ the emailed 6-digit codes (hashed, with their attempt count).
 
 Stores a widget instance configured by a user. Supports multiple instances of the same widget with distinct parameters.
 
-| Field        | Type   | Description                                            |
-| ------------ | ------ | ------------------------------------------------------ |
-| `id`         | Int    | Primary Key                                            |
-| `userId`     | Int    | Foreign Key to `User`                                  |
+| Field         | Type   | Description                                            |
+| ------------- | ------ | ------------------------------------------------------ |
+| `id`          | Int    | Primary Key                                            |
+| `userId`      | Int    | Foreign Key to `User`                                  |
 | `serviceName` | String | Name of the service (e.g., `weather` or `crypto`)      |
-| `widgetName` | String | Name of the widget (e.g., `current_weather`)            |
-| `params`     | Json   | Configurable parameters stored as JSON                 |
+| `widgetName`  | String | Name of the widget (e.g., `current_weather`)           |
+| `params`      | Json   | Configurable parameters stored as JSON                 |
 | `refreshRate` | Int    | Refresh interval in seconds                            |
-| `layout`     | Json   | Grid coordinates for UI rendering (`x`, `y`, `w`, `h`) |
+| `layout`      | Json   | Grid coordinates for UI rendering (`x`, `y`, `w`, `h`) |
 
 `userId` is indexed: the dashboard loads widgets by owner on every visit.
 
@@ -81,16 +81,16 @@ Stores a widget instance configured by a user. Supports multiple instances of th
 
 Stores one user-owned credential set for a configurable external service.
 
-| Field                  | Type     | Description                                    |
-| ---------------------- | -------- | ---------------------------------------------- |
-| `id`                   | Int      | Primary key                                    |
-| `userId`               | Int      | Owner of the connection                        |
+| Field                  | Type     | Description                                          |
+| ---------------------- | -------- | ---------------------------------------------------- |
+| `id`                   | Int      | Primary key                                          |
+| `userId`               | Int      | Owner of the connection                              |
 | `serviceName`          | String   | Registry service name, such as `weather` or `crypto` |
-| `encryptedCredentials` | Json     | AES-256-GCM encrypted provider credentials     |
-| `keyHint`              | String?  | Last four characters shown in the UI           |
-| `verifiedAt`           | DateTime | Last successful provider verification          |
-| `createdAt`            | DateTime | Timestamp of creation                          |
-| `updatedAt`            | DateTime | Timestamp of the latest credential replacement |
+| `encryptedCredentials` | Json     | AES-256-GCM encrypted provider credentials           |
+| `keyHint`              | String?  | Last four characters shown in the UI                 |
+| `verifiedAt`           | DateTime | Last successful provider verification                |
+| `createdAt`            | DateTime | Timestamp of creation                                |
+| `updatedAt`            | DateTime | Timestamp of the latest credential replacement       |
 
 `userId` and `serviceName` are unique together. Deleting the user deletes all
 their service connections.
@@ -108,12 +108,12 @@ their service connections.
 Schema changes are versioned with Prisma Migrate. Each folder in
 `backend/prisma/migrations/` holds the SQL for one change and is applied once, in order.
 
-| Command (from the repository root)                  | Use                                                        |
-| --------------------------------------------------- | ---------------------------------------------------------- |
-| `npm run db:migrate -w backend -- --name <change>`  | After editing `schema.prisma`: create and apply a migration |
-| `npm run db:deploy -w backend`                      | Apply pending migrations (CI, local setup)                 |
-| `npm run db:reset -w backend`                       | Drop the development database and replay every migration   |
-| `npm run db:generate -w backend`                    | Regenerate the Prisma Client after a schema change         |
+| Command (from the repository root)                 | Use                                                         |
+| -------------------------------------------------- | ----------------------------------------------------------- |
+| `npm run db:migrate -w backend -- --name <change>` | After editing `schema.prisma`: create and apply a migration |
+| `npm run db:deploy -w backend`                     | Apply pending migrations (CI, local setup)                  |
+| `npm run db:reset -w backend`                      | Drop the development database and replay every migration    |
+| `npm run db:generate -w backend`                   | Regenerate the Prisma Client after a schema change          |
 
 - Since Prisma 7, migrate commands neither regenerate the client nor seed: run
   `db:generate` after a schema change, and `npx prisma db seed` (from `backend/`) to recreate

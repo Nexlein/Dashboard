@@ -12,11 +12,12 @@ Some answers add fields, such as `retryAfter` on a `429`.
 Returns the health status of the API, including database connection status and server uptime.
 
 **Response (200 OK):**
+
 ```json
 {
-  "status": "ok",
-  "uptime": 123.45,
-  "timestamp": "2026-09-28T15:00:00.000Z"
+    "status": "ok",
+    "uptime": 123.45,
+    "timestamp": "2026-09-28T15:00:00.000Z"
 }
 ```
 
@@ -324,9 +325,7 @@ of `{ role, content }` objects with `role` among `system`, `user`, `assistant`.
 
 ```json
 {
-    "messages": [
-        { "role": "user", "content": "Hello!" }
-    ]
+    "messages": [{ "role": "user", "content": "Hello!" }]
 }
 ```
 
@@ -411,12 +410,12 @@ a connection-required message until the service is connected again.
 
 GitHub plays two separate roles, with two Better Auth providers:
 
-| | Sign-in (`github`) | GitHub service (`github-service`) |
-| --- | --- | --- |
-| Used for | identity: register and sign in | the GitHub widgets |
-| Scope | `read:user user:email` | `read:user user:email repo` |
-| Per user | one | several (one per GitHub account) |
-| Can sign in | yes | never (`400 NOT_A_SIGN_IN_PROVIDER`) |
+|             | Sign-in (`github`)             | GitHub service (`github-service`)    |
+| ----------- | ------------------------------ | ------------------------------------ |
+| Used for    | identity: register and sign in | the GitHub widgets                   |
+| Scope       | `read:user user:email`         | `read:user user:email repo`          |
+| Per user    | one                            | several (one per GitHub account)     |
+| Can sign in | yes                            | never (`400 NOT_A_SIGN_IN_PROVIDER`) |
 
 Both use `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` (the service can use another GitHub OAuth
 App with `GITHUB_SERVICE_CLIENT_ID` / `GITHUB_SERVICE_CLIENT_SECRET`). GitHub requires each
@@ -461,7 +460,6 @@ users (`?error=account_already_linked_to_different_user`).
 
 Tokens are stored encrypted (`account.encryptOAuthTokens`), read through Better Auth on the
 server (which refreshes them when they expire) and never returned to the page.
-
 
 ### YouTube video player and channel watch
 

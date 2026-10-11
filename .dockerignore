@@ -16,6 +16,7 @@ backend/src/generated
 **/test-results
 
 # Not needed in any image
+personal_note*
 .git
 .github
 .husky

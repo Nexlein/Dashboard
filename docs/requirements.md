@@ -9,7 +9,7 @@
 
 - [x] **User Management**: Unauthenticated users can register. Administration section useful. (Registration frontend/backend connected; `/admin` page for administrators: search, filters, role, ban, sign-out and deletion, on Better Auth's admin plugin)
 - [x] **Identity & Permissions**:
-    - [x] Authentication (credentials or OIDC) to bind data to account. (GitHub OIDC & credentials implemented; emails verified by code before the first sign-in; forgotten password reset by code)
+    - [x] Authentication (credentials or OIDC) to bind data to account. (GitHub OAuth & credentials implemented; emails verified by code before the first sign-in; forgotten password reset by code)
     - [x] Authorization (OAuth 2.0) to access external APIs. Link third-party to platform user (GitHub: several accounts per user, separate from GitHub sign-in).
 - [x] **Service Subscriptions**:
     - [x] Authenticated users select services to subscribe to.
@@ -66,7 +66,7 @@
 
 ## Technical Constraints
 
-- [x] **Docker**: `docker-compose.yml` at root. Must support `docker-compose build` and `docker-compose up`.
+- [x] **Docker**: `docker-compose.yml` at root. Supports `docker compose build` and `docker compose up` from a clean clone, without `.env` (Compose v2.24+). The hyphenated command requires a compatible installed executable.
 - [x] **Server**: MUST run on port `8080`.
 - [x] **Endpoint**: MUST respond to `GET http://localhost:8080/about.json`.
 - [x] **Health Check**: MUST respond to `GET http://localhost:8080/health`.
@@ -83,6 +83,7 @@
     - [x] Clear instructions to run and use.
     - [x] Description of technologies used and overall structure.
     - [x] Adapt communication to audience (users vs developers). (Users: [user-guide.md](user-guide.md); developers: README and the other docs)
+- [x] **Quick start**: Linux/macOS launcher and Windows double-click launcher; local email inbox and persistent generated secret.
 - [ ] **Video Presentation**: Short video showcasing main features (to avoid disruptions during live demo).
 
 ## about.json Schema

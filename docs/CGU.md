@@ -30,7 +30,7 @@ La plateforme peut évoluer, être interrompue pour maintenance ou rencontrer de
 
 ## 7. Suppression du compte
 
-Vous pouvez demander la suppression de votre compte et des données qui lui sont associées. Les modalités de contact et d'exercice de ce droit seront précisées dans la politique de confidentialité.
+Vous pouvez demander la suppression de votre compte et des données qui lui sont associées. La suppression est accessible depuis le menu du compte. La politique de confidentialité décrit également l’export des données et les limites de suppression concernant les services externes et les sauvegardes.
 
 ## 8. Évolution des conditions
 

@@ -6,23 +6,23 @@ practices and SEO. CI runs it on every pull request and push to `main` (`lightho
 
 ## Latest results
 
-Run on 2026-10-10, Lighthouse 12.6.1, desktop profile (1200 × 900), 3 runs, commit of the
-accessibility settings (`feat/a11y`).
+Run on 2026-10-11, Lighthouse 12.6.1, desktop profile (1200 × 900), three runs on
+the release-preparation working tree. Scores measure the fixed frontend scenario below.
 
-| Category       | Run 1 | Run 2 | Run 3 | Required                    |
-| -------------- | ----: | ----: | ----: | --------------------------- |
-| Performance    |    98 |    98 |    97 | median ≥ 95                 |
-| Accessibility  |   100 |   100 |   100 | every run ≥ 95              |
-| Best practices |   100 |   100 |   100 | every run ≥ 95              |
-| SEO            |   100 |   100 |   100 | every run ≥ 95              |
+| Category       | Run 1 | Run 2 | Run 3 | Required       |
+| -------------- | ----: | ----: | ----: | -------------- |
+| Performance    |    98 |    98 |    98 | median ≥ 95    |
+| Accessibility  |   100 |   100 |   100 | every run ≥ 95 |
+| Best practices |   100 |   100 |   100 | every run ≥ 95 |
+| SEO            |   100 |   100 |   100 | every run ≥ 95 |
 
-| Metric                         | Value  | Good under | Meaning                                    |
-| ------------------------------ | -----: | ---------: | ------------------------------------------ |
-| First Contentful Paint (FCP)   | 0.6 s  |      1.8 s | First text or image on screen              |
-| Largest Contentful Paint (LCP) | 1.1 s  |      2.5 s | Main content visible                       |
-| Total Blocking Time (TBT)      | 10 ms  |     200 ms | Time the page cannot react to a click      |
-| Cumulative Layout Shift (CLS)  | 0      |        0.1 | How much the page jumps while loading      |
-| Speed Index                    | 1.1 s  |      3.4 s | How fast the page looks complete           |
+| Metric                         | Value | Good under | Meaning                               |
+| ------------------------------ | ----: | ---------: | ------------------------------------- |
+| First Contentful Paint (FCP)   | 0.6 s |      1.8 s | First text or image on screen         |
+| Largest Contentful Paint (LCP) | 1.1 s |      2.5 s | Main content visible                  |
+| Total Blocking Time (TBT)      |  0 ms |     200 ms | Time the page cannot react to a click |
+| Cumulative Layout Shift (CLS)  |     0 |        0.1 | How much the page jumps while loading |
+| Speed Index                    | 0.9 s |      3.4 s | How fast the page looks complete      |
 
 ## What is measured
 

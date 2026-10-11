@@ -77,3 +77,11 @@ flowchart TB
 
 - **Engine**: PostgreSQL 15.
 - **Role**: Persistent storage for User accounts, OAuth tokens, encrypted service connections, and Widget configurations (position, refresh rates, parameters).
+
+## Local startup
+
+Compose needs no backend `.env` file. An `init` container creates a random secret in
+`auth_data`, shared read-only by the replicas. `backend/docker/start.mjs` loads it
+when no explicit secret is provided and selects the Mailpit inbox when SMTP is unset.
+Database, Redis, Mailpit and API health checks order startup; the launchers wait for
+the frontend and proxy as well. Data and secrets persist until volumes are removed.

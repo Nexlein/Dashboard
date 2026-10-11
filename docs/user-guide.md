@@ -13,42 +13,37 @@ different settings (the weather in Paris and in Lyon).
 
 Requirements: Docker with Docker Compose. Node.js 24 only to run it outside Docker.
 
-```bash
-cp -n backend/.env.example backend/.env
-```
-
-Before starting Docker, edit `backend/.env`:
-
-- Set `BETTER_AUTH_SECRET` to a personal random secret (`openssl rand -hex 32`).
-- Configure `SMTP_HOST` and the matching `SMTP_*` settings for your email provider so users
-  receive their sign-up and password-reset codes. **SMTP is required with Docker**: the
-  backend runs in production mode and refuses to start without `SMTP_HOST`.
-
-Then start the application:
+Start Docker, then launch from the repository folder:
 
 ```bash
-docker compose up --build
+sh scripts/start.sh
 ```
 
-| What           | Address                                                            |
-| -------------- | ------------------------------------------------------------------ |
-| Application    | [http://localhost:8081](http://localhost:8081)                     |
-| API            | [http://localhost:8080](http://localhost:8080)                     |
-| `about.json`   | [http://localhost:8080/about.json](http://localhost:8080/about.json) |
-| API reference  | [http://localhost:8080/api-docs](http://localhost:8080/api-docs)   |
+On Windows, double-click `start.cmd`. No `.env` or external SMTP account is required.
+The launcher waits for the application to be ready and opens it in your browser.
+Alternatively, run `docker compose build` then `docker compose up`.
+
+| What          | Address                                                          |
+| ------------- | ---------------------------------------------------------------- |
+| Application   | [http://localhost:8081](http://localhost:8081)                   |
+| Local inbox   | [http://localhost:8025](http://localhost:8025)                   |
+| API reference | [http://localhost:8080/api-docs](http://localhost:8080/api-docs) |
 
 Two demo accounts are created at startup:
 
-| Account        | Email                   | Password    |
-| -------------- | ----------------------- | ----------- |
-| Administrator  | `admin@dashboard.local` | `admin1234` |
-| User           | `user@dashboard.local`  | `user1234`  |
+| Account       | Email                   | Password    |
+| ------------- | ----------------------- | ----------- |
+| Administrator | `admin@dashboard.local` | `admin1234` |
+| User          | `user@dashboard.local`  | `user1234`  |
 
-Optional settings in `backend/.env`: `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` for GitHub
-sign-in and the GitHub widgets. When running the backend outside Docker with `npm run dev`,
-SMTP can be left unset: emails and their codes are printed in the backend console. The
-[README](../README.md#installation--usage) explains each variable and how to run without
-Docker.
+Registration and reset codes appear in the **local inbox**. Emails stay on this
+machine until a real SMTP provider is configured. GitHub requires optional OAuth
+settings; weather, crypto and stocks require personal API keys on the Services page.
+For the chatbot, download a model through its model manager before chatting.
+
+`docker compose down` stops the app and keeps your data. See the
+[README](../README.md#installation--usage) for configuration, troubleshooting and
+running without Docker.
 
 ## Use it
 
@@ -63,7 +58,7 @@ to confirm the address. Forgotten password: a code by email too.
 
 **Services** page. Weather, crypto and stocks need a free API key from the provider: paste it,
 the Dashboard tests it, then stores it encrypted. GitHub connects with a button (OAuth), and
-several GitHub accounts can be connected. YouTube and the chatbot need nothing.
+several GitHub accounts can be connected. YouTube needs no connection. The chatbot needs a downloaded model.
 
 ![Services](screenshots/services.png)
 
@@ -107,14 +102,14 @@ administrators, sign a user out everywhere, ban (with a reason and a duration) o
 
 6 services, 12 widgets. The full list with their parameters is in `about.json`.
 
-| Service     | Provider                   | Connection          | Widgets                                                        |
-| ----------- | -------------------------- | ------------------- | -------------------------------------------------------------- |
-| Weather     | OpenWeather                | API key             | **Current Temperature** (city), **5-Day Forecast** (city)      |
-| GitHub      | GitHub API                 | OAuth, many accounts | **Repository Stats**, **Latest Commits** (branch), **User Profile** |
-| Crypto      | CoinGecko                  | API key             | **Price & Market Stats** (one coin), **Market Comparison Chart** (up to 8 coins, 1W to 1Y) |
-| Stocks      | Twelve Data                | API key             | **Stock Market** (up to 8 stocks compared), **Stock Profile** (one company, 1W to ALL) |
-| YouTube     | Public RSS feeds           | None                | **Video Player** (a video link), **Channel Watch** (up to 5 channels) |
-| Chatbot     | Ollama (runs locally)      | None                | **Ollama Chat** (choose or download a model)                   |
+| Service | Provider              | Connection           | Widgets                                                                                    |
+| ------- | --------------------- | -------------------- | ------------------------------------------------------------------------------------------ |
+| Weather | OpenWeather           | API key              | **Current Temperature** (city), **5-Day Forecast** (city)                                  |
+| GitHub  | GitHub API            | OAuth, many accounts | **Repository Stats**, **Latest Commits** (branch), **User Profile**                        |
+| Crypto  | CoinGecko             | API key              | **Price & Market Stats** (one coin), **Market Comparison Chart** (up to 8 coins, 1W to 1Y) |
+| Stocks  | Twelve Data           | API key              | **Stock Market** (up to 8 stocks compared), **Stock Profile** (one company, 1W to ALL)     |
+| YouTube | Public RSS feeds      | None                 | **Video Player** (a video link), **Channel Watch** (up to 5 channels)                      |
+| Chatbot | Ollama (runs locally) | None                 | **Ollama Chat** (choose or download a model)                                               |
 
 Free keys: [OpenWeather](https://home.openweathermap.org/api_keys),
 [CoinGecko](https://www.coingecko.com/en/developers/dashboard),
@@ -122,13 +117,13 @@ Free keys: [OpenWeather](https://home.openweathermap.org/api_keys),
 
 ## Stack
 
-| Part           | Technology                                                                                          |
-| -------------- | --------------------------------------------------------------------------------------------------- |
+| Part           | Technology                                                                                                                                                                                                                                                                                       |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Frontend       | [React](https://react.dev), [Vite](https://vite.dev), [Tailwind CSS](https://tailwindcss.com), [shadcn/ui](https://ui.shadcn.com), [TanStack Query](https://tanstack.com/query), [react-grid-layout](https://github.com/react-grid-layout/react-grid-layout), [i18next](https://www.i18next.com) |
-| Backend        | [Node.js](https://nodejs.org), [Express](https://expressjs.com), [Better Auth](https://www.better-auth.com), [Zod](https://zod.dev) |
-| Data           | [PostgreSQL](https://www.postgresql.org), [Prisma](https://www.prisma.io), [Redis](https://redis.io) |
-| Infrastructure | [Docker Compose](https://docs.docker.com/compose/), [Nginx](https://nginx.org) (3 API replicas), [Ollama](https://ollama.com) |
-| Tests          | [Vitest](https://vitest.dev), [Playwright](https://playwright.dev), [axe](https://github.com/dequelabs/axe-core), [Lighthouse CI](https://github.com/GoogleChrome/lighthouse-ci) |
+| Backend        | [Node.js](https://nodejs.org), [Express](https://expressjs.com), [Better Auth](https://www.better-auth.com), [Zod](https://zod.dev)                                                                                                                                                              |
+| Data           | [PostgreSQL](https://www.postgresql.org), [Prisma](https://www.prisma.io), [Redis](https://redis.io)                                                                                                                                                                                             |
+| Infrastructure | [Docker Compose](https://docs.docker.com/compose/), [Nginx](https://nginx.org) (3 API replicas), [Ollama](https://ollama.com)                                                                                                                                                                    |
+| Tests          | [Vitest](https://vitest.dev), [Playwright](https://playwright.dev), [axe](https://github.com/dequelabs/axe-core), [Lighthouse CI](https://github.com/GoogleChrome/lighthouse-ci)                                                                                                                 |
 
 Why these choices: [tech_stack.md](tech_stack.md). How things work inside:
 [how-it-works.md](how-it-works.md).

@@ -15,8 +15,9 @@ flowchart LR
     API1 & API2 & API3 --> Ext["OpenWeather, CoinGecko, Twelve Data, GitHub, YouTube, Ollama"]
 ```
 
-The browser never calls a provider for data: it asks our API, which holds the keys, checks the
-user, caches the answer and returns only what the widget shows.
+Widget data goes through our API, which holds the keys, checks the user, caches answers
+and returns what the widget shows. YouTube thumbnails and the clicked video player load
+directly in the browser.
 
 ## Widgets
 
@@ -116,14 +117,14 @@ while in use. Signing out, a ban or a deletion revokes it at once.
 
 ### What stops attacks?
 
-| Attack                         | Protection                                                              |
-| ------------------------------ | ----------------------------------------------------------------------- |
-| Password guessing              | 20 sign-in or code attempts per IP per 15 min, shared by all replicas   |
-| Request from another site      | `Origin` checked on every write (CSRF); CORS limited to our frontend    |
-| Reading another user's widget  | Each request checks the owner (`403`)                                   |
-| Stolen database                | Passwords hashed (scrypt), keys and tokens encrypted (AES-256-GCM)      |
-| Script injection               | React escapes text; Content-Security-Policy; Helmet headers             |
-| Flooding the API               | 1000 requests per IP per 15 min                                         |
+| Attack                        | Protection                                                            |
+| ----------------------------- | --------------------------------------------------------------------- |
+| Password guessing             | 20 sign-in or code attempts per IP per 15 min, shared by all replicas |
+| Request from another site     | `Origin` checked on every write (CSRF); CORS limited to our frontend  |
+| Reading another user's widget | Each request checks the owner (`403`)                                 |
+| Stolen database               | Passwords hashed (scrypt), keys and tokens encrypted (AES-256-GCM)    |
+| Script injection              | React escapes text; Content-Security-Policy; Helmet headers           |
+| Flooding the API              | 1000 requests per IP per 15 min                                       |
 
 ### Forgotten password?
 
@@ -155,9 +156,10 @@ answering.
 
 ### What happens at startup?
 
-Each replica applies the database migrations (Prisma takes a lock, so only one does it), then
-creates the demo accounts if missing (`SEED_DEMO_DATA`, a database lock again), then listens on
-8080.
+The `init` service first generates a stable secret in `auth_data` if none exists. The
+Docker launcher uses that shared secret when `BETTER_AUTH_SECRET` is unset and routes
+mail to the local Mailpit inbox when `SMTP_HOST` is empty. Each replica applies the database migrations (Prisma takes a lock, so only one does it), then
+creates the demo accounts if missing (`SEED_DEMO_DATA`, a database lock again), then listens on 8080.
 
 ### How do languages work?
 
