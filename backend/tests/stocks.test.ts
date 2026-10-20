@@ -245,7 +245,7 @@ describe('Stock market service quota usage', () => {
                     'api-credits-used': String(used),
                     'api-credits-left': String(55 - used),
                 }),
-            };
+            } as Response;
         });
         await stocks.verifyCredentials?.(context.credentials);
         const result = (await stocks.execute?.(

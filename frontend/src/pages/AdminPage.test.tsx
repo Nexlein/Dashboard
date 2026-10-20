@@ -29,7 +29,7 @@ const USERS = [
         email: 'eve@example.com',
         name: 'Eve',
         banned: true,
-        banExpires: '2026-10-13T10:00:00.000Z',
+        banExpires: '2099-10-13T10:00:00.000Z',
     }),
 ];
 
