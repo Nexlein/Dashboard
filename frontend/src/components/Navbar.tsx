@@ -194,8 +194,14 @@ export default function Navbar({
                             />
                         }
                     >
-                        <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary text-xs font-semibold text-primary-foreground">
-                            {user ? initial : <UserRound className="size-4" />}
+                        {/* The initial is drawn by CSS so it stays out of the visible text, which
+                            must be part of the aria-label (WCAG 2.5.3 label in name). */}
+                        <span
+                            aria-hidden="true"
+                            data-initial={user ? initial : undefined}
+                            className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary text-xs font-semibold text-primary-foreground before:content-[attr(data-initial)]"
+                        >
+                            {!user && <UserRound className="size-4" />}
                         </span>
                         <span className="max-w-28 truncate sm:max-w-40">{accountLabel}</span>
                         <ChevronDown className="size-4 text-muted-foreground" />
